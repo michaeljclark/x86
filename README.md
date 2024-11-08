@@ -155,7 +155,7 @@ synthesis rules described in [*Instruction Synthesis Notes*](#user-content-instr
 | lgs `r64,memfar16:64`| `.lex.0f.wx b5 /r .o64`  | `reg/w,mrm/r`      | `64`   |
 | movdiri `mw,rw`      | `.lex.0f38.w1 f9 /r .o64`| `mrm/w,reg/r`      | `64/32`|
 
-_figure 4: x86 metadata table search showing string instructions._
+_figure 4: x86 metadata table search showing 64-bit overrides._
 
 ### Fancy Instruction Formatting Tool
 
