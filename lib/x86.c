@@ -1594,10 +1594,10 @@ uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
     }
 }
 
-uint x86_disp_scale(x86_codec *c, uint regsz)
+uint x86_disp8_scale(x86_codec *c, uint regsz)
 {
-    /* todo - EVEX scales needs tuple type */
-    uint m = 1;
+    /* todo - EVEX compressed displacement for disp8 needs element size
+     * and tuple type. this code is a simple but broken heuristic. */
     switch (c->flags & x86_ce_mask) {
     case x86_ce_evex:
         switch (regsz) {
@@ -1632,7 +1632,7 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
 {
     uint regsz = x86_opr_reg_size(q, mode, opr, enc);
     uint addrsz = x86_mode_addr_size(mode);
-    int disp = c->disp32 * x86_disp_scale(c, regsz);
+    int disp = c->disp32;
 
     switch(q.mod) {
     case x86_mod_disp0:
@@ -1670,6 +1670,8 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
         }
         break;
     case x86_mod_disp8:
+         disp *= x86_disp8_scale(c, regsz);
+         /* fallthrough */
     case x86_mod_dispw:
         if (q.rm == x86_rm_disp_sib) {
             if (q.s) {
