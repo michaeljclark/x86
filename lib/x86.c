@@ -811,17 +811,20 @@ static void x86_build_prefix_table(const x86_opc_data *table,
         }
 
         /* extract opcode and function */
+        size_t len = 0;
         for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++)
         {
             uint func;
             switch (d->enc[i] & x86_enc_t_mask) {
             case x86_enc_t_opcode:
-                opc[0] = d->enc[i] & 0xff;
-                opm[0] = 0xff;
+                opc[len] = d->enc[i] & 0xff;
+                opm[len] = 0xff;
+                len++;
                 break;
             case x86_enc_t_opcode_r:
-                opc[0] = d->enc[i] & 0xff;
-                opm[0] = 0xf8;
+                opc[len] = d->enc[i] & 0xff;
+                opm[len] = 0xf8;
+                len++;
                 break;
             case x86_enc_t_modrm_n:
                 func = (d->enc[i] & x86_enc_modrm_mask) >> x86_enc_modrm_shift;
