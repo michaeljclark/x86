@@ -335,7 +335,7 @@
 "OUTSB dx, psi","LEX.WN 6E rep","Valid","Valid","Valid","","RDX (r)","RSI (r)","","","","Output byte from memory location specified in DS:(E)SI or RSI to I/O port specified in DX."
 "OUTSD dx, psi","LEX.WX 6F o32 rep","Valid","Valid","Valid","","RDX (r)","RSI (r)","","","","Output doubleword from memory location specified in DS:(E)SI or RSI to I/O port specified in DX."
 "OUTSW dx, psi","LEX.WX 6F o16 rep","Valid","Valid","Valid","","RDX (r)","RSI (r)","","","","Output word from memory location specified in DS:(E)SI or RSI to I/O port specified in DX."
-"PAUSE","LEX.WN F3 90","Valid","Valid","Valid","","","","","","","Gives hint to processor that improves performance of spin-wait loops."
+"PAUSE","LEX.F3.WN 90","Valid","Valid","Valid","","","","","","","Gives hint to processor that improves performance of spin-wait loops."
 "POP ES","LEX.WN 07","Invalid","Valid","Valid","","SEG (w)","RSP (r, w, i)","","","","Pop top of stack into ES; increment stack pointer."
 "POP SS","LEX.WN 17","Invalid","Valid","Valid","","SEG (w)","RSP (r, w, i)","","","","Pop top of stack into SS; increment stack pointer."
 "POP DS","LEX.WN 1F","Invalid","Valid","Valid","","SEG (w)","RSP (r, w, i)","","","","Pop top of stack into DS; increment stack pointer."
