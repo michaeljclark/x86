@@ -46,5 +46,8 @@ endforeach()
 add_executable(x86_opcodes tests/x86_opcodes.c)
 target_link_libraries(x86_opcodes x86)
 
+add_executable(x86_bench tests/x86_bench.c)
+target_link_libraries(x86_bench x86)
+
 add_executable(x86_disasm tests/x86_disasm.c)
 target_link_libraries(x86_disasm x86)

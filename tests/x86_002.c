@@ -12,22 +12,6 @@ char* mode_name(uint mode)
     return buf;
 }
 
-char* prefix_name(uint prefix)
-{
-    static char buf[64];
-    x86_prefix_name(buf, sizeof(buf), prefix, "|");
-    printf("%08x %s\n", prefix, buf);
-    return buf;
-}
-
-char* prefix_namen(uint prefix)
-{
-    static char buf[64];
-    x86_prefix_namen(buf, sizeof(buf), prefix, "|");
-    printf("%08x %s\n", prefix, buf);
-    return buf;
-}
-
 char* ord_name(uint ord)
 {
     static char buf[64];
@@ -69,69 +53,6 @@ void test_x86_mode_name()
     assert(strcmp(mode_name(x86_modes_16), "16") == 0);
     assert(strcmp(mode_name(x86_modes_32), "32") == 0);
     assert(strcmp(mode_name(x86_modes_64), "64") == 0);
-}
-
-
-void test_x86_prefix_name()
-{
-    printf("\n# x86_prefix_name\n");
-    assert(strcmp(prefix_name(1 << x86_pn_es), "es") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_cs), "cs") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_ss), "ss") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_ds), "ds") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rex_b), "rex.b") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rex_x), "rex.x") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rex_r), "rex.r") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rex_w), "rex.w") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_evex), "evex") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_fs), "fs") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_gs), "gs") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_osize), "osize") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_asize), "asize") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_wait), "wait") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_vex3), "vex3") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_vex2), "vex2") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rex2), "rex2") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_lock), "lock") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_repne), "repne") == 0);
-    assert(strcmp(prefix_name(1 << x86_pn_rep), "rep") == 0);
-    assert(strcmp(prefix_name((1 << x86_pn_es) |
-                              (1 << x86_pn_cs) |
-                              (1 << x86_pn_ss) |
-                              (1 << x86_pn_ds) |
-                              (1 << x86_pn_fs) |
-                              (1 << x86_pn_gs)), "es|cs|ss|ds|fs|gs") == 0);
-}
-
-void test_x86_prefix_namen()
-{
-    printf("\n# x86_prefix_namen\n");
-    assert(strcmp(prefix_namen(1 << x86_pn_26), "26") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_2e), "2e") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_36), "36") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_3e), "3e") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_41), "41") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_42), "42") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_44), "44") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_48), "48") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_62), "62") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_64), "64") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_65), "65") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_66), "66") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_67), "67") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_9b), "9b") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_c4), "c4") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_c5), "c5") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_d5), "d5") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_f0), "f0") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_f2), "f2") == 0);
-    assert(strcmp(prefix_namen(1 << x86_pn_f3), "f3") == 0);
-    assert(strcmp(prefix_namen((1 << x86_pn_es) |
-                               (1 << x86_pn_cs) |
-                               (1 << x86_pn_ss) |
-                               (1 << x86_pn_ds) |
-                               (1 << x86_pn_fs) |
-                               (1 << x86_pn_gs)), "26|2e|36|3e|64|65") == 0);
 }
 
 void test_x86_ord_name()
@@ -337,48 +258,6 @@ void test_x86_enc_name()
     assert(strcmp(enc_name(x86_enc_t_lex), ".lex") == 0);
     assert(strcmp(enc_name(x86_enc_t_vex), ".vex") == 0);
     assert(strcmp(enc_name(x86_enc_t_evex), ".evex") == 0);
-    assert(strcmp(enc_name(x86_enc_t_o16), ".o16") == 0);
-    assert(strcmp(enc_name(x86_enc_t_o32), ".o32") == 0);
-    assert(strcmp(enc_name(x86_enc_t_o64), ".o64") == 0);
-    assert(strcmp(enc_name(x86_enc_t_a16), ".a16") == 0);
-    assert(strcmp(enc_name(x86_enc_t_a32), ".a32") == 0);
-    assert(strcmp(enc_name(x86_enc_t_a64), ".a64") == 0);
-    assert(strcmp(enc_name(x86_enc_t_lock), ".lock") == 0);
-    assert(strcmp(enc_name(x86_enc_t_rep), ".rep") == 0);
-    assert(strcmp(enc_name(x86_enc_t_opcode), "") == 0);
-    assert(strcmp(enc_name(x86_enc_t_opcode_r), "+r") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_r), "/r") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_0), "/0") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_1), "/1") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_2), "/2") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_3), "/3") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_4), "/4") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_5), "/5") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_6), "/6") == 0);
-    assert(strcmp(enc_name(x86_enc_t_modrm_7), "/7") == 0);
-    assert(strcmp(enc_name(x86_enc_t_ib), "ib") == 0);
-    assert(strcmp(enc_name(x86_enc_t_iw), "iw") == 0);
-    assert(strcmp(enc_name(x86_enc_t_i16), "i16") == 0);
-    assert(strcmp(enc_name(x86_enc_t_i32), "i32") == 0);
-    assert(strcmp(enc_name(x86_enc_t_i64), "i64") == 0);
-    assert(strcmp(enc_name(x86_enc_t_i16e), "i16e") == 0);
-    assert(strcmp(enc_name(x86_enc_l_lz), ".lz") == 0);
-    assert(strcmp(enc_name(x86_enc_l_l0), ".l0") == 0);
-    assert(strcmp(enc_name(x86_enc_l_l1), ".l1") == 0);
-    assert(strcmp(enc_name(x86_enc_l_128), ".128") == 0);
-    assert(strcmp(enc_name(x86_enc_l_256), ".256") == 0);
-    assert(strcmp(enc_name(x86_enc_l_512), ".512") == 0);
-    assert(strcmp(enc_name(x86_enc_l_lig), ".lig") == 0);
-    assert(strcmp(enc_name(x86_enc_p_66), ".66") == 0);
-    assert(strcmp(enc_name(x86_enc_p_9b), ".9b") == 0);
-    assert(strcmp(enc_name(x86_enc_p_f2), ".f2") == 0);
-    assert(strcmp(enc_name(x86_enc_p_f3), ".f3") == 0);
-    assert(strcmp(enc_name(x86_enc_m_0f), ".0f") == 0);
-    assert(strcmp(enc_name(x86_enc_m_0f38), ".0f38") == 0);
-    assert(strcmp(enc_name(x86_enc_m_0f3a), ".0f3a") == 0);
-    assert(strcmp(enc_name(x86_enc_m_map4), ".map4") == 0);
-    assert(strcmp(enc_name(x86_enc_m_map5), ".map5") == 0);
-    assert(strcmp(enc_name(x86_enc_m_map6), ".map6") == 0);
     assert(strcmp(enc_name(x86_enc_w_w0), ".w0") == 0);
     assert(strcmp(enc_name(x86_enc_w_w1), ".w1") == 0);
     assert(strcmp(enc_name(x86_enc_w_wb), ".wb") == 0);
@@ -386,6 +265,44 @@ void test_x86_enc_name()
     assert(strcmp(enc_name(x86_enc_w_wx), ".wx") == 0);
     assert(strcmp(enc_name(x86_enc_w_ww), ".ww") == 0);
     assert(strcmp(enc_name(x86_enc_w_wig), ".wig") == 0);
+    assert(strcmp(enc_name(x86_enc_m_0f), ".0f") == 0);
+    assert(strcmp(enc_name(x86_enc_m_0f38), ".0f38") == 0);
+    assert(strcmp(enc_name(x86_enc_m_0f3a), ".0f3a") == 0);
+    assert(strcmp(enc_name(x86_enc_m_map4), ".map4") == 0);
+    assert(strcmp(enc_name(x86_enc_m_map5), ".map5") == 0);
+    assert(strcmp(enc_name(x86_enc_m_map6), ".map6") == 0);
+    assert(strcmp(enc_name(x86_enc_p_66), ".66") == 0);
+    assert(strcmp(enc_name(x86_enc_p_9b), ".9b") == 0);
+    assert(strcmp(enc_name(x86_enc_p_f2), ".f2") == 0);
+    assert(strcmp(enc_name(x86_enc_p_f3), ".f3") == 0);
+    assert(strcmp(enc_name(x86_enc_p_rexw), ".w") == 0);
+    assert(strcmp(enc_name(x86_enc_l_lz), ".lz") == 0);
+    assert(strcmp(enc_name(x86_enc_l_l0), ".l0") == 0);
+    assert(strcmp(enc_name(x86_enc_l_l1), ".l1") == 0);
+    assert(strcmp(enc_name(x86_enc_l_128), ".128") == 0);
+    assert(strcmp(enc_name(x86_enc_l_256), ".256") == 0);
+    assert(strcmp(enc_name(x86_enc_l_512), ".512") == 0);
+    assert(strcmp(enc_name(x86_enc_l_lig), ".lig") == 0);
+    assert(strcmp(enc_name(x86_enc_o_opcode_r), "") == 0);
+    assert(strcmp(enc_name(x86_enc_o_opcode), "") == 0);
+    assert(strcmp(enc_name(x86_enc_f_opcode_r), "") == 0);
+    assert(strcmp(enc_name(x86_enc_f_opcode), "") == 0);
+    assert(strcmp(enc_name(x86_enc_f_modrm_n), "") == 0);
+    assert(strcmp(enc_name(x86_enc_f_modrm_r), "") == 0);
+    assert(strcmp(enc_name(x86_enc_i_ib), " ib") == 0);
+    assert(strcmp(enc_name(x86_enc_i_iw), " iw") == 0);
+    assert(strcmp(enc_name(x86_enc_i_i16), " i16") == 0);
+    assert(strcmp(enc_name(x86_enc_i_i32), " i32") == 0);
+    assert(strcmp(enc_name(x86_enc_i_i64), " i64") == 0);
+    assert(strcmp(enc_name(x86_enc_i2_i16e), " i16e") == 0);
+    assert(strcmp(enc_name(x86_enc_s_o16), " .o16") == 0);
+    assert(strcmp(enc_name(x86_enc_s_o32), " .o32") == 0);
+    assert(strcmp(enc_name(x86_enc_s_o64), " .o64") == 0);
+    assert(strcmp(enc_name(x86_enc_s_a16), " .a16") == 0);
+    assert(strcmp(enc_name(x86_enc_s_a32), " .a32") == 0);
+    assert(strcmp(enc_name(x86_enc_s_a64), " .a64") == 0);
+    assert(strcmp(enc_name(x86_enc_s_lock), " .lock") == 0);
+    assert(strcmp(enc_name(x86_enc_s_rep), " .rep") == 0);
 }
 
 void test_x86_reg_name()
@@ -430,8 +347,6 @@ int main(int argc, char const *argv[])
 {
     test_x86_sizeof();
     test_x86_mode_name();
-    test_x86_prefix_name();
-    test_x86_prefix_namen();
     test_x86_ord_name();
     test_x86_opr_name();
     test_x86_enc_name();

@@ -166,6 +166,27 @@ operand_map = {
     ''                                                      : None
 }
 
+tuple_map = {
+    'Full'                : 'full',
+    'Full Mem'            : 'full_mem',
+    'Full Vector'         : 'full',
+    'Full Vector Mem'     : 'full_mem',
+    'Half Vector'         : 'half',
+    'Half Vector Mem'     : 'half_mem',
+    'MOVDDUP'             : 'movddup',
+    'Mem128'              : 'mem128',
+    'Oct Vector Mem'      : 'octant_mem',
+    'Quarter Vector'      : 'quarter',
+    'Quarter Vector Mem'  : 'quarter_mem',
+    'Scalar'              : 'tuple1_scalar',
+    'Tuple1 Fixed'        : 'tuple1_fixed',
+    'Tuple1 Scalar'       : 'tuple1_scalar',
+    'Tuple1_4X'           : 'tuple1_rs4',
+    'Tuple2'              : 'tuple2',
+    'Tuple4'              : 'tuple4',
+    'Tuple8'              : 'tuple8'
+}
+
 opcode_map = {
     '<xmm0>'  : 'reg_xmm0',
     '<xmm0-7>': 'reg_xmm0_7',
@@ -289,30 +310,23 @@ def translate_modes(modes):
 
 # add 9b, del rex rex.w
 def translate_encoding(encoding):
-    prefixes = [ 'hex', 'lex', 'vex', 'evex', 'lock', 'rep',
-        'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
+    prefixes = [ 'hex', 'lex', 'vex', 'evex' ]
+    suffixes = [ 'lock', 'rep', 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
     pbytes = [ '66', '9b', 'f2', 'f3' ]
     maps = { '0f', '0f38', '0f3a', 'map4', 'map5', 'map6' }
     widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
     lengths = { 'lig', 'lz', 'l0', 'l1', '128', '256', '512' }
     flags = { 'nds', 'ndd', 'dds' }
-    immediates = { 'ib', 'iw', 'i16', 'i32', 'i64', 'i16e' }
-    mods = {
-        '/r': 'modrm_r',
-        '/0': 'modrm_0',
-        '/1': 'modrm_1',
-        '/2': 'modrm_2',
-        '/3': 'modrm_3',
-        '/4': 'modrm_4',
-        '/5': 'modrm_5',
-        '/6': 'modrm_6',
-        '/7': 'modrm_7',
-    }
-    opl = []
-    has_pfx, has_pbyte, has_map, has_opc = False, False, False, False
+    imm = { 'ib', 'iw', 'i16', 'i32', 'i64' }
+    imm2 = { 'i16e' }
+    mods = { '/r', '/0', '/1', '/2', '/3', '/4', '/5', '/6', '/7' }
+    pl = []
+    opc = ['0x00','0x00']
+    opm = ['0x00','0x00']
+    oplen = 0
+    has_pfx, has_pbyte, has_map = False, False, False
     comps = encoding.split(" ")
     for el in comps:
-        pl = []
         p = None
         for sel in prefixes:
             if el.find(sel) == 0 and ( p == None or len(sel) > len(p) ):
@@ -346,22 +360,42 @@ def translate_encoding(encoding):
                 pl += [vl]
             if vf:
                 pl += [vf]
-            opl += ["|".join(pl)]
             if p == 'vex' or p == 'evex' or p == 'lex':
                 has_pfx = True
-        elif el in immediates:
-            opl += ['x86_enc_t_%s' % el]
+        elif el in maps and len(comps) > 1 and not (has_map or has_pfx):
+            pl += ['x86_enc_m_%s' % el]
+            has_map = True
+        elif el in suffixes:
+            pl += ['x86_enc_s_%s' % el]
+        elif el in imm:
+            pl += ['x86_enc_i_%s' % el]
+        elif el in imm2:
+            pl += ['x86_enc_i2_%s' % el]
         elif el in mods:
-            opl += ['x86_enc_t_%s' % mods[el]]
+            if oplen == 2:
+                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
+            pl += ['x86_enc_f_modrm_r' if el == '/r' else 'x86_enc_f_modrm_n']
+            if el != '/r':
+                opc[oplen] = '0x{:02x}'.format(int(el[1]) << 3)
+                opm[oplen] = '0x38'
+            oplen += 1
         elif len(el) == 2 and all(c in string.hexdigits for c in el[0:2]):
-            opl += ['x86_enc_t_opcode|0x%s' % el[0:2]]
-            has_opc = True
+            if oplen == 2:
+                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
+            pl += ['x86_enc_o_opcode' if oplen == 0 else 'x86_enc_f_opcode']
+            opc[oplen] = '0x%s' % el[0:2]
+            opm[oplen] = '0xff'
+            oplen += 1
         elif len(el) == 4 and all(c in string.hexdigits for c in el[0:2]) and el[2:4] == '+r':
-            opl += ['x86_enc_t_opcode_r|0x%s' % el[0:2]]
-            has_opc = True
+            if oplen == 2:
+                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
+            pl += ['x86_enc_o_opcode_r' if oplen == 0 else 'x86_enc_f_opcode_r']
+            opc[oplen] = '0x%s' % el[0:2]
+            opm[oplen] = '0xf8'
+            oplen += 1
         else:
             raise Exception("unknown element '%s' for encoding '%s" % (el, encoding))
-    return opl
+    return "|".join(pl), opc, opm
 
 def translate_operands(operands):
     oprlist = []
@@ -394,7 +428,7 @@ def print_insn(x86_insn):
     for row in x86_insn:
         opcode, encoding, modes, ext, order, tupletype, description = row
         opcode = opcode.replace('reg_','')
-        print("| %-52s | %-30s | %-23s | %-8s |" % (opcode, encoding, order, modes))
+        print("| %-53s | %-31s | %-23s | %-8s |" % (opcode, encoding, order, modes))
 
 def opcode_list(x86_insn):
     ops = set()
@@ -437,7 +471,7 @@ def print_opcode_strings(x86_insn):
 def print_opcode_table(x86_insn):
     print('const size_t x86_opc_table_size = %d;' % (len(x86_insn) + 1))
     print("const x86_opc_data x86_opc_table[] =\n{")
-    print('  { x86_op_NIL, 0, 0, 0,\n    { } },')
+    print('  { x86_op_NIL, 0, 0, 0,\n    0, { } },')
     oprlist = operand_list(x86_insn)
     ordlist = order_list(x86_insn)
     oprmap = {v: i for i, v in enumerate(oprlist)}
@@ -448,10 +482,10 @@ def print_opcode_table(x86_insn):
         oprlist = translate_operands(opr)
         ordlist = translate_order(order)
         modes = translate_modes(modes)
-        enclist = translate_encoding(encoding)
-        print('  { %s, %s, %d, %d,\n    { %s } },' %
+        enc, opc, opm = translate_encoding(encoding)
+        print('  { %s, %s, %d, %d,\n    %s, { %s, %s }, { %s, %s } },' %
             ('x86_op_%s' % op, modes, oprmap[tuple(oprlist)],
-                ordmap[tuple(ordlist)], ", ".join(enclist)))
+                ordmap[tuple(ordlist)], enc, opc[0], opc[1], opm[0], opm[1]))
     print("};")
 
 def print_operand_table(x86_insn):

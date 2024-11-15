@@ -4,23 +4,18 @@
 
 #include "x86.h"
 
-void x86_disasm(uchar *insn, size_t insnlen)
+void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen)
 {
     x86_buffer buf;
     x86_codec codec;
-    char data[32], str[128];
+    char str[128];
     size_t nbytes = 0, len = 0;
 
-    memset(data, 0, sizeof(data));
-    memset(&codec, 0, sizeof(codec));
-    codec.flags |= x86_cf_amd64;
+    x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
-    x86_buffer_init(&buf, data);
-    x86_buffer_write(&buf, insn, insnlen);
-
-    if (x86_codec_read(&buf, &codec, &nbytes, insnlen) == 0) {
+    if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
-        len += x86_format_op(str+len, sizeof(str)-len, &codec);
+        len += x86_format_op(str+len, sizeof(str)-len, ctx, &codec);
     } else {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
         len += snprintf(str+len, sizeof(str)-len, "%s", "<unknown>");
@@ -51,7 +46,9 @@ int main(int argc, char **argv)
         } else {
             buf = parse_hex((len = argc - 1), argv + 1);
         }
-        x86_disasm(buf, len);
+        x86_ctx *ctx = x86_ctx_create(x86_modes_64);
+        x86_disasm(ctx, buf, len);
+        x86_ctx_destroy(ctx);
         free(buf);
     } else {
         fprintf(stderr, "usage: %s [-d] [hexbytes]\n", argv[0]);

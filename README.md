@@ -242,7 +242,8 @@ translated to enums and arrays by `scripts/x86_tablegen.py` which then map to
 the enum type and set definitions in `include/x86.h`:
 
 - ___enum x86_opr___ - operand encoding enum type and set attributes.
-- ___enum x86_enc___ - instruction encoding enum type and set attributes.
+- ___enum x86_enc___ - instruction encoding prefix enum type and set attributes.
+- ___enum x86_suf___ - instruction encoding suffix enum type and set attributes.
 - ___enum x86_ord___ - operand to instruction encoding field map set attributes.
 
 The enum values are combined together with _logical or_ combinations to
@@ -266,8 +267,10 @@ slashes are translated to underscores.
 This section describes the mnemonics used in the primary data structures:
 
 - ___Appendix A - Operand Encoding___ - describes instruction operands.
-- ___Appendix B - Instruction Encoding___ - describes instruction opcodes.
-- ___Appendix C - Operand Order___ - describes instruction field encoding.
+- ___Appendix B - Operand Order___ - describes instruction field ordering.
+- ___Appendix C - Instruction Encoding Prefixes___ - describes encoding prefixes.
+- ___Appendix D - Instruction Encoding Prefixes___ - describes encoding suffixes.
+- ___Appendix E - Instruction Synthesis Notes___ - notes on prefix synthesis.
 
 ### Appendix A - Operand Encoding
 
@@ -375,70 +378,7 @@ _(enum x86_opr)_.
 | `memfar16/32`      | indirect 16-bit seg 32-bit far displacement           |
 | `memfar16/64`      | indirect 16-bit seg 64-bit far displacement           |
 
-### Appendix B - Instruction Encoding
-
-This table outlines the mnemonics used in instruction encodings
-_(enum x86_enc)_.
-
-| mnemonic | description                                                     |
-|:---------|:----------------------------------------------------------------|
-| `lex`    | legacy instruction                                              |
-| `vex`    | VEX encoded instruction                                         |
-| `evex`   | EVEX encoded instruction                                        |
-| `.lz`    | VEX encoding L=0 and L=1 is unassigned                          |
-| `.l0`    | VEX encoding L=0                                                |
-| `.l1`    | VEX encoding L=1                                                |
-| `.lig`   | VEX/EVEX encoding ignores length L=any                          |
-| `.128`   | VEX/EVEX encoding uses 128-bit vector L=0                       |
-| `.256`   | VEX/EVEX encoding uses 256-bit vector L=1                       |
-| `.512`   | EVEX encoding uses 512-bit vector L=2                           |
-| `.66`    | prefix byte 66 is used for opcode mapping                       |
-| `.f2`    | prefix byte f2 is used for opcode mapping                       |
-| `.f3`    | prefix byte f3 is used for opcode mapping                       |
-| `.9b`    | prefix byte 9b is used for opcode mapping (x87 only)            |
-| `.0f`    | map 0f is used in opcode                                        |
-| `.0f38`  | map 0f38 is used in opcode                                      |
-| `.0f3a`  | map 0f3a is used in opcode                                      |
-| `.wn`    | no register extension, fixed operand size                       |
-| `.wb`    | register extension, fixed operand size                          |
-| `.wx`    | REX and/or operand size extension, optional 66 or REX.W0/W1     |
-| `.ww`    | REX and/or operand size extension, optional 66 and REX.WIG      |
-| `.w0`    | LEX/VEX/EVEX optional REX W0 with operand size used in opcode   |
-| `.w1`    | LEX/VEX/EVEX mandatory REX W1 with operand size used in opcode  |
-| `.wig`   | VEX/EVEX encoding width ignored                                 |
-| `/r`     | ModRM byte                                                      |
-| `/0../9` | ModRM byte with 'r' field used for functions 0 to 7             |
-| `XX+r`   | opcode byte with 3-bit register added to the opcode             |
-| `XX`     | opcode byte                                                     |
-| `ib`     | 8-bit immediate                                                 |
-| `iw`     | 16-bit or 32-bit immediate (real mode XOR operand size)         |
-| `i16`    | 16-bit immediate                                                |
-| `i32`    | 32-bit immediate                                                |
-| `i64`    | 64-bit immediate                                                |
-| `o16`    | encoding uses prefix 66 in 32-bit and 64-bit modes              |
-| `o32`    | encoding uses prefix 66 in 16-bit mode                          |
-| `o64`    | encoding is used exclusively in 64-bit mode with REX.W=1        |
-| `a16`    | encoding uses prefix 67 in 32-bit and 64-bit modes              |
-| `a32`    | encoding uses prefix 67 in 16-bit mode                          |
-| `a64`    | encoding is used exclusively in 64-bit mode                     |
-| `lock`   | memory operand encodings can be used with the LOCK prefix       |
-
-#### Instruction Synthesis Notes
-
-The `.wx` and `.ww` mnemonics are used to synthesize prefix combinations:
-
-- `.wx` labels opcodes with _default 32-bit operand size in 64-bit mode_
-  to synthesize 16/32/64-bit versions using REX and operand size prefix,
-  or in 16/32-bit modes synthesizes 16/32-bit versions using only the
-  operand size prefix. REX is used for register extension on opcodes
-  with `rw` or `rw/mw` operands or fixed register operands like `aw`.
-- `.ww` labels opcodes with _default 64-bit operand size in 64-bit mode_
-  to synthesize 16/64-bit versions using only the operand size prefix,
-  or in 16/32-bit modes. synthesizes 16/32-bit versions using only the
-  operand size prefix. REX is used for register extension on opcodes
-  with `rw` or `rw/mw` operands or fixed register operands like `aw`.
-
-### Appendix C - Operand Order
+### Appendix B - Operand Order
 
 This table outlines the mnemonics used to map operand field order
 _(enum x86_ord)_.
@@ -469,3 +409,74 @@ _(enum x86_ord)_.
 | `xmm0_7` | constant xmm0-xmm7                                              |
 | `mxcsr`  | constant mxcsr                                                  |
 | `rflags` | constant rflags                                                 |
+
+### Appendix C - Instruction Encoding Prefixes
+
+This table outlines the mnemonics used in instruction encodings
+_(enum x86_enc)_.
+
+| mnemonic | description                                                     |
+|:---------|:----------------------------------------------------------------|
+| `lex`    | legacy instruction                                              |
+| `vex`    | VEX encoded instruction                                         |
+| `evex`   | EVEX encoded instruction                                        |
+| `.lz`    | VEX encoding L=0 and L=1 is unassigned                          |
+| `.l0`    | VEX encoding L=0                                                |
+| `.l1`    | VEX encoding L=1                                                |
+| `.lig`   | VEX/EVEX encoding ignores length L=any                          |
+| `.128`   | VEX/EVEX encoding uses 128-bit vector L=0                       |
+| `.256`   | VEX/EVEX encoding uses 256-bit vector L=1                       |
+| `.512`   | EVEX encoding uses 512-bit vector L=2                           |
+| `.66`    | prefix byte 66 is used for opcode mapping                       |
+| `.f2`    | prefix byte f2 is used for opcode mapping                       |
+| `.f3`    | prefix byte f3 is used for opcode mapping                       |
+| `.9b`    | prefix byte 9b is used for opcode mapping (x87 only)            |
+| `.0f`    | map 0f is used in opcode                                        |
+| `.0f38`  | map 0f38 is used in opcode                                      |
+| `.0f3a`  | map 0f3a is used in opcode                                      |
+| `.wn`    | no register extension, fixed operand size                       |
+| `.wb`    | register extension, fixed operand size                          |
+| `.wx`    | REX and/or operand size extension, optional 66 or REX.W0/W1     |
+| `.ww`    | REX and/or operand size extension, optional 66 and REX.WIG      |
+| `.w0`    | LEX/VEX/EVEX optional REX W0 with operand size used in opcode   |
+| `.w1`    | LEX/VEX/EVEX mandatory REX W1 with operand size used in opcode  |
+| `.wig`   | VEX/EVEX encoding width ignored                                 |
+
+### Appendix D - Instruction Encoding Suffixes
+
+This table outlines the mnemonics used in instruction encodings
+_(enum x86_suf)_.
+
+| mnemonic | description                                                     |
+|:---------|:----------------------------------------------------------------|
+| `/r`     | ModRM byte                                                      |
+| `/0../9` | ModRM byte with 'r' field used for functions 0 to 7             |
+| `XX+r`   | opcode byte with 3-bit register added to the opcode             |
+| `XX`     | opcode byte                                                     |
+| `ib`     | 8-bit immediate                                                 |
+| `iw`     | 16-bit or 32-bit immediate (real mode XOR operand size)         |
+| `i16`    | 16-bit immediate                                                |
+| `i32`    | 32-bit immediate                                                |
+| `i64`    | 64-bit immediate                                                |
+| `o16`    | encoding uses prefix 66 in 32-bit and 64-bit modes              |
+| `o32`    | encoding uses prefix 66 in 16-bit mode                          |
+| `o64`    | encoding is used exclusively in 64-bit mode with REX.W=1        |
+| `a16`    | encoding uses prefix 67 in 32-bit and 64-bit modes              |
+| `a32`    | encoding uses prefix 67 in 16-bit mode                          |
+| `a64`    | encoding is used exclusively in 64-bit mode                     |
+| `lock`   | memory operand encodings can be used with the LOCK prefix       |
+
+### Appendix E - Instruction Synthesis Notes
+
+The `.wx` and `.ww` mnemonics are used to synthesize prefix combinations:
+
+- `.wx` labels opcodes with _default 32-bit operand size in 64-bit mode_
+  to synthesize 16/32/64-bit versions using REX and operand size prefix,
+  or in 16/32-bit modes synthesizes 16/32-bit versions using only the
+  operand size prefix. REX is used for register extension on opcodes
+  with `rw` or `rw/mw` operands or fixed register operands like `aw`.
+- `.ww` labels opcodes with _default 64-bit operand size in 64-bit mode_
+  to synthesize 16/64-bit versions using only the operand size prefix,
+  or in 16/32-bit modes. synthesizes 16/32-bit versions using only the
+  operand size prefix. REX is used for register extension on opcodes
+  with `rw` or `rw/mw` operands or fixed register operands like `aw`.

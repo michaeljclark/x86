@@ -74,30 +74,6 @@ x86_map_str x86_map_names[] =
     { x86_map_0f,              "0f"                },
 };
 
-x86_map_str x86_prefix_names[] =
-{
-    { 1 << x86_pn_es,           "es"               },
-    { 1 << x86_pn_cs,           "cs"               },
-    { 1 << x86_pn_ss,           "ss"               },
-    { 1 << x86_pn_ds,           "ds"               },
-    { 1 << x86_pn_rex_b,        "rex.b"            },
-    { 1 << x86_pn_rex_x,        "rex.x"            },
-    { 1 << x86_pn_rex_r,        "rex.r"            },
-    { 1 << x86_pn_rex_w,        "rex.w"            },
-    { 1 << x86_pn_evex,         "evex"             },
-    { 1 << x86_pn_fs,           "fs"               },
-    { 1 << x86_pn_gs,           "gs"               },
-    { 1 << x86_pn_osize,        "osize"            },
-    { 1 << x86_pn_asize,        "asize"            },
-    { 1 << x86_pn_wait,         "wait"             },
-    { 1 << x86_pn_vex3,         "vex3"             },
-    { 1 << x86_pn_vex2,         "vex2"             },
-    { 1 << x86_pn_rex2,         "rex2"             },
-    { 1 << x86_pn_lock,         "lock"             },
-    { 1 << x86_pn_repne,        "repne"            },
-    { 1 << x86_pn_rep,          "rep"              },
-};
-
 x86_map_str x86_ord_names[] =
 {
     { x86_ord_rflags,           "rflags"           },
@@ -289,31 +265,26 @@ x86_map_str x86_opr_names[] =
 
 x86_map_str x86_enc_names[] =
 {
-    { x86_enc_t_i16e,           "i16e"             },
-    { x86_enc_t_i64,            "i64"              },
-    { x86_enc_t_i32,            "i32"              },
-    { x86_enc_t_i16,            "i16"              },
-    { x86_enc_t_iw,             "iw"               },
-    { x86_enc_t_ib,             "ib"               },
-    { x86_enc_t_opcode,         ""                 },
-    { x86_enc_t_opcode_r,       "+r"               },
-    { x86_enc_t_modrm_7,        "/7"               },
-    { x86_enc_t_modrm_6,        "/6"               },
-    { x86_enc_t_modrm_5,        "/5"               },
-    { x86_enc_t_modrm_4,        "/4"               },
-    { x86_enc_t_modrm_3,        "/3"               },
-    { x86_enc_t_modrm_2,        "/2"               },
-    { x86_enc_t_modrm_1,        "/1"               },
-    { x86_enc_t_modrm_0,        "/0"               },
-    { x86_enc_t_modrm_r,        "/r"               },
-    { x86_enc_t_rep,            ".rep"             },
-    { x86_enc_t_lock,           ".lock"            },
-    { x86_enc_t_a64,            ".a64"             },
-    { x86_enc_t_a32,            ".a32"             },
-    { x86_enc_t_a16,            ".a16"             },
-    { x86_enc_t_o64,            ".o64"             },
-    { x86_enc_t_o32,            ".o32"             },
-    { x86_enc_t_o16,            ".o16"             },
+    { x86_enc_s_a64,            " .a64"            },
+    { x86_enc_s_a32,            " .a32"            },
+    { x86_enc_s_a16,            " .a16"            },
+    { x86_enc_s_o64,            " .o64"            },
+    { x86_enc_s_o32,            " .o32"            },
+    { x86_enc_s_o16,            " .o16"            },
+    { x86_enc_s_rep,            " .rep"            },
+    { x86_enc_s_lock,           " .lock"           },
+    { x86_enc_i2_i16e,          " i16e"            },
+    { x86_enc_i_i64,            " i64"             },
+    { x86_enc_i_i32,            " i32"             },
+    { x86_enc_i_i16,            " i16"             },
+    { x86_enc_i_iw,             " iw"              },
+    { x86_enc_i_ib,             " ib"              },
+    { x86_enc_f_opcode_r,       ""                 },
+    { x86_enc_f_opcode,         ""                 },
+    { x86_enc_f_modrm_n,        ""                 },
+    { x86_enc_f_modrm_r,        ""                 },
+    { x86_enc_o_opcode_r,       ""                 },
+    { x86_enc_o_opcode,         ""                 },
     { x86_enc_t_evex,           ".evex"            },
     { x86_enc_t_vex,            ".vex"             },
     { x86_enc_t_lex,            ".lex"             },
@@ -324,6 +295,7 @@ x86_map_str x86_enc_names[] =
     { x86_enc_l_l1,             ".l1"              },
     { x86_enc_l_l0,             ".l0"              },
     { x86_enc_l_lz,             ".lz"              },
+    { x86_enc_p_rexw,           ".w"               },
     { x86_enc_p_f3,             ".f3"              },
     { x86_enc_p_f2,             ".f2"              },
     { x86_enc_p_9b,             ".9b"              },
@@ -368,26 +340,6 @@ static size_t x86_name_map(x86_map_str * p, char * buf, size_t len, uint ord,
     return count;
 }
 
-size_t x86_prefix_namen(char * buf, size_t len, uint ord, const char *sep)
-{
-    size_t count = 0;
-    int ret = 0;
-    for (;;) {
-        if (ord == 0) break;
-        uint tz = ctz(ord);
-        if (tz < sizeof(x86_prefixes)/sizeof(x86_prefixes[0])) {
-            if (buf == NULL || len - count <= len) {
-                ret = snprintf(buf ? buf + count : NULL,
-                    buf ? len - count : INT_MAX,
-                    "%s%02hhx", count == 0 ? "" : sep, x86_prefixes[tz]);
-                if (ret > 0) count += ret;
-            }
-        }
-        ord &= ~(1 << tz);
-    }
-    return count;
-}
-
 size_t x86_mode_name(char * buf, size_t len, uint mode, const char *sep)
 {
     return x86_name_map(x86_mode_names, buf, len, mode, sep);
@@ -396,11 +348,6 @@ size_t x86_mode_name(char * buf, size_t len, uint mode, const char *sep)
 size_t x86_map_name(char * buf, size_t len, uint mode, const char *sep)
 {
     return x86_name_map(x86_map_names, buf, len, mode, sep);
-}
-
-size_t x86_prefix_name(char * buf, size_t len, uint ord, const char *sep)
-{
-    return x86_name_map(x86_prefix_names, buf, len, ord, sep);
 }
 
 size_t x86_ord_name(char * buf, size_t len, uint ord, const char *sep)
@@ -441,16 +388,16 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
  *  metadata filters
  */
 
-int x86_enc_filter_rex(x86_rex prefix, x86_enc enc)
+int x86_enc_filter_rex(x86_rex prefix, uint enc)
 {
-    uint lex =  ((uint)enc & x86_enc_t_mask) == x86_enc_t_lex;
-    uint ew0 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w0;
-    uint ew1 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w1;
-    uint ewn =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_wn;
-    uint ewb =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_wb;
-    uint eww =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_ww;
-    uint ewx =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_wx;
-    uint ewig = ((uint)enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint lex =  (enc & x86_enc_t_mask) == x86_enc_t_lex;
+    uint ew0 =  (enc & x86_enc_w_mask) == x86_enc_w_w0;
+    uint ew1 =  (enc & x86_enc_w_mask) == x86_enc_w_w1;
+    uint ewn =  (enc & x86_enc_w_mask) == x86_enc_w_wn;
+    uint ewb =  (enc & x86_enc_w_mask) == x86_enc_w_wb;
+    uint eww =  (enc & x86_enc_w_mask) == x86_enc_w_ww;
+    uint ewx =  (enc & x86_enc_w_mask) == x86_enc_w_wx;
+    uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
 
     uint w = (prefix.data[0] >> 3) & 1;
 
@@ -468,13 +415,13 @@ int x86_enc_filter_rex(x86_rex prefix, x86_enc enc)
     return 0;
 }
 
-int x86_enc_filter_rex2(x86_rex2 prefix, x86_enc enc)
+int x86_enc_filter_rex2(x86_rex2 prefix, uint enc)
 {
-    uint lex =  ((uint)enc & x86_enc_t_mask) == x86_enc_t_lex;
-    uint ew0 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w0;
-    uint ew1 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w1;
-    uint ewig = ((uint)enc & x86_enc_w_mask) == x86_enc_w_wig;
-    uint em =   ((uint)enc & x86_enc_m_mask) >> x86_enc_m_shift;
+    uint lex =  (enc & x86_enc_t_mask) == x86_enc_t_lex;
+    uint ew0 =  (enc & x86_enc_w_mask) == x86_enc_w_w0;
+    uint ew1 =  (enc & x86_enc_w_mask) == x86_enc_w_w1;
+    uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint em =   (enc & x86_enc_m_mask) >> x86_enc_m_shift;
 
     uint m = (prefix.data[0] >> 7) & 1;
     uint w = (prefix.data[0] >> 3) & 1;
@@ -490,22 +437,22 @@ int x86_enc_filter_rex2(x86_rex2 prefix, x86_enc enc)
     return 0;
 }
 
-int x86_enc_filter_vex2(x86_vex2 prefix, x86_enc enc)
+int x86_enc_filter_vex2(x86_vex2 prefix, uint enc)
 {
-    uint vex =  ((uint)enc & x86_enc_t_mask) == x86_enc_t_vex;
-    uint ew0 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w0;
-    uint ewig = ((uint)enc & x86_enc_w_mask) == x86_enc_w_wig;
-    uint lz =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_lz;
-    uint l0 =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_l0;
-    uint l1 =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_l1;
-    uint l128 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_128;
-    uint l256 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_256;
-    uint lig =  ((uint)enc & x86_enc_l_mask) == x86_enc_l_lig;
-    uint np =   ((uint)enc & x86_enc_p_mask) == x86_enc_p_none;
-    uint p66 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_66;
-    uint pf2 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f2;
-    uint pf3 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f3;
-    uint em =   ((uint)enc & x86_enc_m_mask) >> x86_enc_m_shift;
+    uint vex =  (enc & x86_enc_t_mask) == x86_enc_t_vex;
+    uint ew0 =  (enc & x86_enc_w_mask) == x86_enc_w_w0;
+    uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint lz =   (enc & x86_enc_l_mask) == x86_enc_l_lz;
+    uint l0 =   (enc & x86_enc_l_mask) == x86_enc_l_l0;
+    uint l1 =   (enc & x86_enc_l_mask) == x86_enc_l_l1;
+    uint l128 = (enc & x86_enc_l_mask) == x86_enc_l_128;
+    uint l256 = (enc & x86_enc_l_mask) == x86_enc_l_256;
+    uint lig =  (enc & x86_enc_l_mask) == x86_enc_l_lig;
+    uint np =   (enc & x86_enc_p_mask) == x86_enc_p_none;
+    uint p66 =  (enc & x86_enc_p_mask) == x86_enc_p_66;
+    uint pf2 =  (enc & x86_enc_p_mask) == x86_enc_p_f2;
+    uint pf3 =  (enc & x86_enc_p_mask) == x86_enc_p_f3;
+    uint em =   (enc & x86_enc_m_mask) >> x86_enc_m_shift;
 
     uint p = (prefix.data[0] >> 0) & 3;
     uint l = (prefix.data[0] >> 2) & 1;
@@ -529,23 +476,23 @@ int x86_enc_filter_vex2(x86_vex2 prefix, x86_enc enc)
     return 0;
 }
 
-int x86_enc_filter_vex3(x86_vex3 prefix, x86_enc enc)
+int x86_enc_filter_vex3(x86_vex3 prefix, uint enc)
 {
-    uint vex =  ((uint)enc & x86_enc_t_mask) == x86_enc_t_vex;
-    uint ew0 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w0;
-    uint ew1 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w1;
-    uint ewig = ((uint)enc & x86_enc_w_mask) == x86_enc_w_wig;
-    uint lz =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_lz;
-    uint l0 =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_l0;
-    uint l1 =   ((uint)enc & x86_enc_l_mask) == x86_enc_l_l1;
-    uint l128 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_128;
-    uint l256 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_256;
-    uint lig =  ((uint)enc & x86_enc_l_mask) == x86_enc_l_lig;
-    uint np =   ((uint)enc & x86_enc_p_mask) == x86_enc_p_none;
-    uint p66 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_66;
-    uint pf2 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f2;
-    uint pf3 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f3;
-    uint em =   ((uint)enc & x86_enc_m_mask) >> x86_enc_m_shift;
+    uint vex =  (enc & x86_enc_t_mask) == x86_enc_t_vex;
+    uint ew0 =  (enc & x86_enc_w_mask) == x86_enc_w_w0;
+    uint ew1 =  (enc & x86_enc_w_mask) == x86_enc_w_w1;
+    uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint lz =   (enc & x86_enc_l_mask) == x86_enc_l_lz;
+    uint l0 =   (enc & x86_enc_l_mask) == x86_enc_l_l0;
+    uint l1 =   (enc & x86_enc_l_mask) == x86_enc_l_l1;
+    uint l128 = (enc & x86_enc_l_mask) == x86_enc_l_128;
+    uint l256 = (enc & x86_enc_l_mask) == x86_enc_l_256;
+    uint lig =  (enc & x86_enc_l_mask) == x86_enc_l_lig;
+    uint np =   (enc & x86_enc_p_mask) == x86_enc_p_none;
+    uint p66 =  (enc & x86_enc_p_mask) == x86_enc_p_66;
+    uint pf2 =  (enc & x86_enc_p_mask) == x86_enc_p_f2;
+    uint pf3 =  (enc & x86_enc_p_mask) == x86_enc_p_f3;
+    uint em =   (enc & x86_enc_m_mask) >> x86_enc_m_shift;
 
     uint m = (prefix.data[0] >> 0) & 31;
     uint w = (prefix.data[1] >> 7) & 1;
@@ -577,21 +524,21 @@ int x86_enc_filter_vex3(x86_vex3 prefix, x86_enc enc)
     return 0;
 }
 
-int x86_enc_filter_evex(x86_evex prefix, x86_enc enc)
+int x86_enc_filter_evex(x86_evex prefix, uint enc)
 {
-    uint evex = ((uint)enc & x86_enc_t_mask) == x86_enc_t_evex;
-    uint ew0 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w0;
-    uint ew1 =  ((uint)enc & x86_enc_w_mask) == x86_enc_w_w1;
-    uint ewig = ((uint)enc & x86_enc_w_mask) == x86_enc_w_wig;
-    uint l128 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_128;
-    uint l256 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_256;
-    uint l512 = ((uint)enc & x86_enc_l_mask) == x86_enc_l_512;
-    uint lig =  ((uint)enc & x86_enc_l_mask) == x86_enc_l_lig;
-    uint np =   ((uint)enc & x86_enc_p_mask) == x86_enc_p_none;
-    uint p66 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_66;
-    uint pf2 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f2;
-    uint pf3 =  ((uint)enc & x86_enc_p_mask) == x86_enc_p_f3;
-    uint em =   ((uint)enc & x86_enc_m_mask) >> x86_enc_m_shift;
+    uint evex = (enc & x86_enc_t_mask) == x86_enc_t_evex;
+    uint ew0 =  (enc & x86_enc_w_mask) == x86_enc_w_w0;
+    uint ew1 =  (enc & x86_enc_w_mask) == x86_enc_w_w1;
+    uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint l128 = (enc & x86_enc_l_mask) == x86_enc_l_128;
+    uint l256 = (enc & x86_enc_l_mask) == x86_enc_l_256;
+    uint l512 = (enc & x86_enc_l_mask) == x86_enc_l_512;
+    uint lig =  (enc & x86_enc_l_mask) == x86_enc_l_lig;
+    uint np =   (enc & x86_enc_p_mask) == x86_enc_p_none;
+    uint p66 =  (enc & x86_enc_p_mask) == x86_enc_p_66;
+    uint pf2 =  (enc & x86_enc_p_mask) == x86_enc_p_f2;
+    uint pf3 =  (enc & x86_enc_p_mask) == x86_enc_p_f3;
+    uint em =   (enc & x86_enc_m_mask) >> x86_enc_m_shift;
 
     uint m = (prefix.data[0] >> 0) & 7;
     uint w = (prefix.data[1] >> 7) & 1;
@@ -632,10 +579,23 @@ static int x86_op_enc_compare_opcode(const void *p1, const void *p2)
 {
     const x86_opc_data *op1 = x86_opc_table + *(size_t*)p1;
     const x86_opc_data *op2 = x86_opc_table + *(size_t*)p2;
-    for (size_t i = 0; i < array_size(op1->enc); i++) {
-        if (op1->enc[i] < op2->enc[i]) return -1;
-        if (op1->enc[i] > op2->enc[i]) return 1;
-    }
+
+    /* split into prefix and suffix */
+    uint mask = x86_enc_o_mask | x86_enc_f_mask | x86_enc_s_mask |
+                x86_enc_i_mask | x86_enc_i2_mask;
+    uint op1pre = op1->enc & ~mask;
+    uint op2pre = op2->enc & ~mask;
+    uint op1suf = op1->enc &  mask;
+    uint op2suf = op2->enc &  mask;
+
+    if (op1pre < op2pre) return -1;
+    if (op1pre > op2pre) return 1;
+    if (op1->opc[0] < op2->opc[0]) return -1;
+    if (op1->opc[0] > op2->opc[0]) return 1;
+    if (op1->opc[1] < op2->opc[1]) return -1;
+    if (op1->opc[1] > op2->opc[1]) return 1;
+    if (op1suf < op2suf) return -1;
+    if (op1suf > op2suf) return 1;
     return 0;
 }
 
@@ -643,7 +603,9 @@ static int x86_op_enc_compare_alpha(const void *p1, const void *p2)
 {
     const x86_opc_data *op1 = x86_opc_table + *(size_t*)p1;
     const x86_opc_data *op2 = x86_opc_table + *(size_t*)p2;
-    return strcmp(x86_op_names[op1->op], x86_op_names[op2->op]);
+    int alpha = strcmp(x86_op_names[op1->op], x86_op_names[op2->op]);
+    if (alpha == 0) return x86_op_enc_compare_opcode(p1, p2);
+    else return alpha;
 }
 
 static x86_table_idx x86_opc_table_index(size_t n)
@@ -658,7 +620,7 @@ x86_table_idx x86_opc_table_identity()
     return x86_opc_table_index(x86_opc_table_size);
 }
 
-x86_table_idx x86_opc_table_sorted(x86_table_idx tab, x86_sort sort)
+x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort)
 {
     switch (sort) {
     case x86_sort_none:
@@ -673,7 +635,7 @@ x86_table_idx x86_opc_table_sorted(x86_table_idx tab, x86_sort sort)
     return tab;
 }
 
-x86_table_idx x86_opc_table_filter(x86_table_idx tab, x86_modes modes)
+x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes)
 {
     size_t count = 0;
     for(size_t i = 0; i < tab.count; i++) {
@@ -690,36 +652,33 @@ x86_table_idx x86_opc_table_filter(x86_table_idx tab, x86_modes modes)
     return newtab;
 }
 
-static int x86_map_op_compare_opcode_masked(const void *p1, const void *p2)
+static int x86_opc_data_compare_opcode_masked(const void *p1, const void *p2)
 {
-    x86_map_op *om1 = (x86_map_op*)p1;
-    x86_map_op *om2 = (x86_map_op*)p2;
-    if (om1->type < om2->type) return -1;
-    if (om1->type > om2->type) return 1;
-    if (om1->map < om2->map) return -1;
-    if (om1->map > om2->map) return 1;
-    if (om1->prefix < om2->prefix) return -1;
-    if (om1->prefix > om2->prefix) return 1;
+    x86_opc_data *om1 = (x86_opc_data*)p1;
+    x86_opc_data *om2 = (x86_opc_data*)p2;
+    uint enc1 = om1->enc, enc2 = om2->enc;
+    uint pre1 = enc1 & (x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    uint pre2 = enc2 & (x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    if (pre1 < pre2) return -1;
+    if (pre1 > pre2) return 1;
     for (size_t i = 0; i < 2; i++) {
         uchar mask = om1->opm[i] & om2->opm[i];
         if ((om1->opc[i] & mask) < (om2->opc[i] & mask)) return -1;
         if ((om1->opc[i] & mask) > (om2->opc[i] & mask)) return 1;
     }
-    if (om1->rec < om2->rec) return -1;
-    if (om1->rec > om2->rec) return 1;
+    /* suffix is unnecessary for matching opcodes because it contains format*/
     return 0;
 }
 
-static int x86_map_op_compare_opcode(const void *p1, const void *p2)
+static int x86_opc_data_compare_opcode(const void *p1, const void *p2)
 {
-    x86_map_op *om1 = (x86_map_op*)p1;
-    x86_map_op *om2 = (x86_map_op*)p2;
-    if (om1->type < om2->type) return -1;
-    if (om1->type > om2->type) return 1;
-    if (om1->map < om2->map) return -1;
-    if (om1->map > om2->map) return 1;
-    if (om1->prefix < om2->prefix) return -1;
-    if (om1->prefix > om2->prefix) return 1;
+    x86_opc_data *om1 = (x86_opc_data*)p1;
+    x86_opc_data *om2 = (x86_opc_data*)p2;
+    uint enc1 = om1->enc, enc2 = om2->enc;
+    uint pre1 = enc1 & (x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    uint pre2 = enc2 & (x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    if (pre1 < pre2) return -1;
+    if (pre1 > pre2) return 1;
     for (size_t i = 0; i < 2; i++) {
         if (om1->opc[i] < om2->opc[i]) return -1;
         if (om1->opc[i] > om2->opc[i]) return 1;
@@ -727,22 +686,15 @@ static int x86_map_op_compare_opcode(const void *p1, const void *p2)
         if (om1->opm[i] < om2->opm[i]) return 1;
         if (om1->opm[i] > om2->opm[i]) return -1;
     }
-    if (om1->rec < om2->rec) return -1;
-    if (om1->rec > om2->rec) return 1;
+    uint suf1 = enc1 & ~(x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    uint suf2 = enc2 & ~(x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
+    if (suf1 < suf2) return -1;
+    if (suf1 > suf2) return 1;
     return 0;
 }
 
-static uint x86_op_major_type(const x86_opc_data *d, size_t i)
-{
-    uint e = d->enc[i] & x86_enc_t_mask;
-    if (e == x86_enc_t_lex ||
-        e == x86_enc_t_vex ||
-        e == x86_enc_t_evex) return e;
-    return 0;
-}
-
-static void x86_add_op_map_mod_entries(x86_map_op *op_map,
-    x86_map_op rec, uint mod11p, uint mod11n)
+static void x86_add_opc_data(x86_opc_data *op_map,
+    x86_opc_data rec, uint mod11p, uint mod11n)
 {
     if (mod11p) {
         /* add one entry with mod == 0b11 - ModRM.rm is register */
@@ -764,76 +716,33 @@ static void x86_add_op_map_mod_entries(x86_map_op *op_map,
     }
 }
 
-static void x86_build_prefix_table(const x86_opc_data *table,
-    x86_table_idx tab, x86_map_op *op_map, size_t *count)
+static void x86_build_prefix_table(const x86_opc_data *op_table,
+    x86_table_idx tab, x86_opc_data *op_map, size_t *count)
 {
-    size_t n = 0;
+    size_t n = 1;
 
     for(size_t i = 0; i < tab.count; i++) {
-        const x86_opc_data *d = table + tab.idx[i];
+        const x86_opc_data *d = op_table + tab.idx[i];
         const x86_opr_data *o = x86_opr_table + d->opr;
         const x86_ord_data *p = x86_ord_table + d->ord;
 
-        /* extract type, prefix, map and synthesize width prefixes */
-        uint map = 0, type = 0, pfx = 0, pfx2 = 0, pfx3 = 0;
-        uchar opc[2] = { 0 }, opm[2] = { 0 };
-        for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++) {
-            switch (d->enc[i] & x86_enc_t_mask) {
-            case x86_enc_t_lex:
-            case x86_enc_t_vex:
-            case x86_enc_t_evex:
-                type = x86_op_major_type(d, i) >> x86_enc_t_shift;
-                switch (d->enc[i] & x86_enc_m_mask) {
-                case x86_enc_m_none: map = x86_map_none; break;
-                case x86_enc_m_0f:   map = x86_map_0f; break;
-                case x86_enc_m_0f38: map = x86_map_0f38; break;
-                case x86_enc_m_0f3a: map = x86_map_0f3a; break;
-                case x86_enc_m_map5: map = x86_map_map5; break;
-                case x86_enc_m_map6: map = x86_map_map6; break;
-                }
-                switch (d->enc[i] & x86_enc_p_mask) {
-                case x86_enc_p_66: pfx |= x86_pc_66; break;
-                case x86_enc_p_9b: pfx |= x86_pc_9b; break;
-                case x86_enc_p_f2: pfx |= x86_pc_f2; break;
-                case x86_enc_p_f3: pfx |= x86_pc_f3; break;
-                }
-                switch (d->enc[i] & x86_enc_w_mask) {
-                case x86_enc_w_wig:
-                case x86_enc_w_wn:
-                case x86_enc_w_wb:
-                case x86_enc_w_w0: break;
-                case x86_enc_w_w1: pfx |= x86_pc_48; break;
-                case x86_enc_w_wx: pfx2 = pfx | x86_pc_48; /* fallthrough */
-                case x86_enc_w_ww: pfx3 = pfx | x86_pc_66; break;
-                }
-                break;
+        /* extract prefix and synthesize width prefixes */
+        uint pfx1 = 0, pfx2 = 0, pfx3 = 0;
+        switch (d->enc & x86_enc_t_mask) {
+        case x86_enc_t_lex:
+        case x86_enc_t_vex:
+        case x86_enc_t_evex:
+            switch (d->enc & x86_enc_w_mask) {
+            case x86_enc_w_wig:
+            case x86_enc_w_wn:
+            case x86_enc_w_wb:
+            case x86_enc_w_w0: break;
+            case x86_enc_w_w1: pfx1 |= x86_enc_p_rexw; break;
+            case x86_enc_w_wx: pfx2 = pfx1 | x86_enc_p_rexw; /* fallthrough */
+            case x86_enc_w_ww: pfx3 = pfx1 | x86_enc_p_66; break;
             }
-        }
-
-        /* extract opcode and function */
-        size_t len = 0;
-        for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++)
-        {
-            uint func;
-            switch (d->enc[i] & x86_enc_t_mask) {
-            case x86_enc_t_opcode:
-                opc[len] = d->enc[i] & 0xff;
-                opm[len] = 0xff;
-                len++;
-                break;
-            case x86_enc_t_opcode_r:
-                opc[len] = d->enc[i] & 0xff;
-                opm[len] = 0xf8;
-                len++;
-                break;
-            case x86_enc_t_modrm_n:
-                func = (d->enc[i] & x86_enc_modrm_mask) >> x86_enc_modrm_shift;
-                x86_modrm mod = x86_enc_modrm(0, func, 0);
-                opc[1] = mod.data[0];
-                opm[1] = 0x38;
-                break;
-            }
-        }
+            break;
+         }
 
         /* find register or memory operand mapping to modrm.rm field
          * so that we can add mod=0b11 or mod!=0b11 to modrm mask */
@@ -856,24 +765,24 @@ static void x86_build_prefix_table(const x86_opc_data *table,
 
         /* add entries to table */
         if (op_map) {
-            x86_map_op rec = { type, pfx, map, { opc[0], opc[1] },
-                { opm[0], opm[1] }, tab.idx[i] };
-            x86_add_op_map_mod_entries(op_map + n, rec, mod11p, mod11n);
+            x86_opc_data rec = *d;
+            rec.enc |= pfx1;
+            x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
         }
         n += mod11n ? 3 : 1;
         if (pfx2) {
             if (op_map) {
-                x86_map_op rec = { type, pfx2, map, { opc[0], opc[1] },
-                    { opm[0], opm[1] }, tab.idx[i] };
-                x86_add_op_map_mod_entries(op_map + n, rec, mod11p, mod11n);
+                x86_opc_data rec = *d;
+                rec.enc |= pfx2;
+                x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
             }
             n += mod11n ? 3 : 1;
         }
         if (pfx3) {
             if (op_map) {
-                x86_map_op rec = { type, pfx3, map, { opc[0], opc[1] },
-                    { opm[0], opm[1] }, tab.idx[i] };
-                x86_add_op_map_mod_entries(op_map + n, rec, mod11p, mod11n);
+                x86_opc_data rec = *d;
+                rec.enc |= pfx3;
+                x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
             }
             n += mod11n ? 3 : 1;
         }
@@ -882,31 +791,89 @@ static void x86_build_prefix_table(const x86_opc_data *table,
     if (count) *count = n;
 }
 
-x86_map_idx x86_table_build(x86_modes modes)
+static void x86_build_accel_table(x86_acc_idx *idx,
+    x86_acc_entry *acc, size_t *count)
 {
-    x86_map_idx map;
-    x86_table_idx tab = x86_opc_table_filter(x86_opc_table_identity(), modes);
-    x86_build_prefix_table(x86_opc_table, tab, NULL, &map.count);
-    map.map = calloc(sizeof(x86_map_op), map.count);
-    x86_build_prefix_table(x86_opc_table, tab, map.map, NULL);
-    qsort(map.map, map.count, sizeof(x86_map_op), x86_map_op_compare_opcode);
-    free(tab.idx);
-    return map;
+    /* slot zero is one byte legacy opcodes: type:LEX, prefix:0, map:0 */
+    size_t num_pages = 1;
+    uint max_entries = 0;
+    for (size_t i = 1; i < idx->map_count; i++) {
+        const x86_opc_data *m = idx->map + i;
+        uint type = (m->enc & x86_enc_t_mask) >> x86_enc_t_shift;
+        uint prefix = (m->enc & x86_enc_prexw_mask) >> x86_enc_p_shift;
+        uint map = (m->enc & x86_enc_m_mask) >> x86_enc_m_shift;
+        size_t acc_page = type | (prefix << 2) | (map << 6);
+        /*
+         * offset zero means the slice is not allocated but page zero is
+         * preallocated as a special cased for type:LEX, prefix:0, map:0
+         */
+        size_t offset = 0;
+        if (!acc) {
+            /* counting pass assign offsets except for page zero */
+            if (acc_page > 0 && idx->page_offsets[acc_page] == 0) {
+                size_t page = num_pages++;
+                idx->page_offsets[acc_page] = page;
+                offset = page << 8;
+            }
+        } else if (acc) {
+            /* writing pass lookup offset */
+            offset = idx->page_offsets[acc_page] << 8;
+            uint oc = m->opc[0], msk = m->opm[0], om = oc;
+            /*  (type, prefix, map, opcode) -> (index, count) */
+            while ((oc & msk) == om) {
+                if (acc[offset + oc].idx == 0) acc[offset + oc].idx = i;
+                acc[offset + oc].nent++;
+                oc++;
+            }
+        }
+    }
+    if (count) {
+        *count = num_pages << 8;
+    }
 }
 
-x86_map_op* x86_table_lookup(x86_map_idx map, const x86_map_op *m)
+x86_acc_idx* x86_table_build(uint modes)
 {
-    size_t begin = 0, end = map.count;
+    x86_acc_idx *idx = calloc(1, sizeof(x86_acc_idx));
+    x86_table_idx tab = x86_opc_table_filter(x86_opc_table_identity(), modes);
+    x86_build_prefix_table(x86_opc_table, tab, NULL, &idx->map_count);
+    idx->map = calloc(idx->map_count, sizeof(x86_opc_data));
+    x86_build_prefix_table(x86_opc_table, tab, idx->map, NULL);
+    qsort(idx->map, idx->map_count, sizeof(x86_opc_data), x86_opc_data_compare_opcode);
+    idx->page_offsets = calloc(512, sizeof(uchar));
+    x86_build_accel_table(idx, NULL, &idx->acc_count);
+    idx->acc = calloc(sizeof(x86_acc_entry), idx->acc_count);
+    x86_build_accel_table(idx, idx->acc, NULL);
+    free(tab.idx);
+    return idx;
+}
+
+static x86_opc_data* x86_table_lookup_slow(x86_acc_idx *idx, const x86_opc_data *m)
+{
+    size_t begin = 0, end = idx->map_count;
     while (end != 0) {
         size_t half = (end >> 1), probe = begin + half;
-        if (x86_map_op_compare_opcode_masked(m, map.map + probe) > 0) {
+        if (x86_opc_data_compare_opcode_masked(m, idx->map + probe) > 0) {
             begin = probe + 1;
             end -= half + 1;
         } else {
             end = half;
         }
     }
-    return map.map + begin;
+    return idx->map + begin;
+}
+
+x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m)
+{
+    uint type = (m->enc & x86_enc_t_mask) >> x86_enc_t_shift;
+    uint prefix = (m->enc & x86_enc_prexw_mask) >> x86_enc_p_shift;
+    uint map = (m->enc & x86_enc_m_mask) >> x86_enc_m_shift;
+    size_t acc_page = type | (prefix << 2) | (map << 6);
+    size_t page = idx->page_offsets[acc_page];
+    size_t offset = (page << 8) + m->opc[0];
+    x86_acc_entry *ent = idx->acc + offset;
+    x86_acc_idx new_idx = { ent->nent, idx->map + ent->idx };
+    return x86_table_lookup_slow(&new_idx, m);
 }
 
 /*
@@ -929,98 +896,84 @@ static void x86_print_row(size_t count, x86_table_col *cols)
     printf("\n");
 }
 
-static uint x86_prefix_pc_to_pn(uint ord)
+static size_t x86_format_enc(char * buf, size_t buflen, const x86_opc_data *d)
 {
-    uint result = 0;
-    switch (ord & ~x86_pc_48) {
-    case x86_pc_66: result |= (1 << x86_pn_66); break;
-    case x86_pc_9b: result |= (1 << x86_pn_9b); break;
-    case x86_pc_f2: result |= (1 << x86_pn_f2); break;
-    case x86_pc_f3: result |= (1 << x86_pn_f3); break;
+    size_t len = 0;
+
+    uint i2 = (d->enc & x86_enc_i2_mask);
+    uint i = (d->enc & x86_enc_i_mask);
+    uint s = (d->enc & x86_enc_s_mask);
+    uint enc = d->enc & ~(x86_enc_i2_mask | x86_enc_i_mask | x86_enc_s_mask);
+
+    len += x86_enc_name(buf+len, buflen-len, enc);
+
+    switch (enc & x86_enc_o_mask) {
+    case x86_enc_o_opcode_r:
+        len += snprintf(buf+len, buflen-len, " %02hhx+r", d->opc[0]);
+        break;
+    case x86_enc_o_opcode:
+        len += snprintf(buf+len, buflen-len, " %02hhx", d->opc[0]);
+        break;
     }
-    if (ord & x86_pc_48) result |= (1 << x86_pn_48);
-    return result;
+
+    switch (enc & x86_enc_f_mask) {
+    case x86_enc_f_modrm_r:
+        len += snprintf(buf+len, buflen-len, " /r");
+        break;
+    case x86_enc_f_modrm_n:
+        len += snprintf(buf+len, buflen-len, " /%d", (d->opc[1] >> 3) & 7);
+        break;
+    case x86_enc_f_opcode_r:
+        len += snprintf(buf+len, buflen-len, " %02hhx+r", d->opc[1]);
+        break;
+    case x86_enc_f_opcode:
+        len += snprintf(buf+len, buflen-len, " %02hhx", d->opc[1]);
+        break;
+    }
+
+    if (i2) {
+        len += x86_enc_name(buf+len, buflen-len, i2);
+    }
+    if (i) {
+        len += x86_enc_name(buf+len, buflen-len, i);
+    }
+    if (s) {
+        len += x86_enc_name(buf+len, buflen-len, s);
+    }
 }
 
-void x86_print_map(x86_map_op *m)
+void x86_print_op(const x86_opc_data *d, uint compact, uint opcode)
 {
     char buf[256];
-    x86_table_col cols[9];
-    size_t count = 0, opclen = 0, len;
-    uchar opcode[2], opm[2];
-
-    const x86_opc_data *d = x86_opc_table + m->rec;
-    uint map = m->map;
-    uint type = m->type << x86_enc_t_shift;
-    uint prefix = x86_prefix_pc_to_pn(m->prefix);
-
-    buf[(len = 0)] = '\0';
-    len += x86_enc_name(buf+len, sizeof(buf)-len, type);
-    cols[count++] = x86_new_column(5, buf);
-
-    buf[(len = 0)] = '\0';
-    x86_prefix_namen(buf+len, sizeof(buf)-len, prefix, "|");
-    cols[count++] = x86_new_column(5, buf);
-
-    buf[(len = 0)] = '\0';
-    len += x86_map_name(buf+len, sizeof(buf)-len, map, "|");
-    cols[count++] = x86_new_column(4, buf);
-
-    buf[(len = 0)] = '\0';
-    for (size_t i = 0; i < 2 && m->opm[i]; i++) {
-        if (i != 0) len += snprintf(buf+len, sizeof(buf)-len, " ");
-        len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", m->opc[i]);
-    }
-    cols[count++] = x86_new_column(5, buf);
-
-    buf[(len = 0)] = '\0';
-    for (size_t i = 0; i < 2 && m->opm[i]; i++) {
-        if (i != 0) len += snprintf(buf+len, sizeof(buf)-len, " ");
-        len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", m->opm[i]);
-    }
-    cols[count++] = x86_new_column(5, buf);
-
-    buf[(len = 0)] = '\0';
-    len += snprintf(buf+len, sizeof(buf)-len, "%4u", m->rec);
-    cols[count++] = x86_new_column(4, buf);
-
-    buf[(len = 0)] = '\0';
-    len += snprintf(buf+len, sizeof(buf)-len, "%s", x86_op_names[d->op]);
-    cols[count++] = x86_new_column(18, buf);
-
-    buf[(len = 0)] = '\0';
-    for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++) {
-        if (len != 0) len += snprintf(buf+len, sizeof(buf)-len, " ");
-        if ((d->enc[i] & x86_enc_t_mask) == x86_enc_t_opcode_r) {
-            len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", d->enc[i]&0xff);
-        }
-        len += x86_enc_name(buf+len, sizeof(buf)-len, d->enc[i]);
-        if ((d->enc[i] & x86_enc_t_mask) == x86_enc_t_opcode) {
-            len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", d->enc[i]&0xff);
-        }
-    }
-    cols[count++] = x86_new_column(30, buf);
-
-    x86_print_row(count, cols);
-}
-
-void x86_print_op(uint rec, uint compact)
-{
-    char buf[256];
-    x86_table_col cols[4];
+    x86_table_col cols[6];
     size_t count = 0, len;
 
-    const x86_opc_data *d = x86_opc_table + rec;
     const x86_opr_data *o = x86_opr_table + d->opr;
     const x86_ord_data *p = x86_ord_table + d->ord;
 
     buf[(len = 0)] = '\0';
-    len += snprintf(buf+len, sizeof(buf)-len, "%s ", x86_op_names[d->op]);
-    for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++) {
-        if (i != 0) len += snprintf(buf+len, sizeof(buf)-len, ",");
-        len += x86_opr_name(buf+len, sizeof(buf)-len, o->opr[i]);
+    if (compact) {
+        len += snprintf(buf+len, sizeof(buf)-len, "%s", x86_op_names[d->op]);
+        cols[count++] = x86_new_column(18, buf);
+    } else {
+        len += snprintf(buf+len, sizeof(buf)-len, "%s ", x86_op_names[d->op]);
+        for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++) {
+            if (i != 0) len += snprintf(buf+len, sizeof(buf)-len, ",");
+            len += x86_opr_name(buf+len, sizeof(buf)-len, o->opr[i]);
+        }
+        cols[count++] = x86_new_column(52, buf);
     }
-    cols[count++] = x86_new_column(52, buf);
+
+    if (opcode) {
+        buf[(len = 0)] = '\0';
+        len += snprintf(buf+len, sizeof(buf)-len, "%02hhx %02hhx",
+            d->opc[0], d->opc[1]);
+        cols[count++] = x86_new_column(5, buf);
+        buf[(len = 0)] = '\0';
+        len += snprintf(buf+len, sizeof(buf)-len, "%02hhx %02hhx",
+            d->opm[0], d->opm[1]);
+        cols[count++] = x86_new_column(5, buf);
+    }
 
     if (compact) {
         buf[(len = 0)] = '\0';
@@ -1028,18 +981,14 @@ void x86_print_op(uint rec, uint compact)
         cols[count++] = x86_new_column(4, buf);
     }
 
+    uint s = (d->enc & x86_enc_s_mask);
+    uint i = (d->enc & x86_enc_i_mask);
+    uint i2 = (d->enc & x86_enc_i2_mask);
+    uint enc = d->enc & ~(x86_enc_s_mask | x86_enc_i_mask | x86_enc_i2_mask);
+
     buf[(len = 0)] = '\0';
-    for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++) {
-        if (len != 0) len += snprintf(buf+len, sizeof(buf)-len, " ");
-        if ((d->enc[i] & x86_enc_t_mask) == x86_enc_t_opcode_r) {
-            len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", d->enc[i]&0xff);
-        }
-        len += x86_enc_name(buf+len, sizeof(buf)-len, d->enc[i]);
-        if ((d->enc[i] & x86_enc_t_mask) == x86_enc_t_opcode) {
-            len += snprintf(buf+len, sizeof(buf)-len, "%02hhx", d->enc[i]&0xff);
-        }
-    }
-    cols[count++] = x86_new_column(30, buf);
+    len += x86_format_enc(buf, sizeof(buf), d);
+    cols[count++] = x86_new_column(31, buf);
 
     if (!compact) {
         buf[(len = 0)] = '\0';
@@ -1068,13 +1017,6 @@ static x86_modeb x86_codec_mode(x86_codec *c)
     uint is16 = !(is32 | is64);
     x86_modeb modeb = { is64, is32, is16 };
     return modeb;
-}
-
-static uint x86_enc_mode(x86_modeb mode)
-{
-    if (mode.is64) return x86_modes_64;
-    else if (mode.is32) return x86_modes_32;
-    else return x86_modes_16;
 }
 
 int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
@@ -1221,107 +1163,95 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
     return 0;
 }
 
-static int x86_filter_opdata(x86_codec *c, x86_map_op *k, x86_map_op *r, uint w)
+static int x86_filter_opdata(x86_codec *c, x86_opc_data *d, uint w)
 {
-    const x86_opc_data *d = x86_opc_table + r->rec;
-
     x86_modeb mode = x86_codec_mode(c);
     uint osize = !!(c->flags & x86_cp_osize);
-    uint width = x86_enc_w_wig;
 
     if (mode.is16 && (d->mode & x86_modes_16) == 0) return -1;
     if (mode.is32 && (d->mode & x86_modes_32) == 0) return -1;
     if (mode.is64 && (d->mode & x86_modes_64) == 0) return -1;
 
-    for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++) {
-        if (d->enc[i] & x86_enc_w_mask) {
-            width = d->enc[i] & x86_enc_w_mask;
-        }
-        switch (d->enc[i] & x86_enc_t_mask) {
-        case x86_enc_t_lex:
-        case x86_enc_t_vex:
-        case x86_enc_t_evex:
-            switch (c->flags & x86_ce_mask) {
-            case x86_ce_rex:
-                if (x86_enc_filter_rex(c->rex, d->enc[i]) < 0) return -1;
-                break;
-            case x86_ce_rex2:
-                if (x86_enc_filter_rex2(c->rex2, d->enc[i]) < 0) return -1;
-                break;
-            case x86_ce_vex2:
-                if (x86_enc_filter_vex2(c->vex2, d->enc[i]) < 0) return -1;
-                break;
-            case x86_ce_vex3:
-                if (x86_enc_filter_vex3(c->vex3, d->enc[i]) < 0) return -1;
-                break;
-            case x86_ce_evex:
-                if (x86_enc_filter_evex(c->evex, d->enc[i]) < 0) return -1;
-                break;
-            }
+    switch (d->enc & x86_enc_t_mask) {
+    case x86_enc_t_lex:
+    case x86_enc_t_vex:
+    case x86_enc_t_evex:
+        switch (c->flags & x86_ce_mask) {
+        case x86_ce_rex:
+            if (x86_enc_filter_rex(c->rex, d->enc) < 0) return -1;
             break;
-        case x86_enc_t_o16:
-            switch (width) {
-            case x86_enc_w_ww:
-            case x86_enc_w_wx:
-                if (!(mode.is16 ^ osize) || w) return -1;
-                break;
-            }
+        case x86_ce_rex2:
+            if (x86_enc_filter_rex2(c->rex2, d->enc) < 0) return -1;
             break;
-        case x86_enc_t_o32:
-            switch (width) {
-            case x86_enc_w_ww:
-                /* .ww means no 32-bit operands in 64-bit mode */
-                if ((mode.is16 ^ osize) || mode.is64) return -1;
-                break;
-            case x86_enc_w_wx:
-                if ((mode.is16 ^ osize) || w) return -1;
-                break;
-            }
+        case x86_ce_vex2:
+            if (x86_enc_filter_vex2(c->vex2, d->enc) < 0) return -1;
             break;
-        case x86_enc_t_o64:
-            switch (width) {
-            case x86_enc_w_ww:
-                /* .ww means ignores W=1 in 64-bit mode */
-                if (!mode.is64) return -1;
-                break;
-            case x86_enc_w_wx:
-                if (!mode.is64 || !w) return -1;
-                break;
-            }
+        case x86_ce_vex3:
+            if (x86_enc_filter_vex3(c->vex3, d->enc) < 0) return -1;
+            break;
+        case x86_ce_evex:
+            if (x86_enc_filter_evex(c->evex, d->enc) < 0) return -1;
             break;
         }
+        break;
+    }
+    switch (d->enc & x86_enc_s_mask) {
+    case x86_enc_s_o16:
+        switch (d->enc & x86_enc_w_mask) {
+        case x86_enc_w_ww:
+        case x86_enc_w_wx:
+            if (!(mode.is16 ^ osize) || w) return -1;
+            break;
+        }
+        break;
+    case x86_enc_s_o32:
+        switch (d->enc & x86_enc_w_mask) {
+        case x86_enc_w_ww:
+            /* .ww means no 32-bit operands in 64-bit mode */
+            if ((mode.is16 ^ osize) || mode.is64) return -1;
+            break;
+        case x86_enc_w_wx:
+            if ((mode.is16 ^ osize) || w) return -1;
+            break;
+        }
+        break;
+    case x86_enc_s_o64:
+        switch (d->enc & x86_enc_w_mask) {
+        case x86_enc_w_ww:
+            /* .ww means ignores W=1 in 64-bit mode */
+            if (!mode.is64) return -1;
+            break;
+        case x86_enc_w_wx:
+            if (!mode.is64 || !w) return -1;
+            break;
+        }
+        break;
     }
 
     return 0;
 }
 
 static int x86_parse_encoding(x86_buffer *buf, x86_codec *c,
-    x86_map_op *r, size_t *len)
+    x86_opc_data *d, size_t *len)
 {
-    const x86_opc_data *d = x86_opc_table + r->rec;
-    int opcode_i = -1, opcode_j = -1, modrm_i = -1;
+    int has_byte2 = 0;
     x86_modeb mode = x86_codec_mode(c);
     size_t nbytes = 0;
 
-    /* find opcode and modrm indices to check opcode length */
-    for (size_t i = 0; i < array_size(d->enc) && d->enc[i]; i++) {
-        switch (d->enc[i] & x86_enc_t_mask) {
-        case x86_enc_t_opcode:
-        case x86_enc_t_opcode_r:
-            if (opcode_i == -1) opcode_i = i;
-            opcode_j = i;
-            break;
-        case x86_enc_t_modrm_r:
-        case x86_enc_t_modrm_n:
-            modrm_i = i;
-            c->flags |= x86_cf_modrm;
-            c->modrm.data[0] = c->opc[1];
-            break;
-        }
+    /* check if we have modrm byte */
+    switch (d->enc & x86_enc_f_mask) {
+    case x86_enc_f_modrm_r:
+    case x86_enc_f_modrm_n:
+        c->flags |= x86_cf_modrm;
+        /* fallthrough */
+    case x86_enc_f_opcode:
+    case x86_enc_f_opcode_r:
+        has_byte2 = 1;
+        break;
     }
 
     /* put back byte if there is single byte opcode without modrm */
-    if (modrm_i != opcode_i + 1 && opcode_i == opcode_j) {
+    if (!has_byte2) {
         nbytes -= x86_buffer_unread(buf, 1);
         c->opclen = 1;
     } else {
@@ -1373,37 +1303,37 @@ static int x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     uint osize = !!(c->flags & x86_cp_osize);
 
     /* parse immediate */
-    for (size_t i = opcode_j + 1; i < array_size(d->enc) && d->enc[i]; i++) {
-        switch(d->enc[i] & x86_enc_t_mask) {
-        case x86_enc_t_ib:
-            c->imm32 = (i8)x86_in8(buf); nbytes += 1;
-            c->flags |= x86_ci_ib;
-            break;
-        case x86_enc_t_iw:
-            if (mode.is16 ^ osize) {
-                c->imm32 = (i16)x86_in16(buf); nbytes += 2;
-            } else {
-                c->imm32 = (i32)x86_in32(buf); nbytes += 4;
-            }
-            c->flags |= x86_ci_iw;
-            break;
-        case x86_enc_t_i16:
-            c->imm32 = (i16)x86_in16(buf);  nbytes += 2;
-            c->flags |= x86_ci_i16;
-            break;
-        case x86_enc_t_i32:
-            c->imm32 = (i32)x86_in32(buf);  nbytes += 4;
-            c->flags |= x86_ci_i32;
-            break;
-        case x86_enc_t_i64:
-            c->imm64 = (i64)x86_in64(buf);  nbytes += 8;
-            c->flags |= x86_ci_i64;
-            break;
-        case x86_enc_t_i16e:
-            c->imm16e = (i16)x86_in16(buf); nbytes += 2;
-            c->flags |= x86_cf_i16e;
-            break;
+    switch(d->enc & x86_enc_i2_mask) {
+    case x86_enc_i2_i16e:
+        c->imm16e = (i16)x86_in16(buf); nbytes += 2;
+        c->flags |= x86_cf_i16e;
+        break;
+    }
+    switch(d->enc & x86_enc_i_mask) {
+    case x86_enc_i_ib:
+        c->imm32 = (i8)x86_in8(buf); nbytes += 1;
+        c->flags |= x86_ci_ib;
+        break;
+    case x86_enc_i_iw:
+        if (mode.is16 ^ osize) {
+            c->imm32 = (i16)x86_in16(buf); nbytes += 2;
+        } else {
+            c->imm32 = (i32)x86_in32(buf); nbytes += 4;
         }
+        c->flags |= x86_ci_iw;
+        break;
+    case x86_enc_i_i16:
+        c->imm32 = (i16)x86_in16(buf);  nbytes += 2;
+        c->flags |= x86_ci_i16;
+        break;
+    case x86_enc_i_i32:
+        c->imm32 = (i32)x86_in32(buf);  nbytes += 4;
+        c->flags |= x86_ci_i32;
+        break;
+    case x86_enc_i_i64:
+        c->imm64 = (i64)x86_in64(buf);  nbytes += 8;
+        c->flags |= x86_ci_i64;
+        break;
     }
 
     *len = nbytes;
@@ -1814,9 +1744,9 @@ size_t x86_opr_const_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
-size_t x86_format_op(char *buf, size_t buflen, x86_codec *c)
+size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
 {
-    const x86_opc_data *d = x86_opc_table + c->rec;
+    const x86_opc_data *d = ctx->idx->map + c->rec;
     const x86_opr_data *o = x86_opr_table + d->opr;
     const x86_ord_data *s = x86_ord_table + d->ord;
 
@@ -1832,23 +1762,23 @@ size_t x86_format_op(char *buf, size_t buflen, x86_codec *c)
         switch(s->ord[i] & 7) {
         case x86_ord_const:
             len += x86_opr_const_str(buf+len, buflen-len,
-                c, q, mode, o->opr[i], d->enc[0]);
+                c, q, mode, o->opr[i], d->enc);
             break;
         case x86_ord_imm:
             len += x86_opr_imm_str(buf+len, buflen-len,
-                c, q, mode, o->opr[i], d->enc[0]);
+                c, q, mode, o->opr[i], d->enc);
             break;
         case x86_ord_reg:
             len += x86_opr_reg_str(buf+len, buflen-len,
-                c, q, mode, o->opr[i], d->enc[0]);
+                c, q, mode, o->opr[i], d->enc);
             break;
         case x86_ord_mrm:
             len += x86_opr_mrm_str(buf+len, buflen-len,
-                c, q, mode, o->opr[i], d->enc[0]);
+                c, q, mode, o->opr[i], d->enc);
             break;
         case x86_ord_vec:
             len += x86_opr_vec_str(buf+len, buflen-len,
-                c, q, mode, o->opr[i], d->enc[0]);
+                c, q, mode, o->opr[i], d->enc);
             break;
         }
     }
@@ -1870,26 +1800,22 @@ size_t x86_format_hex(char *buf, size_t buflen, char *data, size_t datalen)
     return len;
 }
 
-int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit)
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
+    size_t *len, size_t limit)
 {
     x86_state state = x86_state_top;
     size_t nbytes = 0;
+    uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
+    uint sufmask = ~(x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask);
+    x86_opc_data k = { 0 }, *r = NULL;
     uchar b = 0, lastp = 0;
-    uint t = 0, m = 0, w = 0, p = 0, l = 0;
-    x86_map_op k = { 0 }, *r = NULL;
 
-    static x86_map_idx idx;
-    static x86_modes idx_mode;
-
-    x86_modeb mode = x86_codec_mode(c);
-    x86_modes enc_mode = x86_enc_mode(mode);
-
-    if (!idx.map || idx_mode != enc_mode) {
-        if (idx.map) free(idx.map);
-        idx = x86_table_build(enc_mode);
-        idx_mode = enc_mode;
+    memset(c, 0, sizeof(x86_codec));
+    switch(mode) {
+    case x86_modes_32: c->flags |= x86_cf_ia32; break;
+    case x86_modes_64: c->flags |= x86_cf_amd64; break;
     }
-
+ 
     while (state != x86_state_done) {
         nbytes += x86_buffer_read(buf, (void*)&b, 1);
         switch (state) {
@@ -2009,24 +1935,23 @@ int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit)
             }
             break;
         case x86_state_lex_opcode: reparse:
-            /* use last prefix to get opcode map */
-            k.type = t;
-            k.map = m;
+            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
+                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
             switch (lastp) {
-            case 0x66: k.prefix = x86_pc_66; break;
-            case 0x9b: k.prefix = x86_pc_9b; break;
-            case 0xf2: k.prefix = x86_pc_f2; break;
-            case 0xf3: k.prefix = x86_pc_f3; break;
+            case 0x66: k.enc |= x86_enc_p_66; break;
+            case 0x9b: k.enc |= x86_enc_p_9b; break;
+            case 0xf2: k.enc |= x86_enc_p_f2; break;
+            case 0xf3: k.enc |= x86_enc_p_f3; break;
             }
             state = x86_state_done;
             break;
         case x86_state_vex_opcode:
-            k.type = t;
-            k.map = m;
+            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
+                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
             switch (p) {
-            case x86_pfx_66: k.prefix = x86_pc_66; break;
-            case x86_pfx_f2: k.prefix = x86_pc_f2; break;
-            case x86_pfx_f3: k.prefix = x86_pc_f3; break;
+            case x86_pfx_66: k.enc |= x86_enc_p_66; break;
+            case x86_pfx_f2: k.enc |= x86_enc_p_f2; break;
+            case x86_pfx_f3: k.enc |= x86_enc_p_f3; break;
             }
             state = x86_state_done;
             break;
@@ -2036,6 +1961,7 @@ int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit)
     };
 
     /* populate opcode for table lookup */
+    k.mode = mode;
     c->opc[0] = k.opc[0] = b;
     nbytes += x86_buffer_read(buf, (void*)&b, 1);
     c->opc[1] = k.opc[1] = b;
@@ -2043,46 +1969,53 @@ int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit)
 
     /* if REX.W=1 first attempt to lookup W=1 record */
     if (w) {
-        k.prefix |= x86_pc_48;
-        k.rec = 0;
+        k.enc |= x86_enc_p_rexw;
+        k.enc = (k.enc & ~sufmask);
         x86_debugf("table_lookup { type:%x prefix:%x map:%x "
             "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
-            k.type, k.prefix, k.map,
+            (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
+            (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
+            (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
             k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
-        r = x86_table_lookup(idx, &k);
-        while (r < idx.map + idx.count) {
-            k.rec = r->rec;
-            x86_debugf("checking opdata %u", r->rec);
-            if (debug) x86_print_map(r);
-            if (x86_map_op_compare_opcode_masked(&k, r) != 0) {
+        r = x86_table_lookup(ctx->idx, &k);
+        while (r < ctx->idx->map + ctx->idx->map_count) {
+            k.enc = (k.enc & ~sufmask) | (r->enc & sufmask);
+            k.enc = (k.enc & ~x86_enc_p_rexw) | (r->enc & x86_enc_p_rexw);
+            size_t oprec = (r - ctx->idx->map);
+            x86_debugf("checking opdata %zu", oprec);
+            if (debug) x86_print_op(r, 1, 1);
+            if (x86_opc_data_compare_opcode_masked(&k, r) != 0) {
                 x86_debugf("** no matches");
                 r = NULL;
                 break;
             }
-            if (x86_filter_opdata(c, &k, r, 1) == 0) break;
+            if (x86_filter_opdata(c, r, 1) == 0) break;
             r++;
         }
     }
 
     /* if REX.W=0 or search failed lookup W=0/WIG record */
     if (!w || (w && !r)) {
-        k.prefix &= ~x86_pc_48;
-        k.rec = 0;
+        k.enc &= ~x86_enc_p_rexw;
+        k.enc = (k.enc & ~sufmask);
         x86_debugf("table_lookup { type:%x prefix:%x map:%x "
             "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
-            k.type, k.prefix, k.map,
+            (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
+            (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
+            (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
             k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
-        r = x86_table_lookup(idx, &k);
-        while (r < idx.map + idx.count) {
-            k.rec = r->rec;
-            x86_debugf("checking opdata %u", r->rec);
-            if (debug) x86_print_map(r);
-            if (x86_map_op_compare_opcode_masked(&k, r) != 0) {
+        r = x86_table_lookup(ctx->idx, &k);
+        while (r < ctx->idx->map + ctx->idx->map_count) {
+            k.enc = (k.enc & ~sufmask) | (r->enc & sufmask);
+            size_t oprec = (r - ctx->idx->map);
+            x86_debugf("checking opdata %zu", oprec);
+            if (debug) x86_print_op(r, 1, 1);
+            if (x86_opc_data_compare_opcode_masked(&k, r) != 0) {
                 x86_debugf("** no matches");
                 r = NULL;
                 break;
             }
-            if (x86_filter_opdata(c, &k, r, 0) == 0) break;
+            if (x86_filter_opdata(c, r, 0) == 0) break;
             r++;
         }
     }
@@ -2092,7 +2025,7 @@ int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit)
         size_t nread = 0;
         if (x86_parse_encoding(buf, c, r, &nread) == 0) {
             if (nbytes + nread <= limit) {
-                c->rec = r->rec;
+                c->rec = (r - ctx->idx->map);
                 nbytes += nread;
             } else if (c->opclen == 1) {
                 /* special case opcode peek */
@@ -2108,4 +2041,20 @@ err:
     nbytes -= x86_buffer_unread(buf, 1);
     *len = nbytes;
     return -1;
+}
+
+x86_ctx* x86_ctx_create(uint mode)
+{
+    x86_ctx *ctx = malloc(sizeof(x86_ctx));
+    ctx->mode = mode;
+    ctx->idx = x86_table_build(mode);
+    return ctx;
+}
+
+void x86_ctx_destroy(x86_ctx *ctx)
+{
+    free(ctx->idx->page_offsets);
+    free(ctx->idx->map);
+    free(ctx->idx->acc);
+    free(ctx);
 }

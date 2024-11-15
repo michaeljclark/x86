@@ -4,7 +4,7 @@
 
 #include "x86.h"
 
-void x86_disasm(uchar *insn, size_t insnlen)
+void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen)
 {
     x86_buffer buf;
     x86_codec codec;
@@ -18,9 +18,9 @@ void x86_disasm(uchar *insn, size_t insnlen)
     x86_buffer_init(&buf, data);
     x86_buffer_write(&buf, insn, insnlen);
 
-    if (x86_codec_read(&buf, &codec, &nbytes, insnlen) == 0) {
+    if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
-        len += x86_format_op(str+len, sizeof(str)-len, &codec);
+        len += x86_format_op(str+len, sizeof(str)-len, ctx, &codec);
     } else {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
         len += snprintf(str+len, sizeof(str)-len, "%s", "<unknown>");
@@ -29,63 +29,65 @@ void x86_disasm(uchar *insn, size_t insnlen)
     printf("%s\n", str);
 }
 
-void t1()
+void t1(x86_ctx *ctx)
 {
     uchar insn[] = { 0x66, 0x47, 0x0f, 0x7e, 0x7c, 0xee, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t2()
+void t2(x86_ctx *ctx)
 {
     uchar insn[] = { 0x66, 0x47, 0x0f, 0x6e, 0x7c, 0xee, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t3()
+void t3(x86_ctx *ctx)
 {
     uchar insn[] = { 0xc5, 0x79, 0x7e, 0x7c, 0xc1, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t4()
+void t4(x86_ctx *ctx)
 {
     uchar insn[] = { 0xc5, 0x79, 0x6e, 0x7c, 0xc1, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t5()
+void t5(x86_ctx *ctx)
 {
     uchar insn[] = { 0xc4, 0x01, 0x79, 0x7e, 0x7c, 0xf5, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t6()
+void t6(x86_ctx *ctx)
 {
     uchar insn[] = { 0xc4, 0x01, 0x79, 0x6e, 0x7c, 0xf5, 0xf8 };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t7()
+void t7(x86_ctx *ctx)
 {
     uchar insn[] = { 0x62, 0x01, 0x7d, 0x08, 0x7e, 0x7c, 0xee, 0xfe };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
-void t8()
+void t8(x86_ctx *ctx)
 {
     uchar insn[] = { 0x62, 0x01, 0x7d, 0x08, 0x6e, 0x7c, 0xee, 0xfe };
-    x86_disasm(insn, sizeof(insn));
+    x86_disasm(ctx, insn, sizeof(insn));
 }
 
 int main(int argc, char **argv)
 {
-    t1();
-    t2();
-    t3();
-    t4();
-    t5();
-    t6();
-    t7();
-    t8();
+    x86_ctx *ctx = x86_ctx_create(x86_modes_64);
+    t1(ctx);
+    t2(ctx);
+    t3(ctx);
+    t4(ctx);
+    t5(ctx);
+    t6(ctx);
+    t7(ctx);
+    t8(ctx);
+    x86_ctx_destroy(ctx);
     return 0;
 }

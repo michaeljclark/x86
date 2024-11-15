@@ -15,9 +15,13 @@ int main(int argc, char **argv)
     printf("ord_table %2zu %5zu %7zu\n",
         sizeof(x86_ord_data), x86_ord_table_size,
         sizeof(x86_ord_data) * x86_ord_table_size);
-    x86_map_idx map = x86_table_build(x86_modes_64);
+    x86_ctx *ctx = x86_ctx_create(x86_modes_64);
     printf("map_table %2zu %5zu %7zu\n",
-        sizeof(x86_map_op), map.count,
-        sizeof(x86_map_op) * map.count);
+        sizeof(x86_opc_data), ctx->idx->map_count,
+        sizeof(x86_opc_data) * ctx->idx->map_count);
+    printf("acc_table %2zu %5zu %7zu\n",
+        sizeof(x86_acc_entry), ctx->idx->acc_count,
+        sizeof(x86_acc_entry) * ctx->idx->acc_count);
+    x86_ctx_destroy(ctx);
     return 0;
 }

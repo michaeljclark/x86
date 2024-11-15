@@ -7,29 +7,6 @@
 #include "bits.h"
 #include "bytes.h"
 
-typedef enum x86_reg x86_reg;
-typedef enum x86_op x86_op;
-typedef enum x86_opr x86_opr;
-typedef enum x86_modes x86_modes;
-typedef enum x86_enc x86_enc;
-typedef enum x86_ord x86_ord;
-typedef enum x86_pb x86_pb;
-typedef enum x86_pn x86_pn;
-typedef enum x86_pc x86_pc;
-typedef enum x86_rm x86_rm;
-typedef enum x86_mod x86_mod;
-typedef enum x86_seg x86_seg;
-typedef enum x86_cf x86_cf;
-typedef enum x86_scale x86_scale;
-typedef enum x86_pfx x86_pfx;
-typedef enum x86_map x86_map;
-typedef enum x86_vex_l x86_vex_l;
-typedef enum x86_vex_w x86_vex_w;
-typedef enum x86_cond x86_cond;
-
-typedef enum x86_sort x86_sort;
-typedef enum x86_table x86_table;
-
 typedef struct x86_rex x86_rex;
 typedef struct x86_rex2 x86_rex2;
 typedef struct x86_vex2 x86_vex2;
@@ -44,11 +21,11 @@ typedef struct x86_modeb x86_modeb;
 typedef struct x86_opc_data x86_opc_data;
 typedef struct x86_opr_data x86_opr_data;
 typedef struct x86_ord_data x86_ord_data;
-typedef struct x86_mod_data x86_mod_data;
 typedef struct x86_table_idx x86_table_idx;
-typedef struct x86_map_idx x86_map_idx;
-typedef struct x86_map_op x86_map_op;
+typedef struct x86_acc_idx x86_acc_idx;
+typedef struct x86_acc_entry x86_acc_entry;
 typedef struct x86_buffer x86_buffer;
+typedef struct x86_ctx x86_ctx;
 
 /*
  * simple debug macros
@@ -132,93 +109,6 @@ enum x86_pb
     x86_pb_lock  = x86_pb_f0,
     x86_pb_repne = x86_pb_f2, /* REPNE/REPNZ and XACQUIRE */
     x86_pb_rep   = x86_pb_f3, /* REP/REPE/REPZ and XRELEASE */
-};
-
-/*
- * prefix number
- */
-
-enum x86_pn
-{
-    x86_pn_26,
-    x86_pn_2e,
-    x86_pn_36,
-    x86_pn_3e,
-    x86_pn_41,
-    x86_pn_42,
-    x86_pn_44,
-    x86_pn_48,
-    x86_pn_62,
-    x86_pn_64,
-    x86_pn_65,
-    x86_pn_66,
-    x86_pn_67,
-    x86_pn_9b,
-    x86_pn_c4,
-    x86_pn_c5,
-    x86_pn_d5,
-    x86_pn_f0,
-    x86_pn_f2,
-    x86_pn_f3,
-
-    x86_pn_es      = x86_pn_26,
-    x86_pn_cs      = x86_pn_2e,
-    x86_pn_ss      = x86_pn_36,
-    x86_pn_ds      = x86_pn_3e,
-    x86_pn_rex_b   = x86_pn_41,
-    x86_pn_rex_x   = x86_pn_42,
-    x86_pn_rex_r   = x86_pn_44,
-    x86_pn_rex_w   = x86_pn_48,
-    x86_pn_evex    = x86_pn_62,
-    x86_pn_fs      = x86_pn_64,
-    x86_pn_gs      = x86_pn_65,
-    x86_pn_osize   = x86_pn_66,
-    x86_pn_asize   = x86_pn_67,
-    x86_pn_wait    = x86_pn_9b,
-    x86_pn_vex3    = x86_pn_c4,
-    x86_pn_vex2    = x86_pn_c5,
-    x86_pn_rex2    = x86_pn_d5,
-    x86_pn_lock    = x86_pn_f0,
-    x86_pn_repne   = x86_pn_f2,
-    x86_pn_rep     = x86_pn_f3,
-};
-
-enum x86_pc
-{
-    x86_pc_none = 0b0000,
-    x86_pc_66   = 0b0001,
-    x86_pc_9b   = 0b0010,
-    x86_pc_f2   = 0b0011,
-    x86_pc_f3   = 0b0100,
-    x86_pc_48   = 0b1000
-};
-
-/*
- * prefix table
- */
-
-static const uchar x86_prefixes[21] =
-{
-    [x86_pn_es]    = x86_pb_es,
-    [x86_pn_cs]    = x86_pb_cs,
-    [x86_pn_ss]    = x86_pb_ss,
-    [x86_pn_ds]    = x86_pb_ds,
-    [x86_pn_rex_b] = x86_pb_rex_b,
-    [x86_pn_rex_x] = x86_pb_rex_x,
-    [x86_pn_rex_r] = x86_pb_rex_r,
-    [x86_pn_rex_w] = x86_pb_rex_w,
-    [x86_pn_evex]  = x86_pb_evex,
-    [x86_pn_fs]    = x86_pb_fs,
-    [x86_pn_gs]    = x86_pb_gs,
-    [x86_pn_osize] = x86_pb_osize,
-    [x86_pn_asize] = x86_pb_asize,
-    [x86_pn_wait]  = x86_pb_wait,
-    [x86_pn_vex3]  = x86_pb_vex3,
-    [x86_pn_vex2]  = x86_pb_vex2,
-    [x86_pn_rex2]  = x86_pb_rex2,
-    [x86_pn_lock]  = x86_pb_lock,
-    [x86_pn_repne] = x86_pb_repne,
-    [x86_pn_rep]   = x86_pb_rep,
 };
 
 /*
@@ -560,12 +450,16 @@ struct x86_evex
 
 enum x86_enc
 {
-    x86_enc_w_shift          = 8,
+    x86_enc_w_shift          = 0,
     x86_enc_m_shift          = x86_enc_w_shift + 3,
     x86_enc_p_shift          = x86_enc_m_shift + 3,
-    x86_enc_l_shift          = x86_enc_p_shift + 3,
+    x86_enc_l_shift          = x86_enc_p_shift + 4,
     x86_enc_t_shift          = x86_enc_l_shift + 3,
-    x86_enc_modrm_shift      = x86_enc_t_shift + 5,
+    x86_enc_o_shift          = x86_enc_t_shift + 2,
+    x86_enc_f_shift          = x86_enc_o_shift + 2,
+    x86_enc_i_shift          = x86_enc_f_shift + 3,
+    x86_enc_i2_shift         = x86_enc_i_shift + 3,
+    x86_enc_s_shift          = x86_enc_i2_shift + 1,
 
     x86_enc_w_w0             = (1 << x86_enc_w_shift),
     x86_enc_w_w1             = (2 << x86_enc_w_shift),
@@ -590,7 +484,9 @@ enum x86_enc
     x86_enc_p_9b             = (2 << x86_enc_p_shift),
     x86_enc_p_f2             = (3 << x86_enc_p_shift),
     x86_enc_p_f3             = (4 << x86_enc_p_shift),
+    x86_enc_p_rexw           = (8 << x86_enc_p_shift),
     x86_enc_p_mask           = (7 << x86_enc_p_shift),
+    x86_enc_prexw_mask       = (15 << x86_enc_p_shift),
 
     x86_enc_l_lz             = (1 << x86_enc_l_shift),
     x86_enc_l_l0             = (2 << x86_enc_l_shift),
@@ -605,35 +501,37 @@ enum x86_enc
     x86_enc_t_lex            = (1 << x86_enc_t_shift),
     x86_enc_t_vex            = (2 << x86_enc_t_shift),
     x86_enc_t_evex           = (3 << x86_enc_t_shift),
-    x86_enc_t_o16            = (4 << x86_enc_t_shift),
-    x86_enc_t_o32            = (5 << x86_enc_t_shift),
-    x86_enc_t_o64            = (6 << x86_enc_t_shift),
-    x86_enc_t_a16            = (7 << x86_enc_t_shift),
-    x86_enc_t_a32            = (8 << x86_enc_t_shift),
-    x86_enc_t_a64            = (9 << x86_enc_t_shift),
-    x86_enc_t_lock           = (10 << x86_enc_t_shift),
-    x86_enc_t_rep            = (11 << x86_enc_t_shift),
-    x86_enc_t_modrm_r        = (12 << x86_enc_t_shift), // /r
-    x86_enc_t_modrm_n        = (13 << x86_enc_t_shift), // /N
-    x86_enc_t_opcode_r       = (14 << x86_enc_t_shift), // +r
-    x86_enc_t_opcode         = (15 << x86_enc_t_shift), // XX
-    x86_enc_t_ib             = (16 << x86_enc_t_shift),
-    x86_enc_t_iw             = (17 << x86_enc_t_shift),
-    x86_enc_t_i16            = (18 << x86_enc_t_shift),
-    x86_enc_t_i32            = (19 << x86_enc_t_shift),
-    x86_enc_t_i64            = (20 << x86_enc_t_shift),
-    x86_enc_t_i16e           = (21 << x86_enc_t_shift),
-    x86_enc_t_mask           = (31 << x86_enc_t_shift),
+    x86_enc_t_mask           = (3 << x86_enc_t_shift),
 
-    x86_enc_t_modrm_0        = x86_enc_t_modrm_n | (0 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_1        = x86_enc_t_modrm_n | (1 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_2        = x86_enc_t_modrm_n | (2 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_3        = x86_enc_t_modrm_n | (3 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_4        = x86_enc_t_modrm_n | (4 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_5        = x86_enc_t_modrm_n | (5 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_6        = x86_enc_t_modrm_n | (6 << x86_enc_modrm_shift),
-    x86_enc_t_modrm_7        = x86_enc_t_modrm_n | (7 << x86_enc_modrm_shift),
-    x86_enc_modrm_mask       = (7 << x86_enc_modrm_shift),
+    x86_enc_o_opcode         = (1 << x86_enc_o_shift), // XX
+    x86_enc_o_opcode_r       = (2 << x86_enc_o_shift), // XX+r
+    x86_enc_o_mask           = (3 << x86_enc_o_shift),
+
+    x86_enc_f_modrm_r        = (1 << x86_enc_f_shift), // /r
+    x86_enc_f_modrm_n        = (2 << x86_enc_f_shift), // /N
+    x86_enc_f_opcode         = (3 << x86_enc_f_shift), // XX
+    x86_enc_f_opcode_r       = (4 << x86_enc_f_shift), // XX+r
+    x86_enc_f_mask           = (7 << x86_enc_f_shift),
+
+    x86_enc_i_ib             = (1 << x86_enc_i_shift),
+    x86_enc_i_iw             = (2 << x86_enc_i_shift),
+    x86_enc_i_i16            = (3 << x86_enc_i_shift),
+    x86_enc_i_i32            = (4 << x86_enc_i_shift),
+    x86_enc_i_i64            = (5 << x86_enc_i_shift),
+    x86_enc_i_mask           = (7 << x86_enc_i_shift),
+
+    x86_enc_i2_i16e          = (1 << x86_enc_i2_shift),
+    x86_enc_i2_mask          = (1 << x86_enc_i2_shift),
+
+    x86_enc_s_lock           = (1 << (x86_enc_s_shift + 0)),
+    x86_enc_s_rep            = (1 << (x86_enc_s_shift + 1)),
+    x86_enc_s_o16            = (1 << (x86_enc_s_shift + 2)),
+    x86_enc_s_o32            = (1 << (x86_enc_s_shift + 3)),
+    x86_enc_s_o64            = (1 << (x86_enc_s_shift + 4)),
+    x86_enc_s_a16            = (1 << (x86_enc_s_shift + 5)),
+    x86_enc_s_a32            = (1 << (x86_enc_s_shift + 6)),
+    x86_enc_s_a64            = (1 << (x86_enc_s_shift + 7)),
+    x86_enc_s_mask           = (255 << x86_enc_s_shift),
 };
 
 /*
@@ -1053,6 +951,19 @@ struct x86_mem
 
 /*
  * opcode metadata
+ *
+ * type, prefix, map, opcode, mask, plus operand and order records.
+ *
+ * opcode - opcode number from opcode enum for name lookup
+ * mode   - operating mode (16 | 32 | 64)
+ * opr    - operand list (r8/m8, rw/mw, xmm/m128, etc)
+ * ord    - operand order (register, immediate, regmem, etc)
+ * enc    - operand encoding (type, width, prefix, map, immediate, etc)
+ * opc    - opcode, ModRM function byte or second opcode byte.
+ * opm    - opcode mask (f8 for XX+r), ModRM function or second byte mask.
+ *
+ * prefix and map are provisioned as 6 bits each to align the bitfield.
+ * there are 3 types, 10 prefixes (5 * 2), and 7 maps (up to map6).
  */
 
 struct x86_opc_data
@@ -1061,35 +972,37 @@ struct x86_opc_data
     ushort mode : 4;
     ushort opr : 9;
     ushort ord : 7;
-    const uint enc[5];
+    uint enc;
+    uchar opc[2];
+    uchar opm[2];
 };
 
 struct x86_opr_data
 {
-    const uint opr[4];
+    uint opr[4];
 };
 
 struct x86_ord_data
 {
-    const ushort ord[4];
+    ushort ord[4];
 };
 
 /*
  * invert condition
  */
 
-static inline x86_cond x86_invert_cond(x86_cond c)
+static inline uint x86_invert_cond(uint c)
 {
-    return (x86_cond)(c ^ 1);
+    return c ^ 1;
 }
 
 /*
  * swap condition operands
  */
 
-static inline x86_cond x86_swap_cond(x86_cond c)
+static inline uint x86_swap_cond(uint c)
 {
-    return c & 6 ? (x86_cond)(c ^ 9) : c;
+    return c & 6 ? c ^ 9 : c;
 }
 
 /*
@@ -1112,7 +1025,7 @@ static inline x86_modrm x86_enc_modrm(uint mod, uint reg, uint rm)
  * SIB encoder
  */
 
-static inline x86_sib x86_enc_sib(x86_scale s, uint x, uint b)
+static inline x86_sib x86_enc_sib(uint s, uint x, uint b)
 {
     x86_sib sib = {
         .data = {
@@ -1167,7 +1080,7 @@ static inline x86_rex2 x86_enc_rex2(uint m, uint w, uint r, uint x, uint b)
  * VEX2 encoder
  */
 
-static inline x86_vex2 x86_enc_vex2(x86_pfx p, x86_vex_l l,
+static inline x86_vex2 x86_enc_vex2(uint p, uint l,
     uint r, uint v)
 {
     x86_vex2 vex2 = {
@@ -1185,8 +1098,8 @@ static inline x86_vex2 x86_enc_vex2(x86_pfx p, x86_vex_l l,
  * VEX3 encoder
  */
 
-static inline x86_vex3 x86_enc_vex3(x86_map m, x86_pfx p,
-    x86_vex_l l, x86_vex_w w, uint r, uint x, uint b, uint v)
+static inline x86_vex3 x86_enc_vex3(uint m, uint p,
+    uint l, uint w, uint r, uint x, uint b, uint v)
 {
     x86_vex3 vex3 = {
         .data = {
@@ -1207,8 +1120,8 @@ static inline x86_vex3 x86_enc_vex3(x86_map m, x86_pfx p,
  * EVEX encoder
  */
 
-static inline x86_evex x86_enc_evex(x86_map m, x86_pfx p,
-    x86_vex_l l, x86_vex_w w, uint r, uint x, uint b, uint v,
+static inline x86_evex x86_enc_evex(uint m, uint p,
+    uint l, uint w, uint r, uint x, uint b, uint v,
     uint k, uint brd, uint z)
 {
     x86_evex evex = {
@@ -1234,17 +1147,21 @@ static inline x86_evex x86_enc_evex(x86_map m, x86_pfx p,
 }
 
 /*
- * table generation
+ * table sort types
  */
 
-enum x86_sort
+enum
 {
     x86_sort_none,
     x86_sort_numeric,
     x86_sort_alpha
 };
 
-enum x86_table
+/*
+ * table types that map to instruction encoding prefix types
+ */
+
+enum
 {
     x86_table_none,
     x86_table_lex,
@@ -1252,27 +1169,51 @@ enum x86_table
     x86_table_evex
 };
 
+/*
+ * table sort indices array used to sort immutable opcode table
+ */
+
 struct x86_table_idx
 {
     size_t count;
     size_t *idx;
 };
 
-struct x86_map_idx
+/*
+ * opcode index decode tables
+ */
+
+struct x86_acc_idx
 {
-    size_t count;
-    x86_map_op *map;
+    size_t map_count;
+    x86_opc_data *map;
+    size_t acc_count;
+    x86_acc_entry *acc;
+    uchar *page_offsets;
 };
 
-struct x86_map_op
+/*
+ * opcode index acceleration entry
+ */
+
+struct x86_acc_entry
 {
-    uchar type   : 2;
-    uchar prefix : 6;
-    uchar map    : 6;
-    uchar opc[2];
-    uchar opm[2];
-    ushort rec;
+    uint idx : 24;
+    uint nent : 8;
 };
+
+/*
+ * context for encoder, decoder, formatter and parser
+ */
+
+struct x86_ctx
+{
+    uint mode;
+    x86_acc_idx *idx;
+};
+
+/* simplified buffer with read (start) and write (end) cursors
+ * capacity is user managed because it does no limit checking. */
 
 struct x86_buffer
 {
@@ -1289,6 +1230,14 @@ static inline void x86_buffer_init(x86_buffer *b, char *data)
 {
     b->start = 0;
     b->end = 0;
+    b->data = data;
+}
+
+static inline void x86_buffer_init_ex(x86_buffer *b, char *data,
+    size_t start, size_t end)
+{
+    b->start = start;
+    b->end = end;
     b->data = data;
 }
 
@@ -1396,32 +1345,30 @@ void x86_set_debug(uint d);
 
 size_t x86_mode_name(char * buf, size_t len, uint mode, const char *sep);
 size_t x86_map_name(char * buf, size_t len, uint mode, const char *sep);
-size_t x86_prefix_name(char * buf, size_t len, uint ord, const char *sep);
-size_t x86_prefix_namen(char * buf, size_t len, uint ord, const char *sep);
 size_t x86_ord_name(char * buf, size_t len, uint ord, const char *sep);
 size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord);
 size_t x86_opr_name(char * buf, size_t len, uint opr);
 size_t x86_enc_name(char * buf, size_t len, uint enc);
 const char* x86_reg_name(uint reg);
 
-int x86_enc_filter_rex(x86_rex prefix, x86_enc enc);
-int x86_enc_filter_rex2(x86_rex2 prefix, x86_enc enc);
-int x86_enc_filter_vex2(x86_vex2 prefix, x86_enc enc);
-int x86_enc_filter_vex3(x86_vex3 prefix, x86_enc enc);
-int x86_enc_filter_evex(x86_evex prefix, x86_enc enc);
-
-int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len);
-int x86_codec_read(x86_buffer *buf, x86_codec *c, size_t *len, size_t limit);
+int x86_enc_filter_rex(x86_rex prefix, uint enc);
+int x86_enc_filter_rex2(x86_rex2 prefix, uint enc);
+int x86_enc_filter_vex2(x86_vex2 prefix, uint enc);
+int x86_enc_filter_vex3(x86_vex3 prefix, uint enc);
+int x86_enc_filter_evex(x86_evex prefix, uint enc);
 
 x86_table_idx x86_opc_table_identity();
-x86_table_idx x86_opc_table_sorted(x86_table_idx tab, x86_sort sort);
-x86_table_idx x86_opc_table_filter(x86_table_idx tab, x86_modes modes);
-x86_map_idx x86_table_build(x86_modes modes);
-x86_map_op* x86_table_lookup(x86_map_idx map, const x86_map_op *m);
-void x86_print_map(x86_map_op *m);
-void x86_print_op(uint opcrec, uint compact);
-size_t x86_format_op(char *buf, size_t len, x86_codec *c);
+x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort);
+x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes);
+x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
+void x86_print_op(const x86_opc_data *d, uint compact, uint opcode);
+size_t x86_format_op(char *buf, size_t len, x86_ctx *ctx, x86_codec *c);
 size_t x86_format_hex(char *buf, size_t len, char *data, size_t datalen);
+
+x86_ctx* x86_ctx_create(uint mode);
+void x86_ctx_destroy(x86_ctx *ctx);
+int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len);
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len, size_t limit);
 
 /*
  * registers sand opcodes
