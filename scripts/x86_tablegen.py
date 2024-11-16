@@ -349,12 +349,6 @@ def translate_encoding(encoding):
             opl += ["|".join(pl)]
             if p == 'vex' or p == 'evex' or p == 'lex':
                 has_pfx = True
-        elif el in pbytes and len(comps) > 1 and not (has_pbyte or has_map or has_pfx or has_opc):
-            opl += ['x86_enc_t_p%s' % el]
-            has_pbyte = True
-        elif el in maps and len(comps) > 1 and not (has_map or has_pfx):
-            opl += ['x86_enc_m_%s' % el]
-            has_map = True
         elif el in immediates:
             opl += ['x86_enc_t_%s' % el]
         elif el in mods:
