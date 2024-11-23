@@ -1669,78 +1669,58 @@ size_t x86_opr_imm_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
-size_t x86_opr_const_str(char *buf, size_t buflen, x86_codec *c,
-    x86_codec_opr q, x86_modeb mode, uint opr, uint enc)
+uint x86_opr_const_reg(x86_codec *c, x86_codec_opr q, x86_modeb mode,
+    uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(q, mode, opr, enc);
     uint addrsz = x86_mode_addr_size(mode);
 
     switch (opr) {
+    case x86_opr_reg_al: return x86_al;
+    case x86_opr_reg_cl: return x86_cl;
+    case x86_opr_reg_ax: return x86_ax;
+    case x86_opr_reg_cx: return x86_cx;
+    case x86_opr_reg_dx: return x86_dx;
+    case x86_opr_reg_bx: return x86_bx;
+    case x86_opr_reg_eax: return x86_eax;
+    case x86_opr_reg_ecx: return x86_ecx;
+    case x86_opr_reg_edx: return x86_edx;
+    case x86_opr_reg_ebx: return x86_ebx;
+    case x86_opr_reg_rax: return x86_rax;
+    case x86_opr_reg_rcx: return x86_rcx;
+    case x86_opr_reg_rdx: return x86_rdx;
+    case x86_opr_reg_rbx: return x86_rbx;
+    case x86_opr_reg_aw: return x86_sized_gpr(c, x86_al, regsz);
+    case x86_opr_reg_cw: return x86_sized_gpr(c, x86_cl, regsz);
+    case x86_opr_reg_dw: return x86_sized_gpr(c, x86_dl, regsz);
+    case x86_opr_reg_bw: return x86_sized_gpr(c, x86_bl, regsz);
+    case x86_opr_reg_pa: return x86_sized_gpr(c, x86_al, addrsz);
+    case x86_opr_reg_pc: return x86_sized_gpr(c, x86_cl, addrsz);
+    case x86_opr_reg_pd: return x86_sized_gpr(c, x86_dl, addrsz);
+    case x86_opr_reg_pb: return x86_sized_gpr(c, x86_bl, addrsz);
+    case x86_opr_reg_psi: return x86_sized_gpr(c, x86_sil, addrsz);
+    case x86_opr_reg_pdi: return x86_sized_gpr(c, x86_dil, addrsz);
+    default: break;
+    }
+    return -1;
+}
+
+size_t x86_opr_const_str(char *buf, size_t buflen, x86_codec *c,
+    x86_codec_opr q, x86_modeb mode, uint opr, uint enc)
+{
+    uint regsz = x86_opr_reg_size(q, mode, opr, enc);
+    uint addrsz = x86_mode_addr_size(mode);
+    uint regname = x86_opr_const_reg(c, q, mode, opr, enc);
+
+    if (regname >= 0) {
+        return snprintf(buf, buflen, "%s", x86_reg_name(regname));
+    }
+
+    switch (opr) {
     case x86_opr_1: return snprintf(buf, buflen, "1");
-    case x86_opr_reg_al:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_al));
-    case x86_opr_reg_cl:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_cl));
-    case x86_opr_reg_ax:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_ax));
-    case x86_opr_reg_cx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_cx));
-    case x86_opr_reg_dx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_dx));
-    case x86_opr_reg_bx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_bx));
-    case x86_opr_reg_eax:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_eax));
-    case x86_opr_reg_ecx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_ecx));
-    case x86_opr_reg_edx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_edx));
-    case x86_opr_reg_ebx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_ebx));
-    case x86_opr_reg_rax:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_rax));
-    case x86_opr_reg_rcx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_rcx));
-    case x86_opr_reg_rdx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_rdx));
-    case x86_opr_reg_rbx:
-        return snprintf(buf, buflen, "%s", x86_reg_name(x86_rbx));
-    case x86_opr_reg_aw:
-        return snprintf(buf, buflen, "%s",
-            x86_reg_name(x86_sized_gpr(c, x86_al, regsz)));
-    case x86_opr_reg_cw:
-        return snprintf(buf, buflen, "%s",
-            x86_reg_name(x86_sized_gpr(c, x86_cl, regsz)));
-    case x86_opr_reg_dw:
-        return snprintf(buf, buflen, "%s",
-            x86_reg_name(x86_sized_gpr(c, x86_dl, regsz)));
-    case x86_opr_reg_bw:
-        return snprintf(buf, buflen, "%s",
-            x86_reg_name(x86_sized_gpr(c, x86_bl, regsz)));
-    case x86_opr_reg_pa:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_al, addrsz)));
-    case x86_opr_reg_pc:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_cl, addrsz)));
-    case x86_opr_reg_pd:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_dl, addrsz)));
-    case x86_opr_reg_pb:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_bl, addrsz)));
-    case x86_opr_reg_psi:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_sil, addrsz)));
-    case x86_opr_reg_pdi:
-        return snprintf(buf, buflen, "[%s]",
-            x86_reg_name(x86_sized_gpr(c, x86_dil, addrsz)));
-    case x86_opr_reg_xmm0:
-        return snprintf(buf, buflen, "%s", "<xmm0>");
-    case x86_opr_reg_xmm0_7:
-        return snprintf(buf, buflen, "%s", "<xmm0-7>");
-    default:
-        return snprintf(buf, buflen, "%s", "<const>");
+    case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "<xmm0>");
+    case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "<xmm0-7>");
+    default: return snprintf(buf, buflen, "%s", "<unknown>");
     }
 }
 
