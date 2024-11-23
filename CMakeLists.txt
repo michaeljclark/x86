@@ -5,6 +5,8 @@ project(x86)
 find_package(Python3)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 #
@@ -36,6 +38,22 @@ add_library(x86 STATIC lib/x86.c)
 add_dependencies(x86 x86_generated_source)
 
 #
+# llvm optional
+#
+find_package(LLVM CONFIG)
+if ( LLVM_FOUND )
+    include_directories(${LLVM_INCLUDE_DIRS})
+    add_definitions(${LLVM_DEFINITIONS_LIST})
+
+    add_executable(llvm_dump tests/llvm_dump.c)
+    add_executable(llvm_dumppp tests/llvm_dumppp.cpp)
+    add_executable(llvm_bench tests/llvm_bench.c)
+    target_link_libraries(llvm_dump LLVM)
+    target_link_libraries(llvm_dumppp LLVM)
+    target_link_libraries(llvm_bench LLVM)
+endif()
+
+#
 # x86 tests
 #
 foreach (test x86_001 x86_002 x86_003 x86_004 x86_005 x86_006)
@@ -43,11 +61,9 @@ foreach (test x86_001 x86_002 x86_003 x86_004 x86_005 x86_006)
     target_link_libraries(${test} x86)
 endforeach()
 
-add_executable(x86_opcodes tests/x86_opcodes.c)
-target_link_libraries(x86_opcodes x86)
-
 add_executable(x86_bench tests/x86_bench.c)
+add_executable(x86_dump tests/x86_dump.c)
+add_executable(x86_opcodes tests/x86_opcodes.c)
 target_link_libraries(x86_bench x86)
-
-add_executable(x86_disasm tests/x86_disasm.c)
-target_link_libraries(x86_disasm x86)
+target_link_libraries(x86_dump x86)
+target_link_libraries(x86_opcodes x86)
