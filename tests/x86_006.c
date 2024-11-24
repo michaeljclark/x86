@@ -8,15 +8,10 @@ void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen)
 {
     x86_buffer buf;
     x86_codec codec;
-    char data[32], str[128];
+    char str[128];
     size_t nbytes = 0, len = 0;
 
-    memset(data, 0, sizeof(data));
-    memset(&codec, 0, sizeof(codec));
-    codec.flags |= x86_cf_amd64;
-
-    x86_buffer_init(&buf, data);
-    x86_buffer_write(&buf, insn, insnlen);
+    x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
