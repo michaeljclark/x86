@@ -1282,7 +1282,7 @@ struct x86_ctx
 
 struct x86_buffer
 {
-    char *data;
+    uchar *data;
     size_t start;
     size_t end;
 };
@@ -1291,14 +1291,14 @@ struct x86_buffer
  * buffer functions
  */
 
-static inline void x86_buffer_init(x86_buffer *b, char *data)
+static inline void x86_buffer_init(x86_buffer *b, uchar *data)
 {
     b->start = 0;
     b->end = 0;
     b->data = data;
 }
 
-static inline void x86_buffer_init_ex(x86_buffer *b, char *data,
+static inline void x86_buffer_init_ex(x86_buffer *b, uchar *data,
     size_t start, size_t end)
 {
     b->start = start;
@@ -1306,7 +1306,7 @@ static inline void x86_buffer_init_ex(x86_buffer *b, char *data,
     b->data = data;
 }
 
-static inline size_t x86_buffer_read(x86_buffer *b, char *buf, size_t len)
+static inline size_t x86_buffer_read(x86_buffer *b, uchar *buf, size_t len)
 {
     memcpy(buf, b->data + b->start, len);
     b->start += len;
@@ -1319,7 +1319,7 @@ static inline size_t x86_buffer_unread(x86_buffer *b, size_t len)
     return len;
 }
 
-static inline size_t x86_buffer_write(x86_buffer *b, char *buf, size_t len)
+static inline size_t x86_buffer_write(x86_buffer *b, uchar *buf, size_t len)
 {
     memcpy(b->data + b->end, buf, len);
     b->end += len;
@@ -1428,7 +1428,7 @@ x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes);
 x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
 void x86_print_op(const x86_opc_data *d, uint compact, uint opcode);
 size_t x86_format_op(char *buf, size_t len, x86_ctx *ctx, x86_codec *c);
-size_t x86_format_hex(char *buf, size_t len, char *data, size_t datalen);
+size_t x86_format_hex(char *buf, size_t len, uchar *data, size_t datalen);
 
 x86_ctx* x86_ctx_create(uint mode);
 void x86_ctx_destroy(x86_ctx *ctx);

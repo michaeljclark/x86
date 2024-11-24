@@ -1754,7 +1754,7 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
     return len;
 }
 
-size_t x86_format_hex(char *buf, size_t buflen, char *data, size_t datalen)
+size_t x86_format_hex(char *buf, size_t buflen, uchar *data, size_t datalen)
 {
     size_t len = 0;
     for(size_t i = 0; i < datalen && i < 11; i++) {
@@ -1785,7 +1785,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
     }
  
     while (state != x86_state_done) {
-        nbytes += x86_buffer_read(buf, (void*)&b, 1);
+        nbytes += x86_buffer_read(buf, &b, 1);
         switch (state) {
         case x86_state_top:
             switch (b) {
@@ -1817,7 +1817,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 break;
             case x86_pb_62:
                 if (c->seg || lastp) goto err;
-                nbytes += x86_buffer_read(buf, (void*)c->evex.data, 3);
+                nbytes += x86_buffer_read(buf, c->evex.data, 3);
                 c->flags |= x86_ce_evex;
                 m = (c->evex.data[0] >> 0) & 7;
                 w = (c->evex.data[1] >> 7) & 1;
@@ -1828,7 +1828,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 break;
             case x86_pb_c4:
                 if (c->seg || lastp) goto err;
-                nbytes += x86_buffer_read(buf, (void*)c->vex3.data, 2);
+                nbytes += x86_buffer_read(buf, c->vex3.data, 2);
                 c->flags |= x86_ce_vex3;
                 m = (c->vex3.data[0] >> 0) & 31;
                 w = (c->vex3.data[1] >> 7) & 1;
@@ -1839,7 +1839,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 break;
             case x86_pb_c5:
                 if (c->seg || lastp) goto err;
-                nbytes += x86_buffer_read(buf, (void*)c->vex2.data, 1);
+                nbytes += x86_buffer_read(buf, c->vex2.data, 1);
                 c->flags |= x86_ce_vex2;
                 m = x86_map_0f;
                 p = (c->vex2.data[0] >> 0) & 3;
@@ -1849,7 +1849,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 break;
             case x86_pb_d5:
                 if (c->seg || lastp) goto err;
-                nbytes += x86_buffer_read(buf, (void*)c->rex2.data, 1);
+                nbytes += x86_buffer_read(buf, c->rex2.data, 1);
                 c->flags |= x86_ce_rex2;
                 m = (c->rex2.data[0] >> 7) & 1;
                 w = (c->rex2.data[0] >> 3) & 1;
@@ -1931,7 +1931,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
     /* populate opcode for table lookup */
     k.mode = mode;
     c->opc[0] = k.opc[0] = b;
-    nbytes += x86_buffer_read(buf, (void*)&b, 1);
+    nbytes += x86_buffer_read(buf, &b, 1);
     c->opc[1] = k.opc[1] = b;
     k.opm[0] = k.opm[1] = 0xff;
 

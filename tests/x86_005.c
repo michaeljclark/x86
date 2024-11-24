@@ -5,7 +5,7 @@
 void x86_out(x86_codec codec)
 {
     x86_buffer buf;
-    char data[32];
+    uchar data[32];
     size_t nbytes = 0;
 
     x86_buffer_init(&buf, data);
