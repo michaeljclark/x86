@@ -575,7 +575,7 @@ int x86_enc_filter_evex(x86_evex prefix, uint enc)
  *  table sorting
  */
 
-static int x86_op_enc_compare_opcode(const void *p1, const void *p2)
+static int x86_opc_data_compare_opcode(const void *p1, const void *p2)
 {
     const x86_opc_data *op1 = x86_opc_table + *(size_t*)p1;
     const x86_opc_data *op2 = x86_opc_table + *(size_t*)p2;
@@ -599,12 +599,12 @@ static int x86_op_enc_compare_opcode(const void *p1, const void *p2)
     return 0;
 }
 
-static int x86_op_enc_compare_alpha(const void *p1, const void *p2)
+static int x86_opc_data_compare_alpha(const void *p1, const void *p2)
 {
     const x86_opc_data *op1 = x86_opc_table + *(size_t*)p1;
     const x86_opc_data *op2 = x86_opc_table + *(size_t*)p2;
     int alpha = strcmp(x86_op_names[op1->op], x86_op_names[op2->op]);
-    if (alpha == 0) return x86_op_enc_compare_opcode(p1, p2);
+    if (alpha == 0) return x86_opc_data_compare_opcode(p1, p2);
     else return alpha;
 }
 
@@ -626,10 +626,10 @@ x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort)
     case x86_sort_none:
         break;
     case x86_sort_numeric:
-        qsort(tab.idx, tab.count, sizeof(size_t), x86_op_enc_compare_opcode);
+        qsort(tab.idx, tab.count, sizeof(size_t), x86_opc_data_compare_opcode);
         break;
     case x86_sort_alpha:
-        qsort(tab.idx, tab.count, sizeof(size_t), x86_op_enc_compare_alpha);
+        qsort(tab.idx, tab.count, sizeof(size_t), x86_opc_data_compare_alpha);
         break;
     }
     return tab;
@@ -652,7 +652,7 @@ x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes)
     return newtab;
 }
 
-static int x86_opc_data_compare_opcode_masked(const void *p1, const void *p2)
+static int x86_opc_data_compare_masked(const void *p1, const void *p2)
 {
     x86_opc_data *om1 = (x86_opc_data*)p1;
     x86_opc_data *om2 = (x86_opc_data*)p2;
@@ -670,7 +670,7 @@ static int x86_opc_data_compare_opcode_masked(const void *p1, const void *p2)
     return 0;
 }
 
-static int x86_opc_data_compare_opcode(const void *p1, const void *p2)
+static int x86_opc_data_compare_build(const void *p1, const void *p2)
 {
     x86_opc_data *om1 = (x86_opc_data*)p1;
     x86_opc_data *om2 = (x86_opc_data*)p2;
@@ -839,7 +839,7 @@ x86_acc_idx* x86_table_build(uint modes)
     x86_build_prefix_table(x86_opc_table, tab, NULL, &idx->map_count);
     idx->map = calloc(idx->map_count, sizeof(x86_opc_data));
     x86_build_prefix_table(x86_opc_table, tab, idx->map, NULL);
-    qsort(idx->map, idx->map_count, sizeof(x86_opc_data), x86_opc_data_compare_opcode);
+    qsort(idx->map, idx->map_count, sizeof(x86_opc_data), x86_opc_data_compare_build);
     idx->page_offsets = calloc(512, sizeof(uchar));
     x86_build_accel_table(idx, NULL, &idx->acc_count);
     idx->acc = calloc(sizeof(x86_acc_entry), idx->acc_count);
@@ -853,7 +853,7 @@ static x86_opc_data* x86_table_lookup_slow(x86_acc_idx *idx, const x86_opc_data 
     size_t begin = 0, end = idx->map_count;
     while (end != 0) {
         size_t half = (end >> 1), probe = begin + half;
-        if (x86_opc_data_compare_opcode_masked(m, idx->map + probe) > 0) {
+        if (x86_opc_data_compare_masked(m, idx->map + probe) > 0) {
             begin = probe + 1;
             end -= half + 1;
         } else {
@@ -1952,7 +1952,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             size_t oprec = (r - ctx->idx->map);
             x86_debugf("checking opdata %zu", oprec);
             if (debug) x86_print_op(r, 1, 1);
-            if (x86_opc_data_compare_opcode_masked(&k, r) != 0) {
+            if (x86_opc_data_compare_masked(&k, r) != 0) {
                 x86_debugf("** no matches");
                 r = NULL;
                 break;
@@ -1978,7 +1978,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             size_t oprec = (r - ctx->idx->map);
             x86_debugf("checking opdata %zu", oprec);
             if (debug) x86_print_op(r, 1, 1);
-            if (x86_opc_data_compare_opcode_masked(&k, r) != 0) {
+            if (x86_opc_data_compare_masked(&k, r) != 0) {
                 x86_debugf("** no matches");
                 r = NULL;
                 break;
