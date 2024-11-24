@@ -1,4 +1,4 @@
-DIS=./build/x86_disasm
+DIS=./build/x86_dump
 
 case $1 in
   -d)
