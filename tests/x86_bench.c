@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "x86.h"
@@ -79,7 +81,7 @@ static void header()
         "----------", "--------", "--------");
 }
 
-uint bench_exec(x86_ctx *ctx, const char *name, bench_fn fn, size_t loops,
+void bench_exec(x86_ctx *ctx, const char *name, bench_fn fn, size_t loops,
     uchar *insn, size_t size)
 {
     clock_t start, end;
