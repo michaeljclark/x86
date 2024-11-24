@@ -117,7 +117,7 @@ void run_benchmarks(x86_ctx *ctx, size_t loops, size_t size,
     uint decode, uint format)
 {
     uchar add_reg[] = { 0x01, 0xc1 };
-    uchar add_sib[] = { 0x00, 0x01 };
+    uchar add_mem[] = { 0x00, 0x01 };
     uchar valignq[] = { 0x62, 0xf3, 0xfd, 0x48, 0x03, 0xd1, 0x07 };
     uchar misc[] = {
         0xf3, 0x0f, 0x1e, 0xfa, 0x55, 0x89, 0xfd, 0xbf,
@@ -131,8 +131,8 @@ void run_benchmarks(x86_ctx *ctx, size_t loops, size_t size,
     if (decode) {
         bench_run(ctx, "decode add_reg", x86_disasm_decode,
                   loops, add_reg, sizeof(add_reg), size * 1024);
-        bench_run(ctx, "decode add_sib", x86_disasm_decode,
-                  loops, add_sib, sizeof(add_sib), size * 1024);
+        bench_run(ctx, "decode add_mem", x86_disasm_decode,
+                  loops, add_mem, sizeof(add_mem), size * 1024);
         bench_run(ctx, "decode valignq", x86_disasm_decode,
                   loops, valignq, sizeof(valignq), size * 1024);
         bench_run(ctx, "decode misc", x86_disasm_decode,
@@ -141,8 +141,8 @@ void run_benchmarks(x86_ctx *ctx, size_t loops, size_t size,
     if (format) {
         bench_run(ctx, "format add_reg", x86_disasm_format,
                   loops, add_reg, sizeof(add_reg), size * 1024);
-        bench_run(ctx, "format add_sib", x86_disasm_format,
-                  loops, add_sib, sizeof(add_sib), size * 1024);
+        bench_run(ctx, "format add_mem", x86_disasm_format,
+                  loops, add_mem, sizeof(add_mem), size * 1024);
         bench_run(ctx, "format valignq", x86_disasm_format,
                   loops, valignq, sizeof(valignq), size * 1024);
         bench_run(ctx, "format misc", x86_disasm_format,
@@ -152,13 +152,13 @@ void run_benchmarks(x86_ctx *ctx, size_t loops, size_t size,
 
 void run_tests(x86_ctx *ctx)
 {
-    uchar add_sib[] = { 0x00, 0x01 };
+    uchar add_mem[] = { 0x00, 0x01 };
     uchar add_reg[] = { 0x01, 0xc1 };
     uchar valignq[] = { 0x62, 0xf3, 0xfd, 0x48, 0x03, 0xd1, 0x07 };
     bench_run(ctx, "test add_reg", x86_disasm_test,
               1, add_reg, sizeof(add_reg), 16);
-    bench_run(ctx, "test add_sib", x86_disasm_test,
-              1, add_sib, sizeof(add_sib), 16);
+    bench_run(ctx, "test add_mem", x86_disasm_test,
+              1, add_mem, sizeof(add_mem), 16);
     bench_run(ctx, "test valignq", x86_disasm_test,
               1, valignq, sizeof(valignq), 16);
 }
