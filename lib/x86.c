@@ -386,6 +386,46 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
     return count;
 }
 
+char * x86_table_type_name(uint type)
+{
+    switch (type) {
+    case x86_table_none: return "none";
+    case x86_table_lex: return "lex";
+    case x86_table_vex: return "vex";
+    case x86_table_evex: return "evex";
+    default: return "";
+    }
+}
+
+char * x86_table_map_name(uint map)
+{
+    switch (map) {
+    case x86_map_none: return "";
+    case x86_map_0f: return "0f";
+    case x86_map_0f38: return "0f38";
+    case x86_map_0f3a: return "0f3a";
+    case x86_map_map4: return "map4";
+    case x86_map_map5: return "map5";
+    case x86_map_map6: return "map6";
+    default: return "";
+    }
+}
+
+char * x86_table_prefix_name(uint prefix)
+{
+    switch (prefix) {
+    case x86_pfx_66: return "66";
+    case x86_pfx_f3: return "f3";
+    case x86_pfx_f2: return "f2";
+    case x86_pfx_9b: return "9b";
+    case x86_pfx_66 | x86_pfx_rexw: return "66+w";
+    case x86_pfx_f3 | x86_pfx_rexw: return "f3+w";
+    case x86_pfx_f2 | x86_pfx_rexw: return "f2+w";
+    case x86_pfx_9b | x86_pfx_rexw: return "9b+w";
+    default: return "";
+    }
+}
+
 /*
  *  metadata filters
  */
@@ -804,7 +844,7 @@ static void x86_build_accel_table(x86_acc_idx *idx,
         uint type = x86_enc_type(m->enc) >> x86_enc_t_shift;
         uint prefix = x86_enc_prefix(m->enc) >> x86_enc_p_shift;
         uint map = x86_enc_map(m->enc) >> x86_enc_m_shift;
-        size_t acc_page = type | (prefix << 2) | (map << 6);
+        size_t acc_page = x86_acc_page(type, prefix, map);
         /*
          * offset zero means the slice is not allocated but page zero is
          * preallocated as a special cased for type:LEX, prefix:0, map:0
@@ -819,7 +859,7 @@ static void x86_build_accel_table(x86_acc_idx *idx,
             }
         } else if (acc) {
             /* writing pass lookup offset */
-            offset = idx->page_offsets[acc_page] << 8;
+            offset = x86_acc_offset(idx, acc_page);
             uint oc = m->opc[0], msk = m->opm[0], om = oc;
             /*  (type, prefix, map, opcode) -> (index, count) */
             while ((oc & msk) == om) {
@@ -870,10 +910,9 @@ x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m)
     uint type = x86_enc_type(m->enc) >> x86_enc_t_shift;
     uint prefix = x86_enc_prefix(m->enc) >> x86_enc_p_shift;
     uint map = x86_enc_map(m->enc) >> x86_enc_m_shift;
-    size_t acc_page = type | (prefix << 2) | (map << 6);
-    size_t page = idx->page_offsets[acc_page];
-    size_t offset = (page << 8) + m->opc[0];
-    x86_acc_entry *ent = idx->acc + offset;
+    size_t acc_page = x86_acc_page(type, prefix, map);
+    size_t offset = x86_acc_offset(idx, acc_page) + m->opc[0];
+    x86_acc_entry *ent = x86_acc_lookup(idx, offset);
     x86_acc_idx new_idx = { ent->nent, idx->map + ent->idx };
     return x86_table_lookup_slow(&new_idx, m);
 }

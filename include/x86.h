@@ -1270,6 +1270,25 @@ struct x86_acc_entry
 };
 
 /*
+ * opcode acceleration functions
+ */
+
+static uint x86_acc_page(uint type, uint prefix, uint map)
+{
+    return (type & 3) | ((prefix & 15) << 2) | ((map & 7) << 6);
+}
+
+static size_t x86_acc_offset(x86_acc_idx *idx, size_t acc_page)
+{
+    return (size_t)idx->page_offsets[acc_page] << 8;
+}
+
+static x86_acc_entry* x86_acc_lookup(x86_acc_idx *idx, size_t offset)
+{
+    return idx->acc + offset;
+}
+
+/*
  * context for encoder, decoder, formatter and parser
  */
 
@@ -1417,6 +1436,10 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord);
 size_t x86_opr_name(char * buf, size_t len, uint opr);
 size_t x86_enc_name(char * buf, size_t len, uint enc);
 const char* x86_reg_name(uint reg);
+
+char * x86_table_type_name(uint type);
+char * x86_table_map_name(uint map);
+char * x86_table_prefix_name(uint prefix);
 
 int x86_enc_filter_rex(x86_rex prefix, uint enc);
 int x86_enc_filter_rex2(x86_rex2 prefix, uint enc);
