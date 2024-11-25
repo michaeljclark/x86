@@ -272,9 +272,9 @@ void test_x86_enc_name()
     assert(strcmp(enc_name(x86_enc_m_map5), ".map5") == 0);
     assert(strcmp(enc_name(x86_enc_m_map6), ".map6") == 0);
     assert(strcmp(enc_name(x86_enc_p_66), ".66") == 0);
-    assert(strcmp(enc_name(x86_enc_p_9b), ".9b") == 0);
-    assert(strcmp(enc_name(x86_enc_p_f2), ".f2") == 0);
     assert(strcmp(enc_name(x86_enc_p_f3), ".f3") == 0);
+    assert(strcmp(enc_name(x86_enc_p_f2), ".f2") == 0);
+    assert(strcmp(enc_name(x86_enc_p_9b), ".9b") == 0);
     assert(strcmp(enc_name(x86_enc_p_rexw), ".w") == 0);
     assert(strcmp(enc_name(x86_enc_l_lz), ".lz") == 0);
     assert(strcmp(enc_name(x86_enc_l_l0), ".l0") == 0);

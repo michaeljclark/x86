@@ -191,6 +191,8 @@ enum x86_pfx
     x86_pfx_66,
     x86_pfx_f3,
     x86_pfx_f2,
+    x86_pfx_9b,
+    x86_pfx_rexw = 8
 };
 
 /*
@@ -481,9 +483,9 @@ enum x86_enc
 
     x86_enc_p_none           = (0 << x86_enc_p_shift),
     x86_enc_p_66             = (1 << x86_enc_p_shift),
-    x86_enc_p_9b             = (2 << x86_enc_p_shift),
+    x86_enc_p_f3             = (2 << x86_enc_p_shift),
     x86_enc_p_f2             = (3 << x86_enc_p_shift),
-    x86_enc_p_f3             = (4 << x86_enc_p_shift),
+    x86_enc_p_9b             = (4 << x86_enc_p_shift),
     x86_enc_p_rexw           = (8 << x86_enc_p_shift),
     x86_enc_p_mask           = (7 << x86_enc_p_shift),
     x86_enc_prexw_mask       = (15 << x86_enc_p_shift),
