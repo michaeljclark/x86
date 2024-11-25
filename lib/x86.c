@@ -19,6 +19,8 @@ typedef struct x86_operands x86_operands;
 enum x86_state
 {
     x86_state_top,
+    x86_state_segment,
+    x86_state_legacy,
     x86_state_map_0f,
     x86_state_lex_opcode,
     x86_state_rex_opcode,
@@ -1784,18 +1786,17 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             case x86_pb_3e:
             case x86_pb_64:
             case x86_pb_65:
-                if (c->seg || lastp) goto err;
-                switch (b) {
-                case x86_pb_26: c->seg = x86_seg_es; break;
-                case x86_pb_2e: c->seg = x86_seg_cs; break;
-                case x86_pb_36: c->seg = x86_seg_ss; break;
-                case x86_pb_3e: c->seg = x86_seg_ds; break;
-                case x86_pb_64: c->seg = x86_seg_fs; break;
-                case x86_pb_65: c->seg = x86_seg_gs; break;
-                }
-                break;
+                state = x86_state_segment;
+                goto segment_reparse;
+            case x86_pb_66:
+            case x86_pb_67:
+            case x86_pb_9b:
+            case x86_pb_f0:
+            case x86_pb_f2:
+            case x86_pb_f3:
+                state = x86_state_legacy;
+                goto legacy_reparse;
             case x86_pb_62:
-                if (c->seg || lastp) goto err;
                 nbytes += x86_buffer_read(buf, c->evex.data, 3);
                 c->flags |= x86_ce_evex;
                 m = (c->evex.data[0] >> 0) & 7;
@@ -1806,7 +1807,6 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 state = x86_state_vex_opcode;
                 break;
             case x86_pb_c4:
-                if (c->seg || lastp) goto err;
                 nbytes += x86_buffer_read(buf, c->vex3.data, 2);
                 c->flags |= x86_ce_vex3;
                 m = (c->vex3.data[0] >> 0) & 31;
@@ -1817,7 +1817,6 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 state = x86_state_vex_opcode;
                 break;
             case x86_pb_c5:
-                if (c->seg || lastp) goto err;
                 nbytes += x86_buffer_read(buf, c->vex2.data, 1);
                 c->flags |= x86_ce_vex2;
                 m = x86_map_0f;
@@ -1827,7 +1826,6 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 state = x86_state_vex_opcode;
                 break;
             case x86_pb_d5:
-                if (c->seg || lastp) goto err;
                 nbytes += x86_buffer_read(buf, c->rex2.data, 1);
                 c->flags |= x86_ce_rex2;
                 m = (c->rex2.data[0] >> 7) & 1;
@@ -1835,6 +1833,82 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 t = x86_table_lex;
                 state = x86_state_lex_opcode;
                 break;
+            case 0x0f:
+                t = x86_table_lex;
+                state = x86_state_map_0f;
+                break;
+            default:
+                m = x86_map_none;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+      case x86_state_segment: segment_reparse:
+            switch (b) {
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                c->rex.data[0] = b;
+                c->flags |= x86_ce_rex;
+                w = (c->rex.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_rex_opcode;
+                break;
+            case x86_pb_26: c->seg = x86_seg_es; state = x86_state_legacy; break;
+            case x86_pb_2e: c->seg = x86_seg_cs; state = x86_state_legacy; break;
+            case x86_pb_36: c->seg = x86_seg_ss; state = x86_state_legacy; break;
+            case x86_pb_3e: c->seg = x86_seg_ds; state = x86_state_legacy; break;
+            case x86_pb_64: c->seg = x86_seg_fs; state = x86_state_legacy; break;
+            case x86_pb_65: c->seg = x86_seg_gs; state = x86_state_legacy; break;
+            case x86_pb_66:
+            case x86_pb_67:
+            case x86_pb_9b:
+            case x86_pb_f0:
+            case x86_pb_f2:
+            case x86_pb_f3:
+                state = x86_state_legacy;
+                goto legacy_reparse;
+            case x86_pb_62:
+            case x86_pb_c4:
+            case x86_pb_c5:
+            case x86_pb_d5:
+                goto err;
+            case 0x0f:
+                t = x86_table_lex;
+                state = x86_state_map_0f;
+                break;
+            default:
+                m = x86_map_none;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_legacy: legacy_reparse:
+            switch (b) {
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                c->rex.data[0] = b;
+                c->flags |= x86_ce_rex;
+                w = (c->rex.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_rex_opcode;
+                break;
+            case x86_pb_26:
+            case x86_pb_2e:
+            case x86_pb_36:
+            case x86_pb_3e:
+            case x86_pb_64:
+            case x86_pb_65:
+            case x86_pb_62:
+            case x86_pb_c4:
+            case x86_pb_c5:
+            case x86_pb_d5:
+                goto err;
             case x86_pb_66: lastp = b; c->flags |= x86_cp_osize; break;
             case x86_pb_67: lastp = b; c->flags |= x86_cp_asize; break;
             case x86_pb_9b: lastp = b; c->flags |= x86_cp_wait; break;
@@ -1849,7 +1923,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 m = x86_map_none;
                 t = x86_table_lex;
                 state = x86_state_lex_opcode;
-                goto reparse;
+                goto lex_reparse;
             }
             break;
         case x86_state_rex_opcode:
@@ -1859,7 +1933,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 break;
             default:
                 state = x86_state_lex_opcode;
-                goto reparse;
+                goto lex_reparse;
             }
             break;
         case x86_state_map_0f:
@@ -1878,10 +1952,10 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 c->flags |= x86_cm_0f;
                 m = x86_map_0f;
                 state = x86_state_lex_opcode;
-                goto reparse;
+                goto lex_reparse;
             }
             break;
-        case x86_state_lex_opcode: reparse:
+        case x86_state_lex_opcode: lex_reparse:
             k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
                   |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
             switch (lastp) {
