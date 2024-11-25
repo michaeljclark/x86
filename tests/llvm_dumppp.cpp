@@ -95,15 +95,20 @@ struct LLVMDisassembler
     }
 
     void format_hex(raw_string_ostream &out, ArrayRef<uint8_t> data,
-        size_t offset, size_t sz)
+        size_t offset, size_t sz, int show_off, int show_hex)
     {
         int nbytes = sz < hexcols ? sz : hexcols;
-        out << format_hex_no_prefix(offset, 8) << ": "
-            << format_bytes(data.slice(offset, nbytes), {}, hexcols, 1);
-        out.indent((hexcols - nbytes) * 3 + 8 - (hexcols * 3) % 8);
+        if (show_off) {
+            out << format_hex_no_prefix(offset, 8) << ":";
+        }
+        if (show_hex) {
+            out << '\t';
+            out << format_bytes(data.slice(offset, nbytes), {}, hexcols, 1);
+            out.indent((hexcols - nbytes) * 3 + 8 - (hexcols * 3) % 8);
+        }
     }
 
-    int disasm(size_t offset, ArrayRef<uint8_t> data, int verbose)
+    int disasm(size_t offset, ArrayRef<uint8_t> data, int show_off, int show_hex)
     {
         std::string buf;
         raw_string_ostream out(buf);
@@ -112,17 +117,17 @@ struct LLVMDisassembler
         while (offset < data.size() &&
                di->getInstruction(in, sz, data.slice(offset), offset, out))
         {
-            if (verbose) {
-                format_hex(out, data, offset, sz);
+            if (show_off || show_hex) {
+                format_hex(out, data, offset, sz, show_off, show_hex);
             }
             ip->printInst(&in, offset, "", *si, out);
             if (sz == 0) break;
             puts(buf.c_str());
             buf.clear();
-            if (verbose) {
+            if (show_off || show_hex) {
                 while (sz > hexcols) {
                     offset += hexcols; sz -= hexcols;
-                    format_hex(out, data, offset, sz);
+                    format_hex(out, data, offset, sz, show_off, show_hex);
                     printf("%s\n", buf.c_str());
                     buf.clear();
                 }
@@ -139,12 +144,14 @@ int main(int argc, char **argv)
     const char *filename = NULL;
     const char *triple = "x86_64";
 
-    int help = 0, verbose = 0, i = 1;
+    int help = 0, show_off = 0, show_hex = 0, i = 1;
     while (i < argc) {
         if (strcmp(argv[i], "-h") == 0) {
             help = 1;
-        } else if (strcmp(argv[i], "-v") == 0) {
-            verbose = 1;
+        } else if (strcmp(argv[i], "-o") == 0) {
+            show_off = 1;
+        } else if (strcmp(argv[i], "-x") == 0) {
+            show_hex = 1;
         } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
             triple = argv[++i];
         } else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
@@ -160,7 +167,7 @@ int main(int argc, char **argv)
     }
     else if (help) {
         fprintf(stderr,
-            "usage: %s [-v] [-t <triple>] (-f <file.bin> | <hex> ...)\n",
+            "usage: %s [-o] [-x] [-t <triple>] (-f <file.bin> | <hex> ...)\n",
             argv[0]);
         return -1;
     }
@@ -179,7 +186,7 @@ int main(int argc, char **argv)
     if (buf.data && buf.length) {
         LLVMDisassembler dis("x86_64", "", "");
         ret = dis.disasm(0, ArrayRef<uint8_t>((uint8_t*)buf.data, buf.length),
-            verbose);
+            show_off, show_hex);
     }
 
     return ret;

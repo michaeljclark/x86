@@ -1,8 +1,10 @@
 DIS=./build/x86_dump
 
+flags="-x"
+
 case $1 in
   -d)
-    flags="-d"
+    flags="${flags} -d"
     shift
     ;;
 esac
