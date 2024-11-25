@@ -1228,28 +1228,7 @@ static int x86_filter_opdata(x86_codec *c, x86_opc_data *d, uint w)
 static int x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     x86_opc_data *d, size_t *len)
 {
-    int has_byte2 = 0;
     size_t nbytes = 0;
-
-    /* check if we have modrm byte */
-    switch (x86_enc_func(d->enc)) {
-    case x86_enc_f_modrm_r:
-    case x86_enc_f_modrm_n:
-        c->flags |= x86_cf_modrm;
-        /* fallthrough */
-    case x86_enc_f_opcode:
-    case x86_enc_f_opcode_r:
-        has_byte2 = 1;
-        break;
-    }
-
-    /* put back byte if there is single byte opcode without modrm */
-    if (!has_byte2) {
-        nbytes -= x86_buffer_unread(buf, 1);
-        c->opclen = 1;
-    } else {
-        c->opclen = 2;
-    }
 
     /* parse SIB and displacement */
     if (x86_codec_has_modrm(c)) {
@@ -1986,6 +1965,26 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             if (x86_filter_opdata(c, r, 0) == 0) break;
             r++;
         }
+    }
+
+    /* check if we have modrm byte */
+    switch (x86_enc_func(r->enc)) {
+    case x86_enc_f_modrm_r:
+    case x86_enc_f_modrm_n:
+        /* second byte is modrm */
+        c->flags |= x86_cf_modrm;
+        c->opclen = 1;
+        break;
+    case x86_enc_f_opcode:
+    case x86_enc_f_opcode_r:
+        /* two byte opcode */
+        c->opclen = 2;
+        break;
+    default:
+        /* no second opcode byte */
+        nbytes -= x86_buffer_unread(buf, 1);
+        c->opclen = 1;
+        break;
     }
 
     /* parse encoding */
