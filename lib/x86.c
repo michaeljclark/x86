@@ -15,6 +15,11 @@ typedef enum x86_state x86_state;
 typedef struct x86_table_col x86_table_col;
 typedef struct x86_map_str x86_map_str;
 typedef struct x86_operands x86_operands;
+typedef struct x86_opr_formatter x86_opr_formatter;
+typedef struct x86_opr_mrm_formats x86_opr_mrm_formats;
+
+typedef size_t (*x86_opr_str_fn)(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc);
 
 enum x86_state
 {
@@ -40,6 +45,29 @@ struct x86_map_str
     const char *str;
 };
 
+struct x86_opr_formatter
+{
+    x86_opr_str_fn fmt_const;
+    x86_opr_str_fn fmt_imm;
+    x86_opr_str_fn fmt_reg;
+    x86_opr_str_fn fmt_mrm;
+    x86_opr_str_fn fmt_vec;
+};
+
+struct x86_opr_mrm_formats
+{
+    const char *ptr_rip_disp;
+    const char *ptr_rip;
+    const char *ptr_disp;
+    const char *ptr_sib_reg_scaled_reg;
+    const char *ptr_sib_reg_reg;
+    const char *ptr_reg;
+    const char *ptr_sib_reg_scaled_reg_disp;
+    const char *ptr_sib_reg_reg_disp;
+    const char *ptr_sib_reg_disp;
+    const char *reg;
+};
+
 struct x86_operands
 {
     ullong mod : 3;
@@ -54,6 +82,11 @@ struct x86_operands
     ullong w   : 1;
     ullong osz : 1;
 };
+
+extern x86_opr_formatter x86_format_intel_hex;
+extern x86_opr_formatter x86_format_intel_dec;
+extern x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex;
+extern x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec;
 
 static uint debug = 0;
 
@@ -1576,8 +1609,34 @@ static const struct x86_mod_data { ushort r8, rw, b, x; } x86_mod_real[8] =
     { x86_bh,   x86_di,   x86_bx,   x86_none },
 };
 
-size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex = {
+    "%s [rip %s 0x%x]",
+    "%s [rip]",
+    "%s [%s0x%x]",
+    "%s [%s + %d*%s]",
+    "%s [%s + %s]",
+    "%s [%s]",
+    "%s [%s + %d*%s %s 0x%x]",
+    "%s [%s + %s %s 0x%x]",
+    "%s [%s %s 0x%x]",
+    "%s"
+};
+
+x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec = {
+    "%s [rip %s %d]",
+    "%s [rip]",
+    "%s [%s%d]",
+    "%s [%s + %d*%s]",
+    "%s [%s + %s]",
+    "%s [%s]",
+    "%s [%s + %d*%s %s %d]",
+    "%s [%s + %s %s %d]",
+    "%s [%s %s %d]",
+    "%s"
+};
+
+size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc, x86_opr_mrm_formats *fmt)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint memsz = x86_opr_mem_size(opr);
@@ -1590,32 +1649,34 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
         if (q.rm == x86_rm_disp0_iw) {
             if (x86_codec_is64(c)) {
                 if (disp) {
-                    return snprintf(buf, buflen, "%s [rip %s 0x%x]",
+                    return snprintf(buf, buflen, fmt->ptr_rip_disp,
                         x86_ptr_size_str(ptrsz),
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
-                    return snprintf(buf, buflen, "%s [rip]",
+                    return snprintf(buf, buflen, fmt->ptr_rip,
                         x86_ptr_size_str(ptrsz));
                 }
             } else {
-                return snprintf(buf, buflen, "%s [0x%x]",
-                    x86_ptr_size_str(ptrsz), disp);
+                return snprintf(buf, buflen, fmt->ptr_disp,
+                    x86_ptr_size_str(ptrsz),
+                    disp < 0 ? "-" : "",
+                    disp < 0 ? -disp : disp);
             }
         } else if (q.rm == x86_rm_disp_sib) {
             if (q.s) {
-                return snprintf(buf, buflen, "%s [%s + %d*%s]",
+                return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
             } else {
-                return snprintf(buf, buflen, "%s [%s + %s]",
+                return snprintf(buf, buflen, fmt->ptr_sib_reg_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
             }
         } else {
-            return snprintf(buf, buflen, "%s [%s]",
+            return snprintf(buf, buflen, fmt->ptr_reg,
                 x86_ptr_size_str(ptrsz),
                 x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
         }
@@ -1626,14 +1687,14 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
     case x86_mod_dispw:
         if (q.rm == x86_rm_disp_sib) {
             if (q.s) {
-                return snprintf(buf, buflen, "%s [%s + %d*%s %s 0x%x]",
+                return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg_disp,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
             } else {
-                return snprintf(buf, buflen, "%s [%s + %s %s 0x%x]",
+                return snprintf(buf, buflen, fmt->ptr_sib_reg_reg_disp,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
@@ -1641,7 +1702,7 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
                     disp < 0 ? -disp : disp);
             }
         } else {
-            return snprintf(buf, buflen, "%s [%s %s 0x%x]",
+            return snprintf(buf, buflen, fmt->ptr_sib_reg_disp,
                 x86_ptr_size_str(ptrsz),
                 x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
                 disp < 0 ? "-" : "+",
@@ -1649,13 +1710,27 @@ size_t x86_opr_mrm_str(char *buf, size_t buflen, x86_codec *c,
         }
         break;
     case x86_mod_reg:
-        return snprintf(buf, buflen, "%s",
+        return snprintf(buf, buflen, fmt->reg,
             x86_reg_name(x86_sized_gpr(c, q.b, regsz)));
     }
     return 0;
 }
 
-size_t x86_opr_reg_str(char *buf, size_t buflen, x86_codec *c,
+size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc)
+{
+    return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
+        &x86_opr_mrm_formats_intel_dec);
+}
+
+size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc)
+{
+    return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
+        &x86_opr_mrm_formats_intel_hex);
+}
+
+size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
@@ -1664,7 +1739,7 @@ size_t x86_opr_reg_str(char *buf, size_t buflen, x86_codec *c,
     return snprintf(buf, buflen, "%s", reg_r);
 }
 
-size_t x86_opr_vec_str(char *buf, size_t buflen, x86_codec *c,
+size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
@@ -1673,7 +1748,7 @@ size_t x86_opr_vec_str(char *buf, size_t buflen, x86_codec *c,
     return snprintf(buf, buflen, "%s", reg_r);
 }
 
-size_t x86_opr_imm_str(char *buf, size_t buflen, x86_codec *c,
+size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
     if ((x86_codec_field_ci(c)) == x86_ci_i64) {
@@ -1687,7 +1762,21 @@ size_t x86_opr_imm_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
-uint x86_opr_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
+size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q,  uint opr, uint enc)
+{
+    if ((x86_codec_field_ci(c)) == x86_ci_i64) {
+        llong imm = c->imm64;
+        return snprintf(buf, buflen, "%s%lld",
+            imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
+    } else {
+        int imm = c->imm32;
+        return snprintf(buf, buflen, "%s%d",
+            imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
+    }
+}
+
+uint x86_opr_intel_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);
@@ -1722,12 +1811,12 @@ uint x86_opr_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
     return -1;
 }
 
-size_t x86_opr_const_str(char *buf, size_t buflen, x86_codec *c,
+size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);
-    uint regname = x86_opr_const_reg(c, q, opr, enc);
+    uint regname = x86_opr_intel_const_reg(c, q, opr, enc);
 
     if (regname >= 0) {
         return snprintf(buf, buflen, "%s", x86_reg_name(regname));
@@ -1741,15 +1830,33 @@ size_t x86_opr_const_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
+x86_opr_formatter x86_format_intel_hex =
+{
+    .fmt_const = &x86_opr_intel_const_str,
+    .fmt_imm = &x86_opr_intel_imm_hex_str,
+    .fmt_reg = &x86_opr_intel_reg_str,
+    .fmt_mrm = &x86_opr_intel_mrm_hex_str,
+    .fmt_vec = &x86_opr_intel_vec_str
+};
+
+x86_opr_formatter x86_format_intel_dec =
+{
+    .fmt_const = &x86_opr_intel_const_str,
+    .fmt_imm = &x86_opr_intel_imm_dec_str,
+    .fmt_reg = &x86_opr_intel_reg_str,
+    .fmt_mrm = &x86_opr_intel_mrm_dec_str,
+    .fmt_vec = &x86_opr_intel_vec_str
+};
+
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint ord, uint opr, uint enc)
+    x86_operands q, uint ord, uint opr, uint enc, x86_opr_formatter *fmt)
 {
     switch(ord & x86_ord_type_mask) {
-    case x86_ord_const: return x86_opr_const_str(buf, buflen, c, q, opr, enc);
-    case x86_ord_imm: return x86_opr_imm_str(buf, buflen, c, q, opr, enc);
-    case x86_ord_reg: return x86_opr_reg_str(buf, buflen, c, q, opr, enc);
-    case x86_ord_mrm: return x86_opr_mrm_str(buf, buflen, c, q, opr, enc);
-    case x86_ord_vec: return x86_opr_vec_str(buf, buflen, c, q, opr, enc);
+    case x86_ord_const: return fmt->fmt_const(buf, buflen, c, q, opr, enc);
+    case x86_ord_imm: return fmt->fmt_imm(buf, buflen, c, q, opr, enc);
+    case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, q, opr, enc);
+    case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, q, opr, enc);
+    case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, q, opr, enc);
     default: return 0;
     }
 }
@@ -1768,7 +1875,7 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
     {
         len += snprintf(buf+len, buflen-len, i == 0 ? "\t" : ", ");
         len += x86_format_operand(buf+len, buflen-len, c, q,
-            s->ord[i], o->opr[i], d->enc);
+            s->ord[i], o->opr[i], d->enc, &x86_format_intel_hex);
     }
 
     return len;
