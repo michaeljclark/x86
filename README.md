@@ -206,7 +206,7 @@ not follow the default rules for instruction word and address sizes:
   operands in 64-bit mode.
 - `.o16` is used to specify an instruction override specific to 16-bit mode.
 - `.o32` is used to specify an instruction override specific to 32-bit mode.
-- `.o32` is used to specify an instruction override specific to 64-bit mode.
+- `.o64` is used to specify an instruction override specific to 64-bit mode.
 
 ### CSV File Format
 
@@ -242,8 +242,7 @@ translated to enums and arrays by `scripts/x86_tablegen.py` which then map to
 the enum type and set definitions in `include/x86.h`:
 
 - ___enum x86_opr___ - operand encoding enum type and set attributes.
-- ___enum x86_enc___ - instruction encoding prefix enum type and set attributes.
-- ___enum x86_suf___ - instruction encoding suffix enum type and set attributes.
+- ___enum x86_enc___ - instruction encoding enum type and set attributes.
 - ___enum x86_ord___ - operand to instruction encoding field map set attributes.
 
 The enum values are combined together with _logical or_ combinations to
@@ -269,7 +268,7 @@ This section describes the mnemonics used in the primary data structures:
 - ___Appendix A - Operand Encoding___ - describes instruction operands.
 - ___Appendix B - Operand Order___ - describes instruction field ordering.
 - ___Appendix C - Instruction Encoding Prefixes___ - describes encoding prefixes.
-- ___Appendix D - Instruction Encoding Prefixes___ - describes encoding suffixes.
+- ___Appendix D - Instruction Encoding Suffixes___ - describes encoding suffixes.
 - ___Appendix E - Instruction Synthesis Notes___ - notes on prefix synthesis.
 
 ### Appendix A - Operand Encoding
@@ -412,7 +411,7 @@ _(enum x86_ord)_.
 
 ### Appendix C - Instruction Encoding Prefixes
 
-This table outlines the mnemonics used in instruction encodings
+This table outlines the mnemonic prefixes used in instruction encodings
 _(enum x86_enc)_.
 
 | mnemonic | description                                                     |
@@ -444,8 +443,8 @@ _(enum x86_enc)_.
 
 ### Appendix D - Instruction Encoding Suffixes
 
-This table outlines the mnemonics used in instruction encodings
-_(enum x86_suf)_.
+This table outlines the mnemonic suffixes used in instruction encodings
+_(enum x86_enc)_.
 
 | mnemonic | description                                                     |
 |:---------|:----------------------------------------------------------------|
