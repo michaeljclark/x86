@@ -1875,7 +1875,7 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
     {
         len += snprintf(buf+len, buflen-len, i == 0 ? "\t" : ", ");
         len += x86_format_operand(buf+len, buflen-len, c, q,
-            s->ord[i], o->opr[i], d->enc, &x86_format_intel_hex);
+            s->ord[i], o->opr[i], d->enc, &x86_format_intel_dec);
     }
 
     return len;
