@@ -1528,8 +1528,9 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     if (oprsz != 0 && oprsz != x86_opr_size_word) {
         return oprsz;
     }
-    /* 'rw' deduce size from mode, operand size prefix and REX.W */
-    else if (oprty == x86_opr_reg && oprsz == x86_opr_size_word)
+    /* 'rw' or 'mw' deduce size from mode, operand size prefix and REX.W */
+    else if (oprty == x86_opr_reg && oprsz == x86_opr_size_word ||
+             (opr & x86_opr_mem_mask) == x86_opr_mw)
     {
         switch (x86_enc_width(enc)) {
         case x86_enc_w_wb: return x86_opr_size_8;
@@ -1557,6 +1558,13 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     }
 
     return x86_codec_addr_size(c);
+}
+
+static uint x86_opr_ptr_size(x86_codec *c, x86_operands q, uint opr, uint enc)
+{
+    uint regsz = x86_opr_reg_size(c, q, opr, enc);
+    uint memsz = x86_opr_mem_size(opr);
+    return memsz == x86_opr_size_word ? regsz : memsz;
 }
 
 static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
@@ -1639,8 +1647,7 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc, x86_opr_mrm_formats *fmt)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
-    uint memsz = x86_opr_mem_size(opr);
-    uint ptrsz = memsz == x86_opr_size_word ? regsz : memsz;
+    uint ptrsz = x86_opr_ptr_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);
     int disp = c->disp32;
 
