@@ -1154,10 +1154,10 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
         nbytes += x86_out8(buf, 0x0f);
         break;
     case x86_cm_0f38 >> x86_cm_shift:
-        nbytes += x86_out16(buf, 0x0f38);
+        nbytes += x86_out16(buf, 0x380f);
         break;
     case x86_cm_0f3a >> x86_cm_shift:
-        nbytes += x86_out16(buf, 0x0f3a);
+        nbytes += x86_out16(buf, 0x3a0f);
         break;
     }
 
