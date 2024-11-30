@@ -1189,9 +1189,9 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
             /* this is RIP-relative in amd64 mode */
             if (rm == x86_rm_disp0_iw) {
                 if (x86_codec_is16(&c)) {
-                    nbytes += x86_out32(buf, (u32)c.disp32);
-                } else {
                     nbytes += x86_out16(buf, (u16)c.disp32);
+                } else {
+                    nbytes += x86_out32(buf, (u32)c.disp32);
                 }
             }
             break;
