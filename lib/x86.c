@@ -1623,15 +1623,15 @@ x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex = {
 };
 
 x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec = {
-    "%s [rip %s %d]",
+    "%s [rip %s %u]",
     "%s [rip]",
-    "%s [%s%d]",
+    "%s [%s%u]",
     "%s [%s + %d*%s]",
     "%s [%s + %s]",
     "%s [%s]",
-    "%s [%s + %d*%s %s %d]",
-    "%s [%s + %s %s %d]",
-    "%s [%s %s %d]",
+    "%s [%s + %d*%s %s %u]",
+    "%s [%s + %s %s %u]",
+    "%s [%s %s %u]",
     "%s"
 };
 
