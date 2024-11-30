@@ -541,6 +541,7 @@ enum x86_enc
 
 static uint x86_enc_width(uint enc) { return (enc & x86_enc_w_mask); }
 static uint x86_enc_prefix(uint enc) { return (enc & x86_enc_prexw_mask); }
+static uint x86_enc_length(uint enc) { return (enc & x86_enc_l_mask); }
 static uint x86_enc_opcode(uint enc) { return (enc & x86_enc_o_mask); }
 static uint x86_enc_func(uint enc) { return (enc & x86_enc_f_mask); }
 static uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
