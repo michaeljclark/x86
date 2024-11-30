@@ -1392,9 +1392,9 @@ x86_operands x86_codec_operands(x86_codec *c)
     q.osz = x86_codec_has_osize(c);
 
     if (x86_codec_has_modrm(c)) {
-        uchar mod = (c->modrm.data[0] >> 6) & 3;
-        uchar rm =  (c->modrm.data[0] >> 0) & 7;
-        uchar reg = (c->modrm.data[0] >> 3) & 7;
+        uchar mod = (c->modrm.data[0] >> x86_mod_shift) & x86_mod_mask;
+        uchar rm =  (c->modrm.data[0] >> x86_rm_shift) & x86_rm_mask;
+        uchar reg = (c->modrm.data[0] >> x86_reg_shift) & x86_reg_mask;
 
         /*
          * q.rm contains unextended value from ModRM.rm
