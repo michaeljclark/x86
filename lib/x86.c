@@ -1299,8 +1299,8 @@ static int x86_filter_opdata(x86_codec *c, x86_opc_data *d, uint w)
     return 0;
 }
 
-static int x86_parse_encoding(x86_buffer *buf, x86_codec *c,
-    x86_opc_data *d, size_t *len)
+static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
+    x86_opc_data *d)
 {
     size_t nbytes = 0;
 
@@ -1380,8 +1380,7 @@ static int x86_parse_encoding(x86_buffer *buf, x86_codec *c,
         break;
     }
 
-    *len = nbytes;
-    return 0;
+    return nbytes;
 }
 
 x86_operands x86_codec_operands(x86_codec *c)
@@ -2216,23 +2215,16 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
 
     /* parse encoding */
     if (r) {
-        size_t nread = 0;
-        if (x86_parse_encoding(buf, c, r, &nread) == 0) {
-            if (nbytes + nread <= limit) {
-                c->rec = (r - ctx->idx->map);
-                nbytes += nread;
-            } else if (c->opclen == 1) {
-                /* special case opcode peek */
-                goto err;
-            }
+        nbytes += x86_parse_encoding(buf, c, r);
+        if (nbytes <= limit) {
+            c->rec = (r - ctx->idx->map);
+            *len = nbytes;
+            return 0;
         }
     }
 
-    *len = nbytes;
-    return c->rec ? 0 : -1;
-
 err:
-    nbytes -= x86_buffer_unread(buf, 1);
+    nbytes -= x86_buffer_unread(buf, nbytes);
     *len = nbytes;
     return -1;
 }

@@ -89,7 +89,7 @@ static void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen,
         if (ret == 0) {
             x86_format_op(str, sizeof(str), ctx, &codec);
         } else {
-            snprintf(str, sizeof(str), "%s", "<unknown>");
+            break;
         }
         if (show_off || show_hex) {
             format_hex(insn, offset, nbytes, show_off, show_hex);
@@ -105,7 +105,6 @@ static void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen,
         offset += nbytes;
     } while (offset < insnlen);
 }
-
 
 int main(int argc, char **argv)
 {
