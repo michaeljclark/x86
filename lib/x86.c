@@ -1773,11 +1773,11 @@ size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
 {
     if ((x86_codec_field_ci(c)) == x86_ci_i64) {
         llong imm = c->imm64;
-        return snprintf(buf, buflen, "%s%lld",
+        return snprintf(buf, buflen, "%s%llu",
             imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
     } else {
         int imm = c->imm32;
-        return snprintf(buf, buflen, "%s%d",
+        return snprintf(buf, buflen, "%s%u",
             imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
     }
 }
