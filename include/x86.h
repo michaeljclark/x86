@@ -112,25 +112,6 @@ enum x86_pb
 };
 
 /*
- * r/m
- */
-
-enum x86_rm
-{
-    x86_rm_disp_sib = 0b100,
-    x86_rm_disp0_iw = 0b101,
-
-    x86_rm_shift = 0,
-    x86_rm_mask = 7,
-
-    x86_reg_shift = 3,
-    x86_reg_mask = 7,
-
-    x86_mod_shift = 6,
-    x86_mod_mask = 3
-};
-
-/*
  * mod
  */
 
@@ -322,6 +303,31 @@ struct x86_modrm
     };
 };
 
+enum
+{
+    x86_rm_sp_sib = 0b100,
+    x86_rm_bp_disp0 = 0b101,
+
+    x86_modrm_rm_mask = 7,
+    x86_modrm_reg_shift = 3,
+    x86_modrm_reg_mask = 7,
+    x86_modrm_mod_shift = 6,
+    x86_modrm_mod_mask = 3,
+};
+
+static inline uint x86_modrm_rm (uchar modrm) {
+    return modrm & x86_modrm_rm_mask;
+}
+static inline uint x86_modrm_reg (uchar modrm) {
+    return (modrm >> x86_modrm_reg_shift) & x86_modrm_reg_mask;
+}
+static inline uint x86_modrm_mod (uchar modrm) {
+    return (modrm >> x86_modrm_mod_shift) & x86_modrm_mod_mask;
+}
+
+/*
+ * SIB
+ */
 
 /*
  * SIB
@@ -338,6 +344,25 @@ struct x86_sib
         };
     };
 };
+
+enum
+{
+    x86_sib_b_mask = 7,
+    x86_sib_x_shift = 3,
+    x86_sib_x_mask = 7,
+    x86_sib_s_shift = 6,
+    x86_sib_s_mask = 3
+};
+
+static inline uint x86_sib_b (uchar sib) {
+    return sib & x86_sib_b_mask;
+}
+static inline uint x86_sib_x (uchar sib) {
+    return (sib >> x86_sib_x_shift) & x86_sib_x_mask;
+}
+static inline uint x86_sib_s (uchar sib) {
+    return (sib >> x86_sib_s_shift) & x86_sib_s_mask;
+}
 
 /*
  * REX struct

@@ -1167,18 +1167,19 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
     }
 
     /* ModRM and SIB */
+    int b;
     if (x86_codec_has_modrm(&c)) {
         nbytes += x86_out8(buf, c.modrm.data[0]);
 
-        uchar mod = (c.modrm.data[0] >> x86_mod_shift) & x86_mod_mask;
-        uchar rm = (c.modrm.data[0] >> x86_rm_shift) & x86_rm_mask;
+        uchar rm = x86_modrm_rm(c.modrm.data[0]);
+        uchar mod = x86_modrm_mod(c.modrm.data[0]);
 
         switch (mod) {
         case x86_mod_disp0:
         case x86_mod_disp8:
         case x86_mod_dispw:
             /* there is no SIB in real mode */
-            if (!x86_codec_is16(&c) && rm == x86_rm_disp_sib) {
+            if (!x86_codec_is16(&c) && rm == x86_rm_sp_sib) {
                 nbytes += x86_out8(buf, c.sib.data[0]);
             }
             break;
@@ -1186,11 +1187,15 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
         }
         switch (mod) {
         case x86_mod_disp0:
-            /* this is RIP-relative in amd64 mode */
-            if (rm == x86_rm_disp0_iw) {
+            /* special case for rm/b == bp */
+            b = x86_sib_b(c.sib.data[0]);
+            if (rm == x86_rm_bp_disp0 ||
+                (rm == x86_rm_sp_sib && b == x86_rm_bp_disp0))
+            {
                 if (x86_codec_is16(&c)) {
                     nbytes += x86_out16(buf, (u16)c.disp32);
                 } else {
+                    /* this is RIP-relative in amd64 mode */
                     nbytes += x86_out32(buf, (u32)c.disp32);
                 }
             }
@@ -1305,16 +1310,16 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     size_t nbytes = 0;
 
     /* parse SIB and displacement */
+    int b;
     if (x86_codec_has_modrm(c)) {
-        uchar modrm = c->modrm.data[0];
-        uchar mod = (modrm >> x86_mod_shift) & x86_mod_mask;
-        uchar rm = (modrm >> x86_rm_shift) & x86_rm_mask;
+        uchar rm = x86_modrm_rm(c->modrm.data[0]);
+        uchar mod = x86_modrm_mod(c->modrm.data[0]);
         switch (mod) {
         case x86_mod_disp0:
         case x86_mod_disp8:
         case x86_mod_dispw:
             /* there is no SIB in real mode */
-            if (!x86_codec_is16(c) && rm == x86_rm_disp_sib) {
+            if (!x86_codec_is16(c) && rm == x86_rm_sp_sib) {
                 c->sib.data[0] = (u8)x86_in8(buf); nbytes += 1;
             }
             break;
@@ -1323,11 +1328,15 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
         }
         switch (mod) {
         case x86_mod_disp0:
-            /* this is RIP-relative in amd64 mode */
-            if (rm == x86_rm_disp0_iw) {
+            /* special case for rm/b == bp */
+            b = x86_sib_b(c->sib.data[0]);
+            if (rm == x86_rm_bp_disp0 ||
+                (rm == x86_rm_sp_sib && b == x86_rm_bp_disp0))
+            {
                 if (x86_codec_is16(c)) {
                     c->disp32 = (i16)x86_in16(buf); nbytes += 2;
                 } else {
+                    /* this is RIP-relative in amd64 mode */
                     c->disp32 = (i32)x86_in32(buf); nbytes += 4;
                 }
             }
@@ -1391,9 +1400,9 @@ x86_operands x86_codec_operands(x86_codec *c)
     q.osz = x86_codec_has_osize(c);
 
     if (x86_codec_has_modrm(c)) {
-        uchar mod = (c->modrm.data[0] >> x86_mod_shift) & x86_mod_mask;
-        uchar rm =  (c->modrm.data[0] >> x86_rm_shift) & x86_rm_mask;
-        uchar reg = (c->modrm.data[0] >> x86_reg_shift) & x86_reg_mask;
+        uchar rm = x86_modrm_rm(c->modrm.data[0]);
+        uchar reg = x86_modrm_reg(c->modrm.data[0]);
+        uchar mod = x86_modrm_mod(c->modrm.data[0]);
 
         /*
          * q.rm contains unextended value from ModRM.rm
@@ -1413,10 +1422,10 @@ x86_operands x86_codec_operands(x86_codec *c)
         case x86_mod_disp0:
         case x86_mod_disp8:
         case x86_mod_dispw:
-            if (!x86_codec_is16(c) && rm == x86_rm_disp_sib) {
-                q.b = (c->sib.data[0] >> 0) & 7;
-                q.x = (c->sib.data[0] >> 3) & 7;
-                q.s = (c->sib.data[0] >> 6) & 3;
+            if (!x86_codec_is16(c) && rm == x86_rm_sp_sib) {
+                q.b = x86_sib_b(c->sib.data[0]);
+                q.x = x86_sib_x(c->sib.data[0]);
+                q.s = x86_sib_s(c->sib.data[0]);
             } else {
                 q.b = q.rm;
             }
@@ -1652,7 +1661,7 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
 
     switch(q.mod) {
     case x86_mod_disp0:
-        if (q.rm == x86_rm_disp0_iw) {
+        if (q.rm == x86_rm_sp_sib) {
             if (x86_codec_is64(c)) {
                 if (disp) {
                     return snprintf(buf, buflen, fmt->ptr_rip_disp,
@@ -1669,7 +1678,7 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
                     disp < 0 ? "-" : "",
                     disp < 0 ? -disp : disp);
             }
-        } else if (q.rm == x86_rm_disp_sib) {
+        } else if (q.rm == x86_rm_sp_sib) {
             if (q.s) {
                 return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg,
                     x86_ptr_size_str(ptrsz),
@@ -1691,7 +1700,7 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
          disp *= x86_disp8_scale(c, regsz);
          /* fallthrough */
     case x86_mod_dispw:
-        if (q.rm == x86_rm_disp_sib) {
+        if (q.rm == x86_rm_sp_sib) {
             if (q.s) {
                 return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg_disp,
                     x86_ptr_size_str(ptrsz),

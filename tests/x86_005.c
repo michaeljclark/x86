@@ -37,7 +37,7 @@ void t1()
     codec.flags |= x86_ce_rex;
     codec.flags |= x86_cm_0f;
     codec.rex = x86_enc_rex(0, x86_xmm15, x86_r13, x86_r14);
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -8;
 
@@ -60,7 +60,7 @@ void t2()
     codec.flags |= x86_ce_rex;
     codec.flags |= x86_cm_0f;
     codec.rex = x86_enc_rex(0, x86_xmm15, x86_r13, x86_r14);
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -8;
 
@@ -84,7 +84,7 @@ void t3()
         x86_pfx_66, x86_vex_l128,
         /*r*/ x86_xmm15, /*v*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_rax, x86_rcx);
     codec.disp32 = -8;
 
@@ -108,7 +108,7 @@ void t4()
         x86_pfx_66, x86_vex_l128,
         /*r*/ x86_xmm15, /*v*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_rax, x86_rcx);
     codec.disp32 = -8;
 
@@ -132,7 +132,7 @@ void t5()
         x86_map_0f, x86_pfx_66, x86_vex_l128, x86_vex_w0,
         /*r*/ x86_xmm15, /*x*/ x86_r14, /*b*/ x86_r13, /*v*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r14, x86_r13);
     codec.disp32 = -8;
 
@@ -156,7 +156,7 @@ void t6()
         x86_map_0f, x86_pfx_66, x86_vex_l128, x86_vex_w0,
         /*r*/ x86_xmm15, /*x*/ x86_r14, /*b*/ x86_r13, /*v*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r14, x86_r13);
     codec.disp32 = -8;
 
@@ -181,7 +181,7 @@ void t7()
         /*r*/ x86_xmm31, /*x*/ x86_r13, /*b*/ x86_r14, /*v*/ 0,
         /*k*/ 0, /*brd*/ 0, /*z*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm15, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -2; /* EVEX scales displacement to word size */
 
@@ -206,7 +206,7 @@ void t8()
         /*r*/ x86_xmm31, /*x*/ x86_r13, /*b*/ x86_r14, /*v*/ 0,
         /*k*/ 0, /*brd*/ 0, /*z*/ 0
     );
-    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm31, x86_rm_disp_sib);
+    codec.modrm = x86_enc_modrm(x86_mod_disp8, x86_xmm31, x86_rm_sp_sib);
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -2; /* EVEX scales displacement to word size */
 
