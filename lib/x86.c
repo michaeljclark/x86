@@ -56,15 +56,16 @@ struct x86_opr_formatter
 
 struct x86_opr_mrm_formats
 {
-    const char *ptr_rip_disp;
     const char *ptr_rip;
-    const char *ptr_disp;
-    const char *ptr_sib_reg_scaled_reg;
-    const char *ptr_sib_reg_reg;
+    const char *ptr_rip_disp;
     const char *ptr_reg;
-    const char *ptr_sib_reg_scaled_reg_disp;
-    const char *ptr_sib_reg_reg_disp;
-    const char *ptr_sib_reg_disp;
+    const char *ptr_reg_disp;
+    const char *ptr_reg_scaled_reg;
+    const char *ptr_reg_scaled_reg_disp;
+    const char *ptr_reg_reg;
+    const char *ptr_reg_reg_disp;
+    const char *ptr_scaled_reg;
+    const char *ptr_disp;
     const char *reg;
 };
 
@@ -1625,30 +1626,34 @@ static const struct x86_mod_data { ushort r8, rw, b, x; } x86_mod_real[8] =
     { x86_bh,   x86_di,   x86_bx,   x86_none },
 };
 
-x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex = {
-    "%s [rip %s 0x%x]",
-    "%s [rip]",
-    "%s [%s0x%x]",
-    "%s [%s + %d*%s]",
-    "%s [%s + %s]",
-    "%s [%s]",
-    "%s [%s + %d*%s %s 0x%x]",
-    "%s [%s + %s %s 0x%x]",
-    "%s [%s %s 0x%x]",
-    "%s"
+x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex =
+{
+    .ptr_rip                     = "%s [rip]",
+    .ptr_rip_disp                = "%s [rip %s 0x%x]",
+    .ptr_reg                     = "%s [%s]",
+    .ptr_reg_disp                = "%s [%s %s 0x%x]",
+    .ptr_reg_scaled_reg          = "%s [%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp     = "%s [%s + %d*%s %s 0x%x]",
+    .ptr_reg_reg                 = "%s [%s + %s]",
+    .ptr_reg_reg_disp            = "%s [%s + %s %s 0x%x]",
+    .ptr_scaled_reg              = "%s [%d*%s]",
+    .ptr_disp                    = "%s [%s0x%x]",
+    .reg                         = "%s"
 };
 
-x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec = {
-    "%s [rip %s %u]",
-    "%s [rip]",
-    "%s [%s%u]",
-    "%s [%s + %d*%s]",
-    "%s [%s + %s]",
-    "%s [%s]",
-    "%s [%s + %d*%s %s %u]",
-    "%s [%s + %s %s %u]",
-    "%s [%s %s %u]",
-    "%s"
+x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec =
+{
+    .ptr_rip                     = "%s [rip]",
+    .ptr_rip_disp                = "%s [rip %s %u]",
+    .ptr_reg                     = "%s [%s]",
+    .ptr_reg_disp                = "%s [%s %s %u]",
+    .ptr_reg_scaled_reg          = "%s [%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp     = "%s [%s + %d*%s %s %u]",
+    .ptr_reg_reg                 = "%s [%s + %s]",
+    .ptr_reg_reg_disp            = "%s [%s + %s %s %u]",
+    .ptr_scaled_reg              = "%s [%d*%s]",
+    .ptr_disp                    = "%s [%s%u]",
+    .reg                         = "%s"
 };
 
 size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
@@ -1661,33 +1666,55 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
 
     switch(q.mod) {
     case x86_mod_disp0:
-        if (q.rm == x86_rm_sp_sib) {
-            if (x86_codec_is64(c)) {
-                if (disp) {
-                    return snprintf(buf, buflen, fmt->ptr_rip_disp,
-                        x86_ptr_size_str(ptrsz),
-                        disp < 0 ? "-" : "+",
-                        disp < 0 ? -disp : disp);
-                } else {
-                    return snprintf(buf, buflen, fmt->ptr_rip,
-                        x86_ptr_size_str(ptrsz));
-                }
-            } else {
+        if (q.rm != x86_rm_sp_sib && (q.b & 7) == x86_rm_bp_disp0) {
+            if (x86_codec_is64(c) && disp) {
+                return snprintf(buf, buflen, fmt->ptr_rip_disp,
+                    x86_ptr_size_str(ptrsz),
+                    disp < 0 ? "-" : "+",
+                    disp < 0 ? -disp : disp);
+            }
+            else if (x86_codec_is64(c)) {
+                return snprintf(buf, buflen, fmt->ptr_rip,
+                    x86_ptr_size_str(ptrsz));
+            }
+            else {
                 return snprintf(buf, buflen, fmt->ptr_disp,
                     x86_ptr_size_str(ptrsz),
                     disp < 0 ? "-" : "",
                     disp < 0 ? -disp : disp);
             }
+        } else if (q.rm == x86_rm_sp_sib && (q.b & 7) == x86_rm_bp_disp0) {
+            if (q.x == x86_sp && q.s != 0) {
+                return snprintf(buf, buflen, fmt->ptr_scaled_reg,
+                    x86_ptr_size_str(ptrsz), (1 << q.s), "riz");
+            }
+            else if (q.x == x86_sp) {
+                return snprintf(buf, buflen, fmt->ptr_disp,
+                    x86_ptr_size_str(ptrsz), "", 0);
+            }
+            else {
+                return snprintf(buf, buflen, fmt->ptr_scaled_reg,
+                    x86_ptr_size_str(ptrsz), (1 << q.s),
+                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+            }
         } else if (q.rm == x86_rm_sp_sib) {
-            if (q.s) {
-                return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg,
+            if (q.s != 0) {
+                return snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                    (q.x & 15) == x86_sp ? "riz" :
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
-            } else {
-                return snprintf(buf, buflen, fmt->ptr_sib_reg_reg,
+            }
+            else if ((q.b & 7) == x86_sp && q.x == x86_sp) {
+                return snprintf(buf, buflen, fmt->ptr_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
+            }
+            else {
+                return snprintf(buf, buflen, fmt->ptr_reg_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                    (q.x & 15) == x86_sp ? "riz" :
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
             }
         } else {
@@ -1700,28 +1727,55 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
          disp *= x86_disp8_scale(c, regsz);
          /* fallthrough */
     case x86_mod_dispw:
-        if (q.rm == x86_rm_sp_sib) {
-            if (q.s) {
-                return snprintf(buf, buflen, fmt->ptr_sib_reg_scaled_reg_disp,
+        if ((q.rm != x86_rm_sp_sib) ||
+            (q.rm == x86_rm_sp_sib && q.s == 0 &&
+            (q.b & 7) == x86_sp && q.x == x86_sp))
+        {
+           if (disp) {
+                return snprintf(buf, buflen, fmt->ptr_reg_disp,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                    disp < 0 ? "-" : "+",
+                    disp < 0 ? -disp : disp);
+            } else {
+                return snprintf(buf, buflen, fmt->ptr_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
+            }
+        }
+        else if (q.rm == x86_rm_sp_sib && q.s != 0) {
+            if (disp) {
+                return snprintf(buf, buflen, fmt->ptr_reg_scaled_reg_disp,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                    (q.x & 15) == x86_sp ? "riz" :
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
             } else {
-                return snprintf(buf, buflen, fmt->ptr_sib_reg_reg_disp,
+                return snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                    (q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+            }
+        }
+        else if (q.rm == x86_rm_sp_sib) {
+            if (disp) {
+                return snprintf(buf, buflen, fmt->ptr_reg_reg_disp,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                    (q.x & 15) == x86_sp ? "riz" :
                     x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
+            } else {
+                return snprintf(buf, buflen, fmt->ptr_reg_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                    (q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
             }
-        } else {
-            return snprintf(buf, buflen, fmt->ptr_sib_reg_disp,
-                x86_ptr_size_str(ptrsz),
-                x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                disp < 0 ? "-" : "+",
-                disp < 0 ? -disp : disp);
         }
         break;
     case x86_mod_reg:
