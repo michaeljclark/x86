@@ -1501,15 +1501,15 @@ uint x86_codec_addr_size(x86_codec *c)
 const char* x86_ptr_size_str(uint sz)
 {
     switch (sz) {
-    case x86_opr_size_8: return "byte ptr";
-    case x86_opr_size_16: return "word ptr";
-    case x86_opr_size_32: return "dword ptr";
-    case x86_opr_size_64: return "qword ptr";
-    case x86_opr_size_80: return "tword ptr";
-    case x86_opr_size_128: return "xmmword ptr";
-    case x86_opr_size_256: return "ymmword ptr";
-    case x86_opr_size_512: return "zmmword ptr";
-    default: return "ptr";
+    case x86_opr_size_8: return "byte ptr ";
+    case x86_opr_size_16: return "word ptr ";
+    case x86_opr_size_32: return "dword ptr ";
+    case x86_opr_size_64: return "qword ptr ";
+    case x86_opr_size_80: return "tword ptr ";
+    case x86_opr_size_128: return "xmmword ptr ";
+    case x86_opr_size_256: return "ymmword ptr ";
+    case x86_opr_size_512: return "zmmword ptr ";
+    default: return "";
     }
 }
 
@@ -1524,7 +1524,8 @@ int x86_opr_mem_size(uint opr)
     case x86_opr_m128: return x86_opr_size_128;
     case x86_opr_m256: return x86_opr_size_256;
     case x86_opr_m512: return x86_opr_size_512;
-    default: return x86_opr_size_word;
+    case x86_opr_mw: return x86_opr_size_word;
+    default: return 0;
     }
 }
 
@@ -1571,9 +1572,11 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
 
 static uint x86_opr_ptr_size(x86_codec *c, x86_operands q, uint opr, uint enc)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint memsz = x86_opr_mem_size(opr);
-    return memsz == x86_opr_size_word ? regsz : memsz;
+    if (memsz == x86_opr_size_word) {
+        memsz = x86_opr_reg_size(c, q, opr, enc);
+    }
+    return memsz;
 }
 
 static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
@@ -1628,31 +1631,31 @@ static const struct x86_mod_data { ushort r8, rw, b, x; } x86_mod_real[8] =
 
 x86_opr_mrm_formats x86_opr_mrm_formats_intel_hex =
 {
-    .ptr_rip                     = "%s [rip]",
-    .ptr_rip_disp                = "%s [rip %s 0x%x]",
-    .ptr_reg                     = "%s [%s]",
-    .ptr_reg_disp                = "%s [%s %s 0x%x]",
-    .ptr_reg_scaled_reg          = "%s [%s + %d*%s]",
-    .ptr_reg_scaled_reg_disp     = "%s [%s + %d*%s %s 0x%x]",
-    .ptr_reg_reg                 = "%s [%s + %s]",
-    .ptr_reg_reg_disp            = "%s [%s + %s %s 0x%x]",
-    .ptr_scaled_reg              = "%s [%d*%s]",
-    .ptr_disp                    = "%s [%s0x%x]",
+    .ptr_rip                     = "%s[rip]",
+    .ptr_rip_disp                = "%s[rip %s 0x%x]",
+    .ptr_reg                     = "%s[%s]",
+    .ptr_reg_disp                = "%s[%s %s 0x%x]",
+    .ptr_reg_scaled_reg          = "%s[%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp     = "%s[%s + %d*%s %s 0x%x]",
+    .ptr_reg_reg                 = "%s[%s + %s]",
+    .ptr_reg_reg_disp            = "%s[%s + %s %s 0x%x]",
+    .ptr_scaled_reg              = "%s[%d*%s]",
+    .ptr_disp                    = "%s[%s0x%x]",
     .reg                         = "%s"
 };
 
 x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec =
 {
-    .ptr_rip                     = "%s [rip]",
-    .ptr_rip_disp                = "%s [rip %s %u]",
-    .ptr_reg                     = "%s [%s]",
-    .ptr_reg_disp                = "%s [%s %s %u]",
-    .ptr_reg_scaled_reg          = "%s [%s + %d*%s]",
-    .ptr_reg_scaled_reg_disp     = "%s [%s + %d*%s %s %u]",
-    .ptr_reg_reg                 = "%s [%s + %s]",
-    .ptr_reg_reg_disp            = "%s [%s + %s %s %u]",
-    .ptr_scaled_reg              = "%s [%d*%s]",
-    .ptr_disp                    = "%s [%s%u]",
+    .ptr_rip                     = "%s[rip]",
+    .ptr_rip_disp                = "%s[rip %s %u]",
+    .ptr_reg                     = "%s[%s]",
+    .ptr_reg_disp                = "%s[%s %s %u]",
+    .ptr_reg_scaled_reg          = "%s[%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp     = "%s[%s + %d*%s %s %u]",
+    .ptr_reg_reg                 = "%s[%s + %s]",
+    .ptr_reg_reg_disp            = "%s[%s + %s %s %u]",
+    .ptr_scaled_reg              = "%s[%d*%s]",
+    .ptr_disp                    = "%s[%s%u]",
     .reg                         = "%s"
 };
 
