@@ -1888,7 +1888,7 @@ size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);
-    uint regname = x86_opr_intel_const_reg(c, q, opr, enc);
+    int regname = x86_opr_intel_const_reg(c, q, opr, enc);
 
     if (regname >= 0) {
         return snprintf(buf, buflen, "%s", x86_reg_name(regname));
@@ -1896,9 +1896,9 @@ size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
 
     switch (opr) {
     case x86_opr_1: return snprintf(buf, buflen, "1");
-    case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "<xmm0>");
-    case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "<xmm0-7>");
-    default: return snprintf(buf, buflen, "%s", "<unknown>");
+    case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "xmm0");
+    case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "xmm0_7");
+    default: return snprintf(buf, buflen, "%s", "unknown");
     }
 }
 
