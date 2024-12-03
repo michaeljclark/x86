@@ -2259,28 +2259,30 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
         }
     }
 
-    /* check if we have modrm byte */
-    switch (x86_enc_func(r->enc)) {
-    case x86_enc_f_modrm_r:
-    case x86_enc_f_modrm_n:
-        /* second byte is modrm */
-        c->flags |= x86_cf_modrm;
-        c->opclen = 1;
-        break;
-    case x86_enc_f_opcode:
-    case x86_enc_f_opcode_r:
-        /* two byte opcode */
-        c->opclen = 2;
-        break;
-    default:
-        /* no second opcode byte */
-        nbytes -= x86_buffer_unread(buf, 1);
-        c->opclen = 1;
-        break;
-    }
-
     /* parse encoding */
     if (r) {
+
+        /* set opcode length and modrm flags */
+        switch (x86_enc_func(r->enc)) {
+        case x86_enc_f_modrm_r:
+        case x86_enc_f_modrm_n:
+            /* second byte is modrm */
+            c->flags |= x86_cf_modrm;
+            c->opclen = 1;
+            break;
+        case x86_enc_f_opcode:
+        case x86_enc_f_opcode_r:
+            /* two byte opcode */
+            c->opclen = 2;
+            break;
+        default:
+            /* no second opcode byte */
+            nbytes -= x86_buffer_unread(buf, 1);
+            c->opclen = 1;
+            break;
+        }
+
+        /* parse SIB, disp, imm from format */
         nbytes += x86_parse_encoding(buf, c, r);
         if (nbytes <= limit) {
             c->rec = (r - ctx->idx->map);
