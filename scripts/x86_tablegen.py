@@ -159,9 +159,9 @@ operand_map = {
     'ib[7:4]'                                               : 'is4/r',
     'Implicit XMM0 (r)'                                     : 'xmm0/r',
     'Implicit XMM0-7 (r, w)'                                : 'xmm0_7/rw',
-    'opcode +r (r)'                                         : 'reg/r',
-    'opcode +r (r, w)'                                      : 'reg/rw',
-    'opcode +r (w)'                                         : 'reg/w',
+    'opcode +r (r)'                                         : 'opr/r',
+    'opcode +r (r, w)'                                      : 'opr/rw',
+    'opcode +r (w)'                                         : 'opr/w',
     'NA'                                                    : None,
     ''                                                      : None
 }

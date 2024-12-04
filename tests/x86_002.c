@@ -63,6 +63,7 @@ void test_x86_ord_name()
     assert(strcmp(ord_name(x86_ord_reg), "reg") == 0);
     assert(strcmp(ord_name(x86_ord_mrm), "mrm") == 0);
     assert(strcmp(ord_name(x86_ord_vec), "vec") == 0);
+    assert(strcmp(ord_name(x86_ord_opr), "opr") == 0);
     assert(strcmp(ord_name(x86_ord_is4), "is4") == 0);
     assert(strcmp(ord_name(x86_ord_ime), "ime") == 0);
     assert(strcmp(ord_name(x86_ord_sib), "sib") == 0);

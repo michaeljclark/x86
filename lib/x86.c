@@ -52,6 +52,7 @@ struct x86_opr_formatter
     x86_opr_str_fn fmt_reg;
     x86_opr_str_fn fmt_mrm;
     x86_opr_str_fn fmt_vec;
+    x86_opr_str_fn fmt_opb;
 };
 
 struct x86_opr_mrm_formats
@@ -132,6 +133,7 @@ x86_map_str x86_ord_names[] =
     { x86_ord_is4,              "is4"              },
     { x86_ord_sib,              "sib"              },
     { x86_ord_vec,              "vec"              },
+    { x86_ord_opr,              "opr"              },
     { x86_ord_mrm,              "mrm"              },
     { x86_ord_reg,              "reg"              },
     { x86_ord_imm,              "imm"              },
@@ -408,7 +410,7 @@ const char* x86_reg_name(uint reg)
 
 size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
 {
-    const char codes[8] = " -irmv  ";
+    const char codes[8] = " -irmvo ";
     size_t count = 0;
     for (size_t i = 0; i < array_size(x86_ord_table[0].ord) && ord[i]; i++) {
         uint type = ord[i] & 0b111;
@@ -1437,8 +1439,8 @@ x86_operands x86_codec_operands(x86_codec *c)
         }
     } else {
         /* if no ModRM, the register, if present, is in the
-         * low 3-bits of the opcode; so stash it in q.r */
-        q.r = c->opc[0] & 7;
+         * low 3-bits of the opcode; so stash it in q.b */
+        q.b = c->opc[0] & 7;
     }
 
     switch (x86_codec_field_ce(c) >> x86_ce_shift) {
@@ -1820,6 +1822,15 @@ size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
     return snprintf(buf, buflen, "%s", reg_r);
 }
 
+size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc)
+{
+    uint regsz = x86_opr_reg_size(c, q, opr, enc);
+    uint regn_r = x86_sized_gpr(c, q.b, regsz);
+    const char* reg_r = x86_reg_name(regn_r);
+    return snprintf(buf, buflen, "%s", reg_r);
+}
+
 size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
@@ -1908,7 +1919,8 @@ x86_opr_formatter x86_format_intel_hex =
     .fmt_imm = &x86_opr_intel_imm_hex_str,
     .fmt_reg = &x86_opr_intel_reg_str,
     .fmt_mrm = &x86_opr_intel_mrm_hex_str,
-    .fmt_vec = &x86_opr_intel_vec_str
+    .fmt_vec = &x86_opr_intel_vec_str,
+    .fmt_opb = &x86_opr_intel_opb_str
 };
 
 x86_opr_formatter x86_format_intel_dec =
@@ -1917,7 +1929,8 @@ x86_opr_formatter x86_format_intel_dec =
     .fmt_imm = &x86_opr_intel_imm_dec_str,
     .fmt_reg = &x86_opr_intel_reg_str,
     .fmt_mrm = &x86_opr_intel_mrm_dec_str,
-    .fmt_vec = &x86_opr_intel_vec_str
+    .fmt_vec = &x86_opr_intel_vec_str,
+    .fmt_opb = &x86_opr_intel_opb_str
 };
 
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
@@ -1929,6 +1942,7 @@ static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
     case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, q, opr, enc);
     case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, q, opr, enc);
     case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, q, opr, enc);
+    case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, q, opr, enc);
     default: return 0;
     }
 }

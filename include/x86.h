@@ -832,6 +832,7 @@ enum x86_ord
     x86_ord_reg              = 3 << x86_ord_s1, // R
     x86_ord_mrm              = 4 << x86_ord_s1, // M
     x86_ord_vec              = 5 << x86_ord_s1, // V
+    x86_ord_opr              = 6 << x86_ord_s1, // O
     x86_ord_type_mask        = 7 << x86_ord_s1,
 
     x86_ord_r                = 0b001 << x86_ord_s2,
