@@ -1104,6 +1104,12 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
     }
 
     /* other prefixes */
+    if (x86_codec_has_osize(&c)) {
+        nbytes += x86_out8(buf, x86_pb_osize);
+    }
+    if (x86_codec_has_asize(&c)) {
+        nbytes += x86_out8(buf, x86_pb_asize);
+    }
     if (x86_codec_has_wait(&c)) {
         nbytes += x86_out8(buf, x86_pb_wait);
     }
@@ -1115,12 +1121,6 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
     }
     if (x86_codec_has_repne(&c)) {
         nbytes += x86_out8(buf, x86_pb_repne);
-    }
-    if (x86_codec_has_osize(&c)) {
-        nbytes += x86_out8(buf, x86_pb_osize);
-    }
-    if (x86_codec_has_asize(&c)) {
-        nbytes += x86_out8(buf, x86_pb_asize);
     }
 
     /* extended prefixes */
