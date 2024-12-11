@@ -5,6 +5,7 @@ import glob
 import string
 import argparse
 
+bnd_count = 8
 gpr_count = 32
 vec_count = 32
 
@@ -14,8 +15,7 @@ gpr_w = ["ax", "cx", "dx", "bx", "sp", "bp", "si", "di"]
 gpr_d = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"]
 gpr_q = ["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi"]
 seg_r = ["es", "cs", "ss", "ds", "fs", "gs", "seg6", "seg7"]
-csr_r = ["fpcsr", "mxcsr"]
-sys_r = ["rip", "rflags"]
+sys_r = ["rip", "rflags","fpcsr", "mxcsr"]
 sys_n = ["none"]
 
 cc_all =      [ 'EQ', 'NEQ', 'GT', 'NLE', 'GE', 'NLT', 'LT', 'NGE', 'LE', 'NGT',
@@ -26,19 +26,21 @@ cc_unsigned = [ 'EQ', 'AE', 'A',  'BE', 'B',  'NEQ', 'NA',  'NBE', 'NB' ]
 def print_reg_strings(t):
     print("const char* x86_reg_names[512] =\n{")
     for i,s,f in t:
+        n = s.replace("(","").replace(")","")
         if len(s) == 0:
             print()
         else:
-            print("    %-12s = \"%s\"," % ("[x86_%s]" % s, s))
+            print("    %-12s = \"%s\"," % ("[x86_%s]" % n, s))
     print("};")
 
 def print_reg_enum(t):
     print("enum x86_reg\n{")
     for i,s,f in t:
+        n = s.replace("(","").replace(")","")
         if len(s) == 0:
             print()
         else:
-            print("    %-10s = %s," % ("x86_%s" % s, "x86_%s | %d" % (f, i)))
+            print("    %-10s = %s," % ("x86_%s" % n, "x86_%s | %d" % (f, i)))
     print("};")
 
 def gen_range(fmt,f,s,e):
@@ -82,9 +84,9 @@ def reg_table():
     t += gen_sep()
     t += gen_range("k%d", "reg_kmask", 0, 8)
     t += gen_sep()
-    t += gen_range("st%d", "reg_fpu", 0, 8)
+    t += gen_range("st(%d)", "reg_fpu", 0, 8)
     t += gen_sep()
-    t += gen_list(csr_r, "reg_csr", 0)
+    t += gen_range("bnd%d", "reg_bnd", 0, bnd_count)
     t += gen_sep()
     t += gen_range("dr%d", "reg_dreg", 0, 8)
     t += gen_sep()

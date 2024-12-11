@@ -53,6 +53,8 @@ struct x86_opr_formatter
     x86_opr_str_fn fmt_mrm;
     x86_opr_str_fn fmt_vec;
     x86_opr_str_fn fmt_opb;
+    x86_opr_str_fn fmt_is4;
+    x86_opr_str_fn fmt_ime;
 };
 
 struct x86_opr_mrm_formats
@@ -251,7 +253,6 @@ x86_map_str x86_opr_names[] =
     { x86_opr_reg_ax,           "ax"               },
     { x86_opr_reg_cl,           "cl"               },
     { x86_opr_reg_al,           "al"               },
-    { x86_opr_reg_st1,          "st1"              },
     { x86_opr_reg_st0,          "st0"              },
     { x86_opr_reg_v0,           "v0"               },
     { x86_opr_reg_ah,           "ah"               },
@@ -1595,7 +1596,7 @@ const char* x86_ptr_size_str(uint sz)
     case x86_opr_size_16: return "word ptr ";
     case x86_opr_size_32: return "dword ptr ";
     case x86_opr_size_64: return "qword ptr ";
-    case x86_opr_size_80: return "tword ptr ";
+    case x86_opr_size_80: return "tbyte ptr ";
     case x86_opr_size_128: return "xmmword ptr ";
     case x86_opr_size_256: return "ymmword ptr ";
     case x86_opr_size_512: return "zmmword ptr ";
@@ -1624,13 +1625,10 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     uint oprty = (opr & x86_opr_type_mask);
     uint oprsz = (opr & x86_opr_size_mask);
 
-    /* operand contains the register size */
-    if (oprsz != 0 && oprsz != x86_opr_size_word) {
-        return oprsz;
-    }
     /* 'rw' or 'mw' deduce size from mode, operand size prefix and REX.W */
-    else if (oprty == x86_opr_reg && oprsz == x86_opr_size_word ||
-             (opr & x86_opr_mem_mask) == x86_opr_mw)
+    if (oprty == x86_opr_reg && oprsz == x86_opr_size_word ||
+             (opr & x86_opr_mem_mask) == x86_opr_mw ||
+             (opr == x86_opr_reg_psi || opr == x86_opr_reg_pdi))
     {
         switch (x86_enc_width(enc)) {
         case x86_enc_w_wb: return x86_opr_size_8;
@@ -1656,6 +1654,10 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
         default: break;
         }
     }
+    /* operand contains the register size */
+    else if (oprsz != 0 && oprsz != x86_opr_size_word) {
+        return oprsz;
+    }
 
     return x86_codec_addr_size(c);
 }
@@ -1680,6 +1682,14 @@ static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
     case x86_opr_size_16: return x86_reg_w | (reg & 31);
     case x86_opr_size_32: return x86_reg_d | (reg & 31);
     case x86_opr_size_64: return x86_reg_q | (reg & 31);
+    default: return reg;
+    }
+}
+
+static uint x86_sized_vec(uint reg, uint opr)
+{
+    switch (opr & x86_opr_size_mask) {
+    case x86_opr_size_64: return x86_reg_mm | (reg & 7);
     case x86_opr_size_128: return x86_reg_xmm | (reg & 31);
     case x86_opr_size_256: return x86_reg_ymm | (reg & 31);
     case x86_opr_size_512: return x86_reg_zmm | (reg & 31);
@@ -1749,8 +1759,33 @@ x86_opr_mrm_formats x86_opr_mrm_formats_intel_dec =
     .reg                         = "%s"
 };
 
-size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc, x86_opr_mrm_formats *fmt)
+
+static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
+    x86_codec *c, x86_operands q, uint opr, uint enc, uint reg)
+{
+    switch (opr & x86_opr_type_mask) {
+    case x86_opr_reg: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_sized_gpr(c, reg, x86_opr_reg_size(c, q, opr, enc))));
+    case x86_opr_vec: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_sized_vec(reg, opr)));
+    case x86_opr_k: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_kmask | (reg & 7)));
+    case x86_opr_st: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_fpu | (reg & 7)));
+    case x86_opr_bnd: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_bnd | (reg & 7)));
+    case x86_opr_seg: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_sreg | (reg & 7)));
+    case x86_opr_creg: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_creg | (reg & 15)));
+    case x86_opr_dreg: return snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_dreg | (reg & 7)));
+    default: return snprintf(buf, buflen, "%s", "unknown");
+    }
+}
+
+static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
+    x86_codec *c, x86_operands q, uint opr, uint enc, x86_opr_mrm_formats *fmt)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint ptrsz = x86_opr_ptr_size(c, q, opr, enc);
@@ -1872,8 +1907,7 @@ size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen, x86_codec *c,
         }
         break;
     case x86_mod_reg:
-        return snprintf(buf, buflen, fmt->reg,
-            x86_reg_name(x86_sized_gpr(c, q.b, regsz)));
+        return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.b);
     }
     return 0;
 }
@@ -1895,28 +1929,26 @@ size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
 size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
-    uint regn_r = x86_sized_gpr(c, q.r, regsz);
-    const char* reg_r = x86_reg_name(regn_r);
-    return snprintf(buf, buflen, "%s", reg_r);
+    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.r);
 }
 
 size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
-    uint regn_r = x86_sized_gpr(c, q.v, regsz);
-    const char* reg_r = x86_reg_name(regn_r);
-    return snprintf(buf, buflen, "%s", reg_r);
+    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.v);
 }
 
 size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
-    uint regn_r = x86_sized_gpr(c, q.b, regsz);
-    const char* reg_r = x86_reg_name(regn_r);
-    return snprintf(buf, buflen, "%s", reg_r);
+    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.b);
+}
+
+size_t x86_opr_intel_is4_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q, uint opr, uint enc)
+{
+    uint reg = (c->imm32 >> 4) & 15;
+    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, reg);
 }
 
 size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
@@ -1947,6 +1979,22 @@ size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
+size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q,  uint opr, uint enc)
+{
+    int imm = c->imm16e;
+    return snprintf(buf, buflen, "%s0x%x",
+        imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
+}
+
+size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
+    x86_operands q,  uint opr, uint enc)
+{
+    int imm = c->imm16e;
+    return snprintf(buf, buflen, "%s%u",
+        imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
+}
+
 uint x86_opr_intel_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
@@ -1975,8 +2023,6 @@ uint x86_opr_intel_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
     case x86_opr_reg_pc: return x86_sized_gpr(c, x86_cl, addrsz);
     case x86_opr_reg_pd: return x86_sized_gpr(c, x86_dl, addrsz);
     case x86_opr_reg_pb: return x86_sized_gpr(c, x86_bl, addrsz);
-    case x86_opr_reg_psi: return x86_sized_gpr(c, x86_sil, addrsz);
-    case x86_opr_reg_pdi: return x86_sized_gpr(c, x86_dil, addrsz);
     default: break;
     }
     return -1;
@@ -1997,6 +2043,13 @@ size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     case x86_opr_1: return snprintf(buf, buflen, "1");
     case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "xmm0");
     case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "xmm0_7");
+    case x86_opr_seg_fs: return snprintf(buf, buflen, "fs");
+    case x86_opr_seg_gs: return snprintf(buf, buflen, "gs");
+    case x86_opr_reg_st0: return snprintf(buf, buflen, "st");
+    case x86_opr_reg_psi: return snprintf(buf, buflen, "%s[%s]",
+        x86_ptr_size_str(regsz), x86_reg_name(x86_sized_gpr(c, x86_sil, addrsz)));
+    case x86_opr_reg_pdi: return snprintf(buf, buflen, "%s[%s]",
+        x86_ptr_size_str(regsz), x86_reg_name(x86_sized_gpr(c, x86_dil, addrsz)));
     default: return snprintf(buf, buflen, "%s", "unknown");
     }
 }
@@ -2008,7 +2061,9 @@ x86_opr_formatter x86_format_intel_hex =
     .fmt_reg = &x86_opr_intel_reg_str,
     .fmt_mrm = &x86_opr_intel_mrm_hex_str,
     .fmt_vec = &x86_opr_intel_vec_str,
-    .fmt_opb = &x86_opr_intel_opb_str
+    .fmt_opb = &x86_opr_intel_opb_str,
+    .fmt_is4 = &x86_opr_intel_is4_str,
+    .fmt_ime = &x86_opr_intel_ime_hex_str
 };
 
 x86_opr_formatter x86_format_intel_dec =
@@ -2018,7 +2073,9 @@ x86_opr_formatter x86_format_intel_dec =
     .fmt_reg = &x86_opr_intel_reg_str,
     .fmt_mrm = &x86_opr_intel_mrm_dec_str,
     .fmt_vec = &x86_opr_intel_vec_str,
-    .fmt_opb = &x86_opr_intel_opb_str
+    .fmt_opb = &x86_opr_intel_opb_str,
+    .fmt_is4 = &x86_opr_intel_is4_str,
+    .fmt_ime = &x86_opr_intel_ime_dec_str
 };
 
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
@@ -2026,11 +2083,18 @@ static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
 {
     switch(ord & x86_ord_type_mask) {
     case x86_ord_const: return fmt->fmt_const(buf, buflen, c, q, opr, enc);
-    case x86_ord_imm: return fmt->fmt_imm(buf, buflen, c, q, opr, enc);
     case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, q, opr, enc);
     case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, q, opr, enc);
     case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, q, opr, enc);
     case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, q, opr, enc);
+    case x86_ord_imm:
+        if ((ord & ~x86_ord_flag_mask) == x86_ord_is4) {
+            return fmt->fmt_is4(buf, buflen, c, q, opr, enc);
+        } else if ((ord & ~x86_ord_flag_mask) == x86_ord_ime) {
+            return fmt->fmt_ime(buf, buflen, c, q, opr, enc);
+        } else {
+            return fmt->fmt_imm(buf, buflen, c, q, opr, enc);
+        }
     default: return 0;
     }
 }

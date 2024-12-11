@@ -148,7 +148,6 @@ void test_x86_opr_name()
     assert(strcmp(arg_name(x86_opr_reg_di), "di") == 0);
     assert(strcmp(arg_name(x86_opr_reg_ah), "ah") == 0);
     assert(strcmp(arg_name(x86_opr_reg_st0), "st0") == 0);
-    assert(strcmp(arg_name(x86_opr_reg_st1), "st1") == 0);
     assert(strcmp(arg_name(x86_opr_reg_v0), "v0") == 0);
     assert(strcmp(arg_name(x86_opr_reg_al), "al") == 0);
     assert(strcmp(arg_name(x86_opr_reg_cl), "cl") == 0);
@@ -340,8 +339,8 @@ void test_x86_reg_name()
     assert(strcmp(reg_name(x86_ymm31), "ymm31") == 0);
     assert(strcmp(reg_name(x86_zmm0), "zmm0") == 0);
     assert(strcmp(reg_name(x86_zmm31), "zmm31") == 0);
-    assert(strcmp(reg_name(x86_st0), "st0") == 0);
-    assert(strcmp(reg_name(x86_st7), "st7") == 0);
+    assert(strcmp(reg_name(x86_st0), "st(0)") == 0);
+    assert(strcmp(reg_name(x86_st7), "st(7)") == 0);
 }
 
 int main(int argc, char const *argv[])

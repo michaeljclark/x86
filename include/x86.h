@@ -54,7 +54,7 @@ enum
     x86_reg_kmask = 0b1000 << 5,
     x86_reg_bl    = 0b1001 << 5,
     x86_reg_fpu   = 0b1010 << 5,
-    x86_reg_csr   = 0b1011 << 5,
+    x86_reg_bnd   = 0b1011 << 5,
 
     x86_reg_dreg  = 0b1100 << 5,
     x86_reg_creg  = 0b1101 << 5,
@@ -778,7 +778,6 @@ enum x86_opr
     x86_opr_reg_ah           = x86_opr_ind | x86_opr_reg | (6 << x86_opr_s4),
     x86_opr_reg_v0           = x86_opr_ind | x86_opr_vec | (0 << x86_opr_s4),
     x86_opr_reg_st0          = x86_opr_ind | x86_opr_st  | (0 << x86_opr_s4),
-    x86_opr_reg_st1          = x86_opr_ind | x86_opr_st  | (1 << x86_opr_s4),
     x86_opr_seg_es           = x86_opr_ind | x86_opr_seg | (0 << x86_opr_s4),
     x86_opr_seg_cs           = x86_opr_ind | x86_opr_seg | (1 << x86_opr_s4),
     x86_opr_seg_ss           = x86_opr_ind | x86_opr_seg | (2 << x86_opr_s4),
@@ -945,7 +944,7 @@ struct x86_codec
 
     uint flags;
     ushort rec;
-    ushort imm16e;
+    short imm16e;
 
     union {
         struct {
