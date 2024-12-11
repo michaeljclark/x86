@@ -1316,6 +1316,23 @@ static x86_acc_entry* x86_acc_lookup(x86_acc_idx *idx, size_t offset)
 }
 
 /*
+ * bitmap utility functions
+ */
+
+static inline size_t x86_bitmap_idx(size_t i) { return i >> 6; }
+static inline size_t x86_bitmap_shift(size_t i) { return (i & 63); }
+
+static inline int x86_bitmap_get(ullong *bitmap, size_t i)
+{
+    return (int)((bitmap[x86_bitmap_idx(i)] >> x86_bitmap_shift(i)) & 1);
+}
+
+static inline void x86_bitmap_set(ullong *bitmap, size_t i, int value)
+{
+    bitmap[x86_bitmap_idx(i)] |= ((ullong)value << x86_bitmap_shift(i));
+}
+
+/*
  * context for encoder, decoder, formatter and parser
  */
 

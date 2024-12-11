@@ -659,12 +659,11 @@ static int x86_opc_data_compare_opcode(const void *p1, const void *p2)
     const x86_opc_data *op2 = x86_opc_table + *(size_t*)p2;
 
     /* split into prefix and suffix */
-    uint mask = x86_enc_o_mask | x86_enc_f_mask | x86_enc_s_mask |
-                x86_enc_i_mask | x86_enc_i2_mask;
-    uint op1pre = op1->enc & ~mask;
-    uint op2pre = op2->enc & ~mask;
-    uint op1suf = op1->enc &  mask;
-    uint op2suf = op2->enc &  mask;
+    uint mask = x86_enc_t_mask | x86_enc_p_mask | x86_enc_m_mask;
+    uint op1pre = op1->enc & mask;
+    uint op2pre = op2->enc & mask;
+    uint op1suf = op1->enc & ~mask;
+    uint op2suf = op2->enc & ~mask;
 
     if (op1pre < op2pre) return -1;
     if (op1pre > op2pre) return 1;
@@ -771,158 +770,243 @@ static int x86_opc_data_compare_build(const void *p1, const void *p2)
     return 0;
 }
 
-static void x86_add_opc_data(x86_opc_data *op_map,
-    x86_opc_data rec, uint mod11p, uint mod11n)
+typedef struct x86_opc_prefix x86_opc_prefix;
+struct x86_opc_prefix
 {
-    if (mod11p) {
-        /* add one entry with mod == 0b11 - ModRM.rm is register */
-        rec.opm[1] |= 0xc0;
-        rec.opc[1] |= 0xc0;
-        op_map[0] = rec;
-    } else if (mod11n) {
-        /* add three entries with mod != 0b11 - ModRM.rm is memory */
-        rec.opm[1] |= 0xc0;
-        rec.opc[1] = (rec.opc[1] & 0x3f) | 0x80;
-        op_map[0] = rec;
-        rec.opc[1] = (rec.opc[1] & 0x3f) | 0x40;
-        op_map[1] = rec;
-        rec.opc[1] = (rec.opc[1] & 0x3f);
-        op_map[2] = rec;
-    } else {
-        /* add entry unmodified */
-        op_map[0] = rec;
+    uint pfx;
+    uint pfx_w;
+    uint pfx_o;
+    uint modfun;
+    uint modreg;
+    uint modmem;
+};
+
+static x86_opc_prefix x86_table_make_prefix(const x86_opc_data *d,
+    const x86_opr_data *o, const x86_ord_data *p)
+{
+    x86_opc_prefix tp;
+    memset(&tp, 0, sizeof(tp));
+
+    /* extract prefix and synthesize width prefixes */
+    switch (x86_enc_type(d->enc)) {
+    case x86_enc_t_lex:
+    case x86_enc_t_vex:
+    case x86_enc_t_evex:
+        switch (d->enc & x86_enc_w_mask) {
+        case x86_enc_w_wig:
+        case x86_enc_w_wn:
+        case x86_enc_w_wb:
+        case x86_enc_w_w0: break;
+        case x86_enc_w_w1: tp.pfx = x86_enc_p_rexw; break;
+        case x86_enc_w_wx: tp.pfx_w = x86_enc_p_rexw; /* fallthrough */
+        case x86_enc_w_ww: tp.pfx_o = x86_enc_p_66; break;
+        }
+        break;
+     }
+
+    /* find register or memory operand mapping to modrm.rm field
+     * so that we can add mod=0b11 or mod!=0b11 to modrm mask */
+    tp.modfun = x86_enc_func(d->enc) == x86_enc_f_modrm_n;
+    for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
+    {
+        uint isreg = (o->opr[i] & x86_opr_type_mask) >= x86_opr_reg;
+        uint ismem = (o->opr[i] & x86_opr_mem) != 0;
+        uint ismrm = (p->ord[i] & x86_ord_type_mask) == x86_ord_mrm;
+        if (ismrm) {
+            if (isreg && !ismem) {
+                tp.modreg = 1; /* mod == 0b11 */
+                break;
+            } else if (!isreg && ismem) {
+                tp.modmem = 1; /* mod != 0b11 */
+                break;
+            }
+        }
+    }
+
+    /* explict second opcode byte has mod == 0b11 */
+    if (d->opm[1] == 0xff && (d->opc[1] & 0xc0) == 0xc0 &&
+        !tp.modreg && !tp.modmem)
+    {
+        tp.modreg = 1;
+    }
+
+    return tp;
+}
+
+static void x86_build_prefix_clashes(x86_acc_idx *idx, x86_table_idx tab,
+    ullong *modfun, ullong *modmod)
+{
+    /*
+     * record modrm.reg /n or modrm.mod (reg or mem) usage
+     * so that opcodes with clashes can expand mod entries
+     */
+    for(size_t i = 0; i < tab.count; i++) {
+        const x86_opc_data *d = x86_opc_table + tab.idx[i];
+        const x86_opr_data *o = x86_opr_table + d->opr;
+        const x86_ord_data *p = x86_ord_table + d->ord;
+        x86_opc_prefix tp = x86_table_make_prefix(d, o, p);
+        uint type = x86_enc_type(d->enc) >> x86_enc_t_shift;
+        uint prefix = x86_enc_prefix(d->enc) >> x86_enc_p_shift;
+        uint map = x86_enc_map(d->enc) >> x86_enc_m_shift;
+        size_t tpm = x86_acc_page(type, prefix, map);
+        size_t x = (tpm << 8) | d->opc[0];
+        if (tp.modfun) {
+            x86_bitmap_set(modfun, x, 1);
+        }
+        if (tp.modreg || tp.modmem) {
+            x86_bitmap_set(modmod, x, 1);
+        }
     }
 }
 
-static void x86_build_prefix_table(const x86_opc_data *op_table,
-    x86_table_idx tab, x86_opc_data *op_map, size_t *count)
+static size_t x86_add_opc_data(x86_opc_data *op_map, size_t idx,
+    x86_opc_data rec, uint modreg, uint modmem, uint modcla)
 {
-    size_t n = 1;
+    /*
+     * add entries to opcode map, expanding mod entries where
+     * for modreg or modmem constraints or clashes with mod.reg /n
+     */
+    if (op_map) {
+        if (modreg) {
+            /* add one entry with mod == 0b11 - ModRM.rm is register */
+            rec.opm[1] |= 0xc0;
+            rec.opc[1] |= 0xc0;
+            op_map[idx] = rec;
+        } else if (modmem) {
+            /* add three entries with mod != 0b11 - ModRM.rm is memory */
+            rec.opm[1] |= 0xc0;
+            rec.opc[1] = (rec.opc[1] & 0x3f) | 0x80;
+            op_map[idx] = rec;
+            rec.opc[1] = (rec.opc[1] & 0x3f) | 0x40;
+            op_map[idx+1] = rec;
+            rec.opc[1] = (rec.opc[1] & 0x3f);
+            op_map[idx+2] = rec;
+        } else if (modcla) {
+            /* add four entries mod (0b00..0b11) due to function clash */
+            rec.opm[1] |= 0xc0;
+            rec.opc[1] = (rec.opc[1] & 0x3f) | 0xc0;
+            op_map[idx] = rec;
+            rec.opc[1] = (rec.opc[1] & 0x3f) | 0x80;
+            op_map[idx+1] = rec;
+            rec.opc[1] = (rec.opc[1] & 0x3f) | 0x40;
+            op_map[idx+2] = rec;
+            rec.opc[1] = (rec.opc[1] & 0x3f);
+            op_map[idx+3] = rec;
+        } else {
+            /* add entry unmodified */
+            op_map[idx] = rec;
+        }
+    }
+    return modreg ? 1 : modmem ? 3 : modcla ? 4 : 1;
+}
 
+static void x86_build_prefix_table(x86_acc_idx *idx,
+    x86_table_idx tab, x86_opc_data *op_map, size_t *count,
+    ullong *modfun, ullong *modmod)
+{
+    /*
+     * build the opcode map with synthesized prefixes and modrm expansion
+     */
+    size_t n = 1;
     for(size_t i = 0; i < tab.count; i++) {
-        const x86_opc_data *d = op_table + tab.idx[i];
+        const x86_opc_data *d = x86_opc_table + tab.idx[i];
         const x86_opr_data *o = x86_opr_table + d->opr;
         const x86_ord_data *p = x86_ord_table + d->ord;
 
-        /* extract prefix and synthesize width prefixes */
-        uint pfx1 = 0, pfx2 = 0, pfx3 = 0;
-        switch (x86_enc_type(d->enc)) {
-        case x86_enc_t_lex:
-        case x86_enc_t_vex:
-        case x86_enc_t_evex:
-            switch (d->enc & x86_enc_w_mask) {
-            case x86_enc_w_wig:
-            case x86_enc_w_wn:
-            case x86_enc_w_wb:
-            case x86_enc_w_w0: break;
-            case x86_enc_w_w1: pfx1 |= x86_enc_p_rexw; break;
-            case x86_enc_w_wx: pfx2 = pfx1 | x86_enc_p_rexw; /* fallthrough */
-            case x86_enc_w_ww: pfx3 = pfx1 | x86_enc_p_66; break;
-            }
-            break;
-         }
+        uint type = x86_enc_type(d->enc) >> x86_enc_t_shift;
+        uint prefix = x86_enc_prefix(d->enc) >> x86_enc_p_shift;
+        uint map = x86_enc_map(d->enc) >> x86_enc_m_shift;
+        size_t tpm = x86_acc_page(type, prefix, map);
+        size_t x = (tpm << 8) | d->opc[0];
+        uint modcla = x86_bitmap_get(modfun, x) && x86_bitmap_get(modmod, x);
+        x86_opc_prefix tp = x86_table_make_prefix(d, o, p);
 
-        /* find register or memory operand mapping to modrm.rm field
-         * so that we can add mod=0b11 or mod!=0b11 to modrm mask */
-        uint mod11p = 0, mod11n = 0;
-        for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
-        {
-            uint isreg = (o->opr[i] & x86_opr_type_mask) >= x86_opr_reg;
-            uint ismem = (o->opr[i] & x86_opr_mem) != 0;
-            uint ismrm = (p->ord[i] & x86_ord_type_mask) == x86_ord_mrm;
-            if (ismrm) {
-                if (isreg && !ismem) {
-                    mod11p = 1; /* modb == 0b11 */
-                    break;
-                } else if (!isreg && ismem) {
-                    mod11n = 1; /* modb != 0b11 */
-                    break;
-                }
-            }
-        }
-
-        /* add entries to table */
-        if (op_map) {
+        x86_opc_data rec = *d;
+        rec.enc |= tp.pfx;
+        n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
+        if (tp.pfx_w) {
             x86_opc_data rec = *d;
-            rec.enc |= pfx1;
-            x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
+            rec.enc |= tp.pfx | tp.pfx_w;
+            n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
         }
-        n += mod11n ? 3 : 1;
-        if (pfx2) {
-            if (op_map) {
-                x86_opc_data rec = *d;
-                rec.enc |= pfx2;
-                x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
-            }
-            n += mod11n ? 3 : 1;
-        }
-        if (pfx3) {
-            if (op_map) {
-                x86_opc_data rec = *d;
-                rec.enc |= pfx3;
-                x86_add_opc_data(op_map + n, rec, mod11p, mod11n);
-            }
-            n += mod11n ? 3 : 1;
+        if (tp.pfx_o) {
+            x86_opc_data rec = *d;
+            rec.enc |= tp.pfx | tp.pfx_o;
+            n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
         }
     }
 
     if (count) *count = n;
 }
 
-static void x86_build_accel_table(x86_acc_idx *idx,
-    x86_acc_entry *acc, size_t *count)
+static size_t x86_build_accel_offsets(x86_acc_idx *idx)
 {
-    /* slot zero is one byte legacy opcodes: type:LEX, prefix:0, map:0 */
+    /*
+     * allocate offsets for type prefix map combinations
+     *
+     * offset zero means the slice is not allocated but page zero is
+     * preallocated as a special cased for type:LEX, prefix:0, map:0
+     */
     size_t num_pages = 1;
-    uint max_entries = 0;
     for (size_t i = 1; i < idx->map_count; i++) {
         const x86_opc_data *m = idx->map + i;
         uint type = x86_enc_type(m->enc) >> x86_enc_t_shift;
         uint prefix = x86_enc_prefix(m->enc) >> x86_enc_p_shift;
         uint map = x86_enc_map(m->enc) >> x86_enc_m_shift;
         size_t acc_page = x86_acc_page(type, prefix, map);
-        /*
-         * offset zero means the slice is not allocated but page zero is
-         * preallocated as a special cased for type:LEX, prefix:0, map:0
-         */
-        size_t offset = 0;
-        if (!acc) {
-            /* counting pass assign offsets except for page zero */
-            if (acc_page > 0 && idx->page_offsets[acc_page] == 0) {
-                size_t page = num_pages++;
-                idx->page_offsets[acc_page] = page;
-                offset = page << 8;
-            }
-        } else if (acc) {
-            /* writing pass lookup offset */
-            offset = x86_acc_offset(idx, acc_page);
-            uint oc = m->opc[0], msk = m->opm[0], om = oc;
-            /*  (type, prefix, map, opcode) -> (index, count) */
-            while ((oc & msk) == om) {
-                if (acc[offset + oc].idx == 0) acc[offset + oc].idx = i;
-                acc[offset + oc].nent++;
-                oc++;
-            }
+        if (acc_page > 0 && idx->page_offsets[acc_page] == 0) {
+            size_t page = num_pages++;
+            idx->page_offsets[acc_page] = page;
         }
     }
-    if (count) {
-        *count = num_pages << 8;
+    return num_pages << 8;
+}
+
+static void x86_build_accel_table(x86_acc_idx *idx, x86_acc_entry *acc)
+{
+    /*
+     * add entries to the acceleration table. the acceleration
+     * table contains ranges for all entries of a given opcode.
+     *
+     * (type, prefix, map, opcode) -> (index, count)
+     */
+    for (size_t i = 1; i < idx->map_count; i++) {
+        const x86_opc_data *m = idx->map + i;
+        uint type = x86_enc_type(m->enc) >> x86_enc_t_shift;
+        uint prefix = x86_enc_prefix(m->enc) >> x86_enc_p_shift;
+        uint map = x86_enc_map(m->enc) >> x86_enc_m_shift;
+        size_t acc_page = x86_acc_page(type, prefix, map);
+        size_t offset = x86_acc_offset(idx, acc_page);
+        uint opc = m->opc[0], opc_i = opc, opm = m->opm[0];
+        while ((opc_i & opm) == opc) {
+            if (acc[offset + opc_i].idx == 0) {
+                acc[offset + opc_i].idx = i;
+            }
+            acc[offset + opc_i].nent++;
+            opc_i++;
+        }
     }
 }
 
 x86_acc_idx* x86_table_build(uint modes)
 {
     x86_acc_idx *idx = calloc(1, sizeof(x86_acc_idx));
-    x86_table_idx tab = x86_opc_table_filter(x86_opc_table_identity(), modes);
-    x86_build_prefix_table(x86_opc_table, tab, NULL, &idx->map_count);
+    x86_table_idx tab = x86_opc_table_sorted(x86_opc_table_filter(
+        x86_opc_table_identity(), modes), x86_sort_numeric);
+    ullong *modfun = (ullong *)calloc(2048, sizeof(ullong));
+    ullong *modmod = (ullong *)calloc(2048, sizeof(ullong));
+    x86_build_prefix_clashes(idx, tab, modfun, modmod);
+    x86_build_prefix_table(idx, tab, NULL, &idx->map_count, modfun, modmod);
     idx->map = calloc(idx->map_count, sizeof(x86_opc_data));
-    x86_build_prefix_table(x86_opc_table, tab, idx->map, NULL);
+    x86_build_prefix_table(idx, tab, idx->map, NULL, modfun, modmod);
     qsort(idx->map, idx->map_count, sizeof(x86_opc_data), x86_opc_data_compare_build);
     idx->page_offsets = calloc(512, sizeof(uchar));
-    x86_build_accel_table(idx, NULL, &idx->acc_count);
+    idx->acc_count = x86_build_accel_offsets(idx);
     idx->acc = calloc(sizeof(x86_acc_entry), idx->acc_count);
-    x86_build_accel_table(idx, idx->acc, NULL);
+    x86_build_accel_table(idx, idx->acc);
     free(tab.idx);
+    free(modfun);
+    free(modmod);
     return idx;
 }
 
