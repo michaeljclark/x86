@@ -137,6 +137,8 @@ enum
     x86_gen_v,
     x86_gen_k,
     x86_gen_brd,
+    x86_gen_is4,
+    x86_gen_ime,
 };
 
 struct x86_operand_gen
@@ -166,6 +168,8 @@ const char *x86_generator_name(uint type)
     case x86_gen_v: return "v";
     case x86_gen_k: return "k";
     case x86_gen_brd: return "brd";
+    case x86_gen_is4: return "is4";
+    case x86_gen_ime: return "ime";
     default: return "";
     }
 }
@@ -184,7 +188,7 @@ int x86_osize_w_pred(x86_operand_gen *generators, size_t idx)
         if (generators[i].type == x86_gen_w)
             w = (int)generators[i].value;
     }
-    if (w == 0) {
+    if (w <= 0) {
         return 1;
     } else {
         generators[idx].value = 0;
@@ -287,8 +291,45 @@ int x86_imm_rax_pred(x86_operand_gen *generators, size_t idx)
         }
     }
     return (r == -1 || r == x86_ax) &&
-           (rm == -1 || rm == x86_sp || rm == x86_bp) &&
-           (b == -1 || b == x86_bp) &&
+           (rm == -1 || rm == x86_ax) &&
+           (b == -1 || b == x86_ax) &&
+           (x == -1 || x == x86_ax) &&
+           (v == -1 || v == x86_ax);
+}
+
+int x86_imm_rax_iw_osize_pred(x86_operand_gen *generators, size_t idx)
+{
+    int osize = -1, r = -1, rm = -1, b = -1, x = -1, v= -1;
+    for (size_t i = 0; i < idx; i++) {
+        if (generators[i].type == x86_gen_osize) {
+            osize = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_r) {
+            r = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_rm) {
+            rm = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_b) {
+            b = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_x) {
+            x = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_v) {
+            v = (int)generators[i].value;
+        }
+    }
+    if (osize == 1) {
+        generators[idx].step = 1ull << 14;
+        generators[idx].end = 3ull << 14;
+    } else {
+        generators[idx].step = 1ull << 30;
+        generators[idx].end = 3ull << 30;
+    }
+    return (r == -1 || r == x86_ax) &&
+           (rm == -1 || rm == x86_ax) &&
+           (b == -1 || b == x86_ax) &&
            (x == -1 || x == x86_ax) &&
            (v == -1 || v == x86_ax);
 }
@@ -298,21 +339,30 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
     const x86_opr_data *o = x86_opr_table + d->opr;
     const x86_ord_data *s = x86_ord_table + d->ord;
 
+    /* currently only 64-bit mode generation is supported */
+
     switch (x86_enc_width(d->enc)) {
     case x86_enc_w_ww:
         if (x86_enc_has_o16(d->enc)) {
+            x86_new_generator(gen, count, x86_gen_osize, NULL, 1, 1, 1, 1);
+        }
+        else if (x86_enc_has_o32(d->enc));
+        else if (x86_enc_has_o64(d->enc));
+        else {
             x86_new_generator(gen, count, x86_gen_osize, NULL, 0, 0, 1, 1);
         }
         break;
     case x86_enc_w_wx:
         if (x86_enc_has_o16(d->enc)) {
-            x86_new_generator(gen, count, x86_gen_osize, x86_osize_w_pred, 0, 0, 1, 1);
+            x86_new_generator(gen, count, x86_gen_osize, NULL, 1, 1, 1, 1);
         }
-        else if (x86_enc_has_o32(d->enc)) {
-            /* no need to emit anything in 64-bit mode */
-        }
+        else if (x86_enc_has_o32(d->enc));
         else if (x86_enc_has_o64(d->enc)) {
+            x86_new_generator(gen, count, x86_gen_w, NULL, 1, 1, 1, 1);
+        }
+        else {
             x86_new_generator(gen, count, x86_gen_w, NULL, 0, 0, 1, 1);
+            x86_new_generator(gen, count, x86_gen_osize, x86_osize_w_pred, 0, 0, 1, 1);
         }
         break;
     case x86_enc_w_w1:
@@ -323,7 +373,7 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
         break;
     }
 
-    uint isreg = 0, ismem = 0;
+    uint rs = 4, isreg = 0, ismem = 0, issib = 0;
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
     {
         uint ord = s->ord[i], opr = o->opr[i];
@@ -333,65 +383,85 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
         case x86_ord_const:
             break;
         case x86_ord_imm:
-            switch (x86_enc_imm(d->enc)) {
-            case x86_enc_i_ib:
-                x86_new_generator(gen, count, x86_gen_i,
-                    x86_imm_rax_pred, 0, 0, 3ull << 6, 1ull << 6);
-                break;
-            case x86_enc_i_iw:
-                x86_new_generator(gen, count, x86_gen_i,
-                    x86_imm_rax_pred, 0, 0, 3ull << 30, 1ull << 30);
-                break;
-            case x86_enc_i_i16:
-                x86_new_generator(gen, count, x86_gen_i,
+            if ((ord & ~x86_ord_flag_mask) == x86_ord_is4) {
+                x86_new_generator(gen, count, x86_gen_is4,
+                    NULL, 0, 0, 15, rs);
+            } else if ((ord & ~x86_ord_flag_mask) == x86_ord_ime) {
+                x86_new_generator(gen, count, x86_gen_ime,
                     x86_imm_rax_pred, 0, 0, 3ull << 14, 1ull << 14);
-                break;
-            case x86_enc_i_i32:
-                x86_new_generator(gen, count, x86_gen_i,
-                    x86_imm_rax_pred, 0, 0, 3ull << 30, 1ull << 30);
-                break;
-            case x86_enc_i_i64:
-                x86_new_generator(gen, count, x86_gen_i,
-                    x86_imm_rax_pred, 0, 0, 3ull << 62, 1ull << 62);
-                break;
+            } else {
+                switch (x86_enc_imm(d->enc)) {
+                case x86_enc_i_ib:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_pred, 0, 0, 3ull << 6, 1ull << 6);
+                    break;
+                case x86_enc_i_iw:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_iw_osize_pred, 0, 0, 3ull << 30, 1ull << 30);
+                    break;
+                case x86_enc_i_i16:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_pred, 0, 0, 3ull << 14, 1ull << 14);
+                    break;
+                case x86_enc_i_i32:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_pred, 0, 0, 3ull << 30, 1ull << 30);
+                    break;
+                case x86_enc_i_i64:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_pred, 0, 0, 3ull << 62, 1ull << 62);
+                    break;
+                }
             }
             break;
         case x86_ord_reg:
-            x86_new_generator(gen, count, x86_gen_r, NULL, 0, 0, 15, 1);
+            if (opr_type == x86_opr_k) {
+                x86_new_generator(gen, count, x86_gen_r, NULL, 0, 0, 7, rs);
+            } else {
+                x86_new_generator(gen, count, x86_gen_r, NULL, 0, 0, 15, rs);
+            }
             break;
         case x86_ord_opr:
-            x86_new_generator(gen, count, x86_gen_b, NULL, 0, 0, 15, 1);
+            x86_new_generator(gen, count, x86_gen_b, NULL, 0, 0, 15, rs);
             break;
         case x86_ord_mrm:
             isreg = (o->opr[i] & x86_opr_type_mask) >= x86_opr_reg;
             ismem = (o->opr[i] & x86_opr_mem) != 0;
-            if (isreg && ismem) {
+            issib = (s->ord[i] & ~x86_ord_flag_mask) == x86_ord_sib;
+            if (isreg && ismem && !issib) {
                 x86_new_generator(gen, count, x86_gen_mod, NULL, 0, 0, 3, 1);
-            } else if (isreg) {
+            } else if (isreg && !issib) {
                 x86_new_generator(gen, count, x86_gen_mod, NULL, 3, 3, 3, 1);
-            } else if (ismem) {
+            } else if (issib || ismem) {
                 x86_new_generator(gen, count, x86_gen_mod, NULL, 0, 0, 2, 1);
             }
-            x86_new_generator(gen, count, x86_gen_rm, NULL, 0, 0, 15, 1);
+            if (issib) {
+                x86_new_generator(gen, count, x86_gen_rm, NULL, 4, 4, 4, 1);
+            } else if (opr_type == x86_opr_k) {
+                x86_new_generator(gen, count, x86_gen_r, NULL, 0, 0, 7, rs);
+            } else {
+                x86_new_generator(gen, count, x86_gen_rm, NULL, 0, 0, 15, rs);
+            }
             if (ismem) {
                 x86_new_generator(gen, count, x86_gen_s,
                     x86_mrm_sib_scale_pred, 0, 0, 3, 1);
                 x86_new_generator(gen, count, x86_gen_b,
                     x86_mrm_sib_reg_pred, 0, 0, 15, 1);
                 x86_new_generator(gen, count, x86_gen_x,
-                    x86_mrm_sib_reg_pred, 0, 0, 15, 1);
+                    x86_mrm_sib_reg_pred, 0, 0, 15, rs);
                 x86_new_generator(gen, count, x86_gen_disp,
                     x86_mrm_disp_pred, 0, 0, 3ull << 30, 1ull << 30);
                 }
             break;
         case x86_ord_vec:
-            x86_new_generator(gen, count, x86_gen_v, NULL, 0, 0, 15, 1);
+            if (opr_type == x86_opr_k) {
+                x86_new_generator(gen, count, x86_gen_v, NULL, 0, 0, 7, rs);
+            } else {
+                x86_new_generator(gen, count, x86_gen_v, NULL, 0, 0, 15, rs);
+            }
             break;
         default:
             break;
-        }
-        if (opr_type == x86_opr_k) {
-            x86_new_generator(gen, count, x86_gen_k, NULL, 0, 0, 7, 1);
         }
         if (opr & x86_opr_m16bcst) {
             x86_new_generator(gen, count, x86_gen_brd, NULL, 0, 0, 1, 1);
@@ -403,8 +473,10 @@ int x86_gen_next(x86_operand_gen *gen, size_t count)
 {
     for (size_t i = count-1; i < count; i--) {
         if (gen[i].pred && gen[i].pred(gen, i) == 0) continue;
-        gen[i].value += gen[i].step;
-        if (gen[i].value <= gen[i].end) {
+        ullong value = gen[i].value;
+        ullong result = value + gen[i].step;
+        gen[i].value = result;
+        if (gen[i].value <= gen[i].end && value < result) {
             return 1;
         } else {
             gen[i].value = gen[i].start;
@@ -466,6 +538,14 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
             default:
                 break;
             }
+            break;
+        case x86_gen_is4:
+            c->imm32 = (int)gen[i].value;
+            c->flags |= x86_ci_ib;
+            break;
+        case x86_gen_ime:
+            c->imm16e = (int)gen[i].value;
+            c->flags |= x86_cf_i16e;
             break;
         case x86_gen_r:
             r = (int)gen[i].value;
@@ -666,6 +746,7 @@ void x86_evaluate_opcode(x86_ctx *ctx_x86, LLVMDisasmContextRef ctx_llvm,
         }
         if (!pass && error_count == error_limit) {
             printf("[reached limit of %d errors]\n", error_limit);
+            return;
         }
     } while (x86_gen_next(gen, count));
 }
@@ -684,7 +765,7 @@ void x86_loop_opcodes(x86_ctx *ctx_x86, LLVMDisasmContextRef ctx_llvm,
 
 void print_help(const char *progname)
 {
-    fprintf(stderr, "%s [-a] [-n] [-d] [-h [-l <limit>]\n", progname);
+    fprintf(stderr, "%s [-a] [-n] [-d] [-h] [-l <limit>]\n", progname);
 }
 
 int main(int argc, char **argv)
