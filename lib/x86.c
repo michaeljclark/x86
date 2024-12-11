@@ -1479,10 +1479,12 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     return nbytes;
 }
 
-x86_operands x86_codec_operands(x86_codec *c)
+x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
 {
     x86_operands q;
     memset(&q, 0, sizeof(q));
+
+    const x86_opc_data *d = ctx->idx->map + c->rec;
 
     q.osz = x86_codec_has_osize(c);
 
@@ -1521,10 +1523,12 @@ x86_operands x86_codec_operands(x86_codec *c)
             q.b = q.rm;
             break;
         }
-    } else {
-        /* if no ModRM, the register, if present, is in the
-         * low 3-bits of the opcode; so stash it in q.b */
+    }
+    else if (d->enc & x86_enc_o_opcode_r) {
         q.b = c->opc[0] & 7;
+    }
+    else if (d->enc & x86_enc_f_opcode_r) {
+        q.b = c->opc[1] & 7;
     }
 
     switch (x86_codec_field_ce(c) >> x86_ce_shift) {
@@ -2037,7 +2041,7 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
     const x86_opr_data *o = x86_opr_table + d->opr;
     const x86_ord_data *s = x86_ord_table + d->ord;
 
-    x86_operands q = x86_codec_operands(c);
+    x86_operands q = x86_codec_operands(ctx, c);
 
     size_t len = 0;
     len += snprintf(buf+len, buflen-len, "%s", x86_op_names[d->op]);
