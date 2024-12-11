@@ -132,6 +132,7 @@ void test_x86_opr_name()
     assert(strcmp(arg_name(x86_opr_r64), "r64") == 0);
     assert(strcmp(arg_name(x86_opr_i16e), "i16e") == 0);
     assert(strcmp(arg_name(x86_opr_rw), "rw") == 0);
+    assert(strcmp(arg_name(x86_opr_ra), "ra") == 0);
     assert(strcmp(arg_name(x86_opr_mm), "mm") == 0);
     assert(strcmp(arg_name(x86_opr_xmm), "xmm") == 0);
     assert(strcmp(arg_name(x86_opr_ymm), "ymm") == 0);
