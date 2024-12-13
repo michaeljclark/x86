@@ -638,6 +638,7 @@ enum x86_opr
     x86_opr_r32              = x86_opr_reg | x86_opr_size_32,
     x86_opr_r64              = x86_opr_reg | x86_opr_size_64,
     x86_opr_rw               = x86_opr_reg | x86_opr_size_word,
+    x86_opr_ra               = x86_opr_reg | x86_opr_size_addr,
     x86_opr_mm               = x86_opr_vec | x86_opr_size_64,
     x86_opr_xmm              = x86_opr_vec | x86_opr_size_128,
     x86_opr_ymm              = x86_opr_vec | x86_opr_size_256,

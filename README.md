@@ -286,8 +286,9 @@ _(enum x86_opr)_.
 | `dreg`             | debug register                                        |
 | `bnd`              | bound register                                        |
 | `mem`              | memory reference                                      |
-| `rw`               | integer register word (16/32/64 bit)                  |
-| `mw`               | memory reference word (16/32/64 bit)                  |
+| `rw`               | integer register word-sized (16/32/64 bit)            |
+| `ra`               | integer register addr-sized (16/32/64 bit)            |
+| `mw`               | memory reference word-sized (16/32/64 bit)            |
 | `mm`               | vector register 64-bit                                |
 | `xmm`              | vector register 128-bit                               |
 | `ymm`              | vector register 256-bit                               |

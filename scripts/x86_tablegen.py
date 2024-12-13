@@ -88,7 +88,7 @@ def reg_table():
     t += gen_sep()
     t += gen_range("bnd%d", "reg_bnd", 0, bnd_count)
     t += gen_sep()
-    t += gen_range("dr%d", "reg_dreg", 0, 8)
+    t += gen_range("dr%d", "reg_dreg", 0, 16)
     t += gen_sep()
     t += gen_range("cr%d", "reg_creg", 0, 16)
     t += gen_sep()

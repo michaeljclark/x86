@@ -269,6 +269,7 @@ x86_map_str x86_opr_names[] =
     { x86_opr_ymm,              "ymm"              },
     { x86_opr_xmm,              "xmm"              },
     { x86_opr_mm,               "mm"               },
+    { x86_opr_ra,               "ra"               },
     { x86_opr_rw,               "rw"               },
     { x86_opr_r64,              "r64"              },
     { x86_opr_r32,              "r32"              },
@@ -1655,7 +1656,7 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
         }
     }
     /* operand contains the register size */
-    else if (oprsz != 0 && oprsz != x86_opr_size_word) {
+    else if (oprsz != 0 && oprsz != x86_opr_size_word && oprsz != x86_opr_size_addr) {
         return oprsz;
     }
 
@@ -1779,7 +1780,7 @@ static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
     case x86_opr_creg: return snprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_creg | (reg & 15)));
     case x86_opr_dreg: return snprintf(buf, buflen, "%s",
-        x86_reg_name(x86_reg_dreg | (reg & 7)));
+        x86_reg_name(x86_reg_dreg | (reg & 15)));
     default: return snprintf(buf, buflen, "%s", "unknown");
     }
 }
