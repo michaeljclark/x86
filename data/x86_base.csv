@@ -513,7 +513,7 @@
 "TEST aw, iw","LEX.WX A9 iw","Valid","Valid","Valid","","RAX (r)","iw","","","","AND iw with EAX; set SF, ZF, PF according to result."
 "TEST r8/m8, ib","LEX.WB F6 /0 ib","Valid","Valid","Valid","","ModRM:r/m (r)","ib","","","","AND ib with r8/m8; set SF, ZF, PF according to result."
 "TEST rw/mw, iw","LEX.WX F7 /0 iw","Valid","Valid","Valid","","ModRM:r/m (r)","iw","","","","AND iw with r/m; set SF, ZF, PF according to result."
-"UD0","LEX.0F.W0 FF","Valid","Valid","Valid","","","","","","","Raise invalid opcode exception."
+"UD0 rw, rw/mw","LEX.0F.W0 FF /r","Valid","Valid","Valid","","ModRM:reg (r)","ModRM:r/m (r)","","","","Raise invalid opcode exception."
 "UD1 rw, rw/mw","LEX.0F.W0 B9 /r","Valid","Valid","Valid","","ModRM:reg (r)","ModRM:r/m (r)","","","","Raise invalid opcode exception."
 "UD2","LEX.0F.W0 0B","Valid","Valid","Valid","","","","","","","Raise invalid opcode exception."
 "VERR r16/m16","LEX.0F.W0 00 /4","Valid","Valid","Valid","","ModRM:r/m (r)","","","","","Set ZF=1 if segment specified with r/m can be read."
