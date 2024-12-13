@@ -46,15 +46,15 @@ cmake --build build -- --verbose
 This shows output from running disassembly commands in `scripts/demo.sh`:
 
 ```
-$ ./build/x86_disasm  4c 13 3d ad de ad 1e
+$ ./build/x86_dump  4c 13 3d ad de ad 1e
   4c 13 3d ad de ad 1e            adc r15, qword ptr [rip + 0x1eaddead]
-$ ./build/x86_disasm  4c bf 01 02 03 04 05 06 07 08
+$ ./build/x86_dump  4c bf 01 02 03 04 05 06 07 08
   4c bf 01 02 03 04 05 06 07 08   movabs  r15, 0x807060504030201
-$ ./build/x86_disasm  49 0f c7 0f
+$ ./build/x86_dump  49 0f c7 0f
   49 0f c7 0f                     cmpxchg16b  xmmword ptr [r15]
-$ ./build/x86_disasm  c5 7f e6 3d 40 84 c8 0c
+$ ./build/x86_dump  c5 7f e6 3d 40 84 c8 0c
   c5 7f e6 3d 40 84 c8 0c         vcvtpd2dq xmm15, ymmword ptr [rip + 0xcc88440]
-$ ./build/x86_disasm  62 f2 7d 48 7e 15 11 22 33 44
+$ ./build/x86_dump  62 f2 7d 48 7e 15 11 22 33 44
   62 f2 7d 48 7e 15 11 22 33 44   vpermt2d  zmm2, zmm0, zmmword ptr [rip + 0xcc88440]
 ```
 
@@ -64,7 +64,7 @@ _figure 2: Command-line disassembly tool decoding instruction from hex._
 
 This shows output from running disassembly commands in `scripts/demo.sh` with debug enabled:
 
-`$ ./build/x86_disasm -d 4c 13 3d ad de ad 1e`
+`$ ./build/x86_dump -d 4c 13 3d ad de ad 1e`
 ```
 x86_codec_read: table_lookup { type:1 prefix:8 map:0 opc:[13 3d] opm:[ff ff] }
 x86_codec_read: checking opdata 12
@@ -72,7 +72,7 @@ x86_codec_read: checking opdata 12
   4c 13 3d ad de ad 1e            adc r15, qword ptr [rip + 0x1eaddead]
 ```
 
-`$ ./build/x86_disasm -d 4c bf 01 02 03 04 05 06 07 08`
+`$ ./build/x86_dump -d 4c bf 01 02 03 04 05 06 07 08`
 ```
 x86_codec_read: table_lookup { type:1 prefix:8 map:0 opc:[bf 01] opm:[ff ff] }
 x86_codec_read: checking opdata 619
@@ -84,7 +84,7 @@ x86_codec_read: checking opdata 623
   4c bf 01 02 03 04 05 06 07 08   movabs  r15, 0x807060504030201
 ```
 
-`$ ./build/x86_disasm -d 49 0f c7 0f`
+`$ ./build/x86_dump -d 49 0f c7 0f`
 ```
 x86_codec_read: table_lookup { type:1 prefix:8 map:1 opc:[c7 0f] opm:[ff ff] }
 x86_codec_read: checking opdata 171
@@ -92,7 +92,7 @@ x86_codec_read: checking opdata 171
   49 0f c7 0f                     cmpxchg16b  xmmword ptr [r15]
 ```
 
-`$ ./build/x86_disasm -d c5 7f e6 3d 40 84 c8 0c`
+`$ ./build/x86_dump -d c5 7f e6 3d 40 84 c8 0c`
 ```
 x86_codec_read: table_lookup { type:2 prefix:3 map:1 opc:[e6 3d] opm:[ff ff] }
 x86_codec_read: checking opdata 1389
@@ -102,7 +102,7 @@ x86_codec_read: checking opdata 1390
   c5 7f e6 3d 40 84 c8 0c         vcvtpd2dq xmm15, ymmword ptr [rip + 0xcc88440]
 ```
 
-`$ ./build/x86_disasm -d 62 f2 7d 48 7e 15 11 22 33 44`
+`$ ./build/x86_dump -d 62 f2 7d 48 7e 15 11 22 33 44`
 ```
 x86_codec_read: table_lookup { type:3 prefix:1 map:2 opc:[7e 15] opm:[ff ff] }
 x86_codec_read: checking opdata 2698
