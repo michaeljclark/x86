@@ -387,8 +387,16 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
                 x86_new_generator(gen, count, x86_gen_is4,
                     NULL, 0, 0, 15, rs);
             } else if ((ord & ~x86_ord_flag_mask) == x86_ord_ime) {
-                x86_new_generator(gen, count, x86_gen_ime,
-                    x86_imm_rax_pred, 0, 0, 3ull << 14, 1ull << 14);
+                switch (x86_enc_imm2(d->enc)) {
+                case x86_enc_j_ib:
+                    x86_new_generator(gen, count, x86_gen_ime,
+                        x86_imm_rax_pred, 0, 0, 3ull << 6, 1ull << 6);
+                    break;
+                case x86_enc_j_i16:
+                    x86_new_generator(gen, count, x86_gen_ime,
+                        x86_imm_rax_pred, 0, 0, 3ull << 14, 1ull << 14);
+                    break;
+                }
             } else {
                 switch (x86_enc_imm(d->enc)) {
                 case x86_enc_i_ib:
@@ -398,6 +406,10 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
                 case x86_enc_i_iw:
                     x86_new_generator(gen, count, x86_gen_i,
                         x86_imm_rax_iw_osize_pred, 0, 0, 3ull << 30, 1ull << 30);
+                    break;
+                case x86_enc_i_iwd:
+                    x86_new_generator(gen, count, x86_gen_i,
+                        x86_imm_rax_pred, 0, 0, 3ull << 30, 1ull << 30);
                     break;
                 case x86_enc_i_i16:
                     x86_new_generator(gen, count, x86_gen_i,
@@ -523,6 +535,10 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
                 c->imm32 = (i32)gen[i].value;
                 c->flags |= x86_ci_iw;
                 break;
+            case x86_enc_i_iwd:
+                c->imm32 = (i32)gen[i].value;
+                c->flags |= x86_ci_iwd;
+                break;
             case x86_enc_i_i16:
                 c->imm32 = (i16)gen[i].value;
                 c->flags |= x86_ci_i16;
@@ -544,8 +560,16 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
             c->flags |= x86_ci_ib;
             break;
         case x86_gen_ime:
-            c->imm16e = (int)gen[i].value;
-            c->flags |= x86_cf_i16e;
+            switch (x86_enc_imm2(d->enc)) {
+            case x86_enc_j_ib:
+                c->imm2 = (int)gen[i].value;
+                c->flags |= x86_cj_ib;
+                break;
+            case x86_enc_j_i16:
+                c->imm2 = (int)gen[i].value;
+                c->flags |= x86_cj_i16;
+                break;
+            }
             break;
         case x86_gen_r:
             r = (int)gen[i].value;
@@ -584,15 +608,13 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
 
     /* first opcode byte */
     switch (x86_enc_opcode(d->enc)) {
-    case x86_enc_o_opcode:
-        c->opc[0] = d->opc[0];
-        c->opclen = 1;
-        break;
     case x86_enc_o_opcode_r:
         c->opc[0] = d->opc[0] + (b & 7);
         c->opclen = 1;
         break;
     default:
+        c->opc[0] = d->opc[0];
+        c->opclen = 1;
         break;
     }
 

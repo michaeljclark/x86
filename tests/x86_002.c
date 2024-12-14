@@ -123,6 +123,7 @@ void test_x86_opr_name()
     assert(strcmp(arg_name(x86_opr_bnd), "bnd") == 0);
     assert(strcmp(arg_name(x86_opr_ib), "ib") == 0);
     assert(strcmp(arg_name(x86_opr_iw), "iw") == 0);
+    assert(strcmp(arg_name(x86_opr_iwd), "iwd") == 0);
     assert(strcmp(arg_name(x86_opr_i16), "i16") == 0);
     assert(strcmp(arg_name(x86_opr_i32), "i32") == 0);
     assert(strcmp(arg_name(x86_opr_i64), "i64") == 0);
@@ -130,7 +131,6 @@ void test_x86_opr_name()
     assert(strcmp(arg_name(x86_opr_r16), "r16") == 0);
     assert(strcmp(arg_name(x86_opr_r32), "r32") == 0);
     assert(strcmp(arg_name(x86_opr_r64), "r64") == 0);
-    assert(strcmp(arg_name(x86_opr_i16e), "i16e") == 0);
     assert(strcmp(arg_name(x86_opr_rw), "rw") == 0);
     assert(strcmp(arg_name(x86_opr_ra), "ra") == 0);
     assert(strcmp(arg_name(x86_opr_mm), "mm") == 0);
@@ -285,17 +285,18 @@ void test_x86_enc_name()
     assert(strcmp(enc_name(x86_enc_l_512), ".512") == 0);
     assert(strcmp(enc_name(x86_enc_l_lig), ".lig") == 0);
     assert(strcmp(enc_name(x86_enc_o_opcode_r), "") == 0);
-    assert(strcmp(enc_name(x86_enc_o_opcode), "") == 0);
     assert(strcmp(enc_name(x86_enc_f_opcode_r), "") == 0);
     assert(strcmp(enc_name(x86_enc_f_opcode), "") == 0);
     assert(strcmp(enc_name(x86_enc_f_modrm_n), "") == 0);
     assert(strcmp(enc_name(x86_enc_f_modrm_r), "") == 0);
     assert(strcmp(enc_name(x86_enc_i_ib), " ib") == 0);
     assert(strcmp(enc_name(x86_enc_i_iw), " iw") == 0);
+    assert(strcmp(enc_name(x86_enc_i_iwd), " iwd") == 0);
     assert(strcmp(enc_name(x86_enc_i_i16), " i16") == 0);
     assert(strcmp(enc_name(x86_enc_i_i32), " i32") == 0);
     assert(strcmp(enc_name(x86_enc_i_i64), " i64") == 0);
-    assert(strcmp(enc_name(x86_enc_i2_i16e), " i16e") == 0);
+    assert(strcmp(enc_name(x86_enc_j_ib), " ib") == 0);
+    assert(strcmp(enc_name(x86_enc_j_i16), " i16") == 0);
     assert(strcmp(enc_name(x86_enc_s_o16), " .o16") == 0);
     assert(strcmp(enc_name(x86_enc_s_o32), " .o32") == 0);
     assert(strcmp(enc_name(x86_enc_s_o64), " .o64") == 0);

@@ -156,7 +156,6 @@ x86_map_str x86_opr_names[] =
     { x86_opr_memfar16_16,      "memfar16:16"      },
     { x86_opr_far16_32,         "far16:32"         },
     { x86_opr_far16_16,         "far16:16"         },
-    { x86_opr_i16e,             "i16e"             },
     { x86_opr_bnd_mem,          "bnd/mem"          },
     { x86_opr_k_m64,            "k/m64"            },
     { x86_opr_k_m32,            "k/m32"            },
@@ -276,6 +275,7 @@ x86_map_str x86_opr_names[] =
     { x86_opr_r16,              "r16"              },
     { x86_opr_r8,               "r8"               },
     { x86_opr_iw,               "iw"               },
+    { x86_opr_iwd,              "iwd"              },
     { x86_opr_i64,              "i64"              },
     { x86_opr_i32,              "i32"              },
     { x86_opr_i16,              "i16"              },
@@ -313,10 +313,12 @@ x86_map_str x86_enc_names[] =
     { x86_enc_s_o16,            " .o16"            },
     { x86_enc_s_rep,            " .rep"            },
     { x86_enc_s_lock,           " .lock"           },
-    { x86_enc_i2_i16e,          " i16e"            },
+    { x86_enc_j_i16,            " i16"             },
+    { x86_enc_j_ib,             " ib"              },
     { x86_enc_i_i64,            " i64"             },
     { x86_enc_i_i32,            " i32"             },
     { x86_enc_i_i16,            " i16"             },
+    { x86_enc_i_iwd,            " iwd"             },
     { x86_enc_i_iw,             " iw"              },
     { x86_enc_i_ib,             " ib"              },
     { x86_enc_f_opcode_r,       ""                 },
@@ -324,7 +326,6 @@ x86_map_str x86_enc_names[] =
     { x86_enc_f_modrm_n,        ""                 },
     { x86_enc_f_modrm_r,        ""                 },
     { x86_enc_o_opcode_r,       ""                 },
-    { x86_enc_o_opcode,         ""                 },
     { x86_enc_t_evex,           ".evex"            },
     { x86_enc_t_vex,            ".vex"             },
     { x86_enc_t_lex,            ".lex"             },
@@ -1065,7 +1066,7 @@ static size_t x86_format_enc(char * buf, size_t buflen, const x86_opc_data *d)
 
     uint s = x86_enc_suffix(d->enc);
     uint i = x86_enc_imm(d->enc);
-    uint i2 = x86_enc_imm2(d->enc);
+    uint j = x86_enc_imm2(d->enc);
     uint enc = x86_enc_leading(d->enc);
 
     len += x86_enc_name(buf+len, buflen-len, enc);
@@ -1074,7 +1075,7 @@ static size_t x86_format_enc(char * buf, size_t buflen, const x86_opc_data *d)
     case x86_enc_o_opcode_r:
         len += snprintf(buf+len, buflen-len, " %02hhx+r", d->opc[0]);
         break;
-    case x86_enc_o_opcode:
+    default:
         len += snprintf(buf+len, buflen-len, " %02hhx", d->opc[0]);
         break;
     }
@@ -1094,11 +1095,11 @@ static size_t x86_format_enc(char * buf, size_t buflen, const x86_opc_data *d)
         break;
     }
 
-    if (i2) {
-        len += x86_enc_name(buf+len, buflen-len, i2);
-    }
     if (i) {
         len += x86_enc_name(buf+len, buflen-len, i);
+    }
+    if (j) {
+        len += x86_enc_name(buf+len, buflen-len, j);
     }
     if (s) {
         len += x86_enc_name(buf+len, buflen-len, s);
@@ -1146,9 +1147,6 @@ void x86_print_op(const x86_opc_data *d, uint compact, uint opcode)
         cols[count++] = x86_new_column(4, buf);
     }
 
-    uint s = x86_enc_suffix(d->enc);
-    uint i = x86_enc_imm(d->enc);
-    uint i2 = x86_enc_imm2(d->enc);
     uint enc = x86_enc_leading(d->enc);
 
     buf[(len = 0)] = '\0';
@@ -1302,15 +1300,17 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
         }
     }
 
-    /* additional immediate used by CALLF/JMPF/ENTER */
-    if (x86_codec_has_i16e(&c)) {
-        nbytes += x86_out16(buf, (u16)c.imm16e);
-    }
-
     /* immediate */
     switch (x86_codec_field_ci(&c) >> x86_ci_shift) {
-    case x86_ci_iw >> x86_ci_shift: /* iw */
+    case x86_ci_iw >> x86_ci_shift:
         if (x86_codec_is16(&c) ^ x86_codec_has_osize(&c)) {
+            nbytes += x86_out16(buf, (u16)c.imm32);
+        } else {
+            nbytes += x86_out32(buf, (u32)c.imm32);
+        }
+        break;
+    case x86_ci_iwd >> x86_ci_shift:
+        if (x86_codec_is16(&c)) {
             nbytes += x86_out16(buf, (u16)c.imm32);
         } else {
             nbytes += x86_out32(buf, (u32)c.imm32);
@@ -1327,6 +1327,16 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
         break;
     case x86_ci_i64 >> x86_ci_shift:
         nbytes += x86_out64(buf, (u64)c.imm64);
+        break;
+    }
+
+    /* additional immediate used by CALLF/JMPF/ENTER */
+    switch (x86_codec_field_cj(&c) >> x86_cj_shift) {
+    case x86_cj_ib >> x86_cj_shift:
+        nbytes += x86_out8(buf, (u8)c.imm2);
+        break;
+    case x86_cj_i16 >> x86_cj_shift:
+        nbytes += x86_out16(buf, (u16)c.imm2);
         break;
     }
 
@@ -1445,12 +1455,6 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     }
 
     /* parse immediate */
-    switch(x86_enc_imm2(d->enc) >> x86_enc_i2_shift) {
-    case x86_enc_i2_i16e >> x86_enc_i2_shift:
-        c->imm16e = (i16)x86_in16(buf); nbytes += 2;
-        c->flags |= x86_cf_i16e;
-        break;
-    }
     switch(x86_enc_imm(d->enc) >> x86_enc_i_shift) {
     case x86_enc_i_ib >> x86_enc_i_shift:
         c->imm32 = (i8)x86_in8(buf); nbytes += 1;
@@ -1464,6 +1468,14 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
         }
         c->flags |= x86_ci_iw;
         break;
+    case x86_enc_i_iwd >> x86_enc_i_shift:
+        if (x86_codec_is16(c)) {
+            c->imm32 = (i16)x86_in16(buf); nbytes += 2;
+        } else {
+            c->imm32 = (i32)x86_in32(buf); nbytes += 4;
+        }
+        c->flags |= x86_ci_iwd;
+        break;
     case x86_enc_i_i16 >> x86_enc_i_shift:
         c->imm32 = (i16)x86_in16(buf);  nbytes += 2;
         c->flags |= x86_ci_i16;
@@ -1475,6 +1487,18 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     case x86_enc_i_i64 >> x86_enc_i_shift:
         c->imm64 = (i64)x86_in64(buf);  nbytes += 8;
         c->flags |= x86_ci_i64;
+        break;
+    }
+
+    /* additional immediate used by CALLF/JMPF/ENTER */
+    switch(x86_enc_imm2(d->enc) >> x86_enc_j_shift) {
+    case x86_enc_j_ib >> x86_enc_j_shift:
+        c->imm2 = (i8)x86_in8(buf); nbytes += 1;
+        c->flags |= x86_cj_ib;
+        break;
+    case x86_enc_j_i16 >> x86_enc_j_shift:
+        c->imm2 = (i16)x86_in16(buf); nbytes += 2;
+        c->flags |= x86_cj_i16;
         break;
     }
 
@@ -1616,7 +1640,7 @@ int x86_opr_mem_size(uint opr)
     case x86_opr_m128: return x86_opr_size_128;
     case x86_opr_m256: return x86_opr_size_256;
     case x86_opr_m512: return x86_opr_size_512;
-    case x86_opr_mw: return x86_opr_size_word;
+    case x86_opr_mw: return x86_opr_size_w;
     default: return 0;
     }
 }
@@ -1627,7 +1651,7 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     uint oprsz = (opr & x86_opr_size_mask);
 
     /* 'rw' or 'mw' deduce size from mode, operand size prefix and REX.W */
-    if (oprty == x86_opr_reg && oprsz == x86_opr_size_word ||
+    if (oprty == x86_opr_reg && oprsz == x86_opr_size_w ||
              (opr & x86_opr_mem_mask) == x86_opr_mw ||
              (opr == x86_opr_reg_psi || opr == x86_opr_reg_pdi))
     {
@@ -1656,7 +1680,7 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
         }
     }
     /* operand contains the register size */
-    else if (oprsz != 0 && oprsz != x86_opr_size_word && oprsz != x86_opr_size_addr) {
+    else if (oprsz != 0 && oprsz != x86_opr_size_w && oprsz != x86_opr_size_a) {
         return oprsz;
     }
 
@@ -1666,7 +1690,7 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
 static uint x86_opr_ptr_size(x86_codec *c, x86_operands q, uint opr, uint enc)
 {
     uint memsz = x86_opr_mem_size(opr);
-    if (memsz == x86_opr_size_word) {
+    if (memsz == x86_opr_size_w) {
         memsz = x86_opr_reg_size(c, q, opr, enc);
     }
     return memsz;
@@ -1983,7 +2007,7 @@ size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
 size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
-    int imm = c->imm16e;
+    int imm = c->imm2;
     return snprintf(buf, buflen, "%s0x%x",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
@@ -1991,7 +2015,7 @@ size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
 size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
-    int imm = c->imm16e;
+    int imm = c->imm2;
     return snprintf(buf, buflen, "%s%u",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }

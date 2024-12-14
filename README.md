@@ -390,7 +390,7 @@ _(enum x86_ord)_.
 | `mrm`    | modrm.r/m                                                       |
 | `sib`    | modrm.r/m sib                                                   |
 | `is4`    | register from ib                                                |
-| `ime`    | i16e, far16 (special case for CALLF/JMPF/ENTER)                 |
+| `ime`    | i8, i16 (special case for CALLF/JMPF/ENTER)                     |
 | `vec`    | VEX.vvvv                                                        |
 | `opr`    | opcode +r                                                       |
 | `one`    | constant 1                                                      |

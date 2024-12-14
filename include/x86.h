@@ -483,10 +483,10 @@ enum x86_enc
     x86_enc_l_shift          = x86_enc_p_shift + 4,
     x86_enc_t_shift          = x86_enc_l_shift + 3,
     x86_enc_o_shift          = x86_enc_t_shift + 2,
-    x86_enc_f_shift          = x86_enc_o_shift + 2,
+    x86_enc_f_shift          = x86_enc_o_shift + 1,
     x86_enc_i_shift          = x86_enc_f_shift + 3,
-    x86_enc_i2_shift         = x86_enc_i_shift + 3,
-    x86_enc_s_shift          = x86_enc_i2_shift + 1,
+    x86_enc_j_shift          = x86_enc_i_shift + 3,
+    x86_enc_s_shift          = x86_enc_j_shift + 2,
 
     x86_enc_w_w0             = (1 << x86_enc_w_shift),
     x86_enc_w_w1             = (2 << x86_enc_w_shift),
@@ -530,9 +530,8 @@ enum x86_enc
     x86_enc_t_evex           = (3 << x86_enc_t_shift),
     x86_enc_t_mask           = (3 << x86_enc_t_shift),
 
-    x86_enc_o_opcode         = (1 << x86_enc_o_shift), // XX
-    x86_enc_o_opcode_r       = (2 << x86_enc_o_shift), // XX+r
-    x86_enc_o_mask           = (3 << x86_enc_o_shift),
+    x86_enc_o_opcode_r       = (1 << x86_enc_o_shift), // XX+r
+    x86_enc_o_mask           = (1 << x86_enc_o_shift),
 
     x86_enc_f_modrm_r        = (1 << x86_enc_f_shift), // /r
     x86_enc_f_modrm_n        = (2 << x86_enc_f_shift), // /N
@@ -542,13 +541,15 @@ enum x86_enc
 
     x86_enc_i_ib             = (1 << x86_enc_i_shift),
     x86_enc_i_iw             = (2 << x86_enc_i_shift),
-    x86_enc_i_i16            = (3 << x86_enc_i_shift),
-    x86_enc_i_i32            = (4 << x86_enc_i_shift),
-    x86_enc_i_i64            = (5 << x86_enc_i_shift),
+    x86_enc_i_iwd            = (3 << x86_enc_i_shift),
+    x86_enc_i_i16            = (4 << x86_enc_i_shift),
+    x86_enc_i_i32            = (5 << x86_enc_i_shift),
+    x86_enc_i_i64            = (6 << x86_enc_i_shift),
     x86_enc_i_mask           = (7 << x86_enc_i_shift),
 
-    x86_enc_i2_i16e          = (1 << x86_enc_i2_shift),
-    x86_enc_i2_mask          = (1 << x86_enc_i2_shift),
+    x86_enc_j_ib             = (1 << x86_enc_j_shift),
+    x86_enc_j_i16            = (2 << x86_enc_j_shift),
+    x86_enc_j_mask           = (3 << x86_enc_j_shift),
 
     x86_enc_s_lock           = (1 << (x86_enc_s_shift + 0)),
     x86_enc_s_rep            = (1 << (x86_enc_s_shift + 1)),
@@ -560,7 +561,7 @@ enum x86_enc
     x86_enc_s_a64            = (1 << (x86_enc_s_shift + 7)),
     x86_enc_s_mask           = (255 << x86_enc_s_shift),
 
-    x86_enc_param_mask       = x86_enc_i2_mask | x86_enc_i_mask |
+    x86_enc_param_mask       = x86_enc_j_mask | x86_enc_i_mask |
                                x86_enc_s_mask,
 };
 
@@ -570,8 +571,8 @@ static uint x86_enc_length(uint enc) { return (enc & x86_enc_l_mask); }
 static uint x86_enc_opcode(uint enc) { return (enc & x86_enc_o_mask); }
 static uint x86_enc_func(uint enc) { return (enc & x86_enc_f_mask); }
 static uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
-static uint x86_enc_imm2(uint enc) { return (enc & x86_enc_i2_mask); }
 static uint x86_enc_imm(uint enc) { return (enc & x86_enc_i_mask); }
+static uint x86_enc_imm2(uint enc) { return (enc & x86_enc_j_mask); }
 static uint x86_enc_type(uint enc) { return (enc & x86_enc_t_mask); }
 static uint x86_enc_suffix(uint enc) { return (enc & x86_enc_s_mask); }
 static uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
@@ -628,8 +629,9 @@ enum x86_opr
     x86_opr_size_512         = 7 << x86_opr_s2,
     x86_opr_size_1024        = 8 << x86_opr_s2,
     x86_opr_size_80          = 9 << x86_opr_s2,
-    x86_opr_size_word        = 14 << x86_opr_s2,
-    x86_opr_size_addr        = 15 << x86_opr_s2,
+    x86_opr_size_wd          = 13 << x86_opr_s2,
+    x86_opr_size_w           = 14 << x86_opr_s2,
+    x86_opr_size_a           = 15 << x86_opr_s2,
     x86_opr_size_mask        = 15 << x86_opr_s2,
 
     /* sized register */
@@ -637,8 +639,8 @@ enum x86_opr
     x86_opr_r16              = x86_opr_reg | x86_opr_size_16,
     x86_opr_r32              = x86_opr_reg | x86_opr_size_32,
     x86_opr_r64              = x86_opr_reg | x86_opr_size_64,
-    x86_opr_rw               = x86_opr_reg | x86_opr_size_word,
-    x86_opr_ra               = x86_opr_reg | x86_opr_size_addr,
+    x86_opr_rw               = x86_opr_reg | x86_opr_size_w,
+    x86_opr_ra               = x86_opr_reg | x86_opr_size_a,
     x86_opr_mm               = x86_opr_vec | x86_opr_size_64,
     x86_opr_xmm              = x86_opr_vec | x86_opr_size_128,
     x86_opr_ymm              = x86_opr_vec | x86_opr_size_256,
@@ -724,14 +726,15 @@ enum x86_opr
     x86_opr_i16              = x86_opr_imm | x86_opr_size_16,
     x86_opr_i32              = x86_opr_imm | x86_opr_size_32,
     x86_opr_i64              = x86_opr_imm | x86_opr_size_64,
-    x86_opr_iw               = x86_opr_imm | x86_opr_size_word,
+    x86_opr_iwd              = x86_opr_imm | x86_opr_size_wd,
+    x86_opr_iw               = x86_opr_imm | x86_opr_size_w,
 
     /* relative displacement */
     x86_opr_rel8             = x86_opr_imm | x86_opr_rel | x86_opr_size_8,
-    x86_opr_relw             = x86_opr_imm | x86_opr_rel | x86_opr_size_word,
+    x86_opr_relw             = x86_opr_imm | x86_opr_rel | x86_opr_size_w,
 
     /* memory offset */
-    x86_opr_moffs            = x86_opr_imm | x86_opr_mem | x86_opr_size_addr,
+    x86_opr_moffs            = x86_opr_imm | x86_opr_mem | x86_opr_size_a,
 
     /* constant */
     x86_opr_1                = x86_opr_const | (1 << x86_opr_s4),
@@ -760,9 +763,8 @@ enum x86_opr
     x86_opr_zmm_m512_m64bcst = x86_opr_zmm_m512 | x86_opr_m64bcst,
 
     /* enter / far displacement */
-    x86_opr_i16e             = x86_opr_imm | x86_opr_far | (1 << x86_opr_s4),
-    x86_opr_far16_16         = x86_opr_imm | x86_opr_far | (2 << x86_opr_s4),
-    x86_opr_far16_32         = x86_opr_imm | x86_opr_far | (3 << x86_opr_s4),
+    x86_opr_far16_16         = x86_opr_imm | x86_opr_far | (3 << x86_opr_s4),
+    x86_opr_far16_32         = x86_opr_imm | x86_opr_far | (4 << x86_opr_s4),
 
     /* far memory indirect */
     x86_opr_memfar16_16      = x86_opr_mem | x86_opr_far | (1 << x86_opr_s4),
@@ -801,16 +803,16 @@ enum x86_opr
     x86_opr_reg_rcx          = x86_opr_reg_c | x86_opr_size_64,
     x86_opr_reg_rdx          = x86_opr_reg_d | x86_opr_size_64,
     x86_opr_reg_rbx          = x86_opr_reg_b | x86_opr_size_64,
-    x86_opr_reg_aw           = x86_opr_reg_a | x86_opr_size_word,
-    x86_opr_reg_cw           = x86_opr_reg_c | x86_opr_size_word,
-    x86_opr_reg_dw           = x86_opr_reg_d | x86_opr_size_word,
-    x86_opr_reg_bw           = x86_opr_reg_b | x86_opr_size_word,
-    x86_opr_reg_pa           = x86_opr_reg_a | x86_opr_size_addr,
-    x86_opr_reg_pc           = x86_opr_reg_c | x86_opr_size_addr,
-    x86_opr_reg_pd           = x86_opr_reg_d | x86_opr_size_addr,
-    x86_opr_reg_pb           = x86_opr_reg_b | x86_opr_size_addr,
-    x86_opr_reg_psi          = x86_opr_reg_si | x86_opr_size_addr,
-    x86_opr_reg_pdi          = x86_opr_reg_di | x86_opr_size_addr,
+    x86_opr_reg_aw           = x86_opr_reg_a | x86_opr_size_w,
+    x86_opr_reg_cw           = x86_opr_reg_c | x86_opr_size_w,
+    x86_opr_reg_dw           = x86_opr_reg_d | x86_opr_size_w,
+    x86_opr_reg_bw           = x86_opr_reg_b | x86_opr_size_w,
+    x86_opr_reg_pa           = x86_opr_reg_a | x86_opr_size_a,
+    x86_opr_reg_pc           = x86_opr_reg_c | x86_opr_size_a,
+    x86_opr_reg_pd           = x86_opr_reg_d | x86_opr_size_a,
+    x86_opr_reg_pb           = x86_opr_reg_b | x86_opr_size_a,
+    x86_opr_reg_psi          = x86_opr_reg_si | x86_opr_size_a,
+    x86_opr_reg_pdi          = x86_opr_reg_di | x86_opr_size_a,
     x86_opr_reg_xmm0         = x86_opr_reg_v0 | x86_opr_size_128,
     x86_opr_reg_xmm0_7       = x86_opr_reg_v0 | x86_opr_size_1024,
 };
@@ -894,26 +896,32 @@ enum x86_cf
     /* [5:7] imm */
     x86_ci_shift   = 5,
     x86_ci_none    = 0 << x86_ci_shift,
-    x86_ci_iw      = 1 << x86_ci_shift,
-    x86_ci_ib      = 2 << x86_ci_shift,
-    x86_ci_i16     = 3 << x86_ci_shift,
-    x86_ci_i32     = 4 << x86_ci_shift,
-    x86_ci_i64     = 5 << x86_ci_shift,
+    x86_ci_ib      = 1 << x86_ci_shift,
+    x86_ci_iw      = 2 << x86_ci_shift,
+    x86_ci_iwd     = 3 << x86_ci_shift,
+    x86_ci_i16     = 4 << x86_ci_shift,
+    x86_ci_i32     = 5 << x86_ci_shift,
+    x86_ci_i64     = 6 << x86_ci_shift,
     x86_ci_mask    = 7 << x86_ci_shift,
 
-    /* [8:13] prefixes */
-    x86_cp_osize   = 1 << 8,  /* 0x66 */
-    x86_cp_asize   = 1 << 9,  /* 0x67 */
-    x86_cp_wait    = 1 << 10, /* 0x9B */
-    x86_cp_lock    = 1 << 11, /* 0xF0 */
-    x86_cp_repne   = 1 << 12, /* 0xF2 */
-    x86_cp_rep     = 1 << 13, /* 0xF3 */
+    /* [8:9] imm2 */
+    x86_cj_shift   = 8,
+    x86_cj_ib      = 1 << x86_cj_shift,
+    x86_cj_i16     = 2 << x86_cj_shift,
+    x86_cj_mask    = 3 << x86_cj_shift,
 
-    /* [14:17] flags */
-    x86_cf_modrm   = 1 << 14,
-    x86_cf_ia32    = 1 << 15,
-    x86_cf_amd64   = 1 << 16,
-    x86_cf_i16e    = 1 << 17,
+    /* [10:15] prefixes */
+    x86_cp_osize   = 1 << 10, /* 0x66 */
+    x86_cp_asize   = 1 << 11, /* 0x67 */
+    x86_cp_wait    = 1 << 12, /* 0x9B */
+    x86_cp_lock    = 1 << 13, /* 0xF0 */
+    x86_cp_repne   = 1 << 14, /* 0xF2 */
+    x86_cp_rep     = 1 << 15, /* 0xF3 */
+
+    /* [16:18] flags */
+    x86_cf_modrm   = 1 << 16,
+    x86_cf_ia32    = 1 << 17,
+    x86_cf_amd64   = 1 << 18,
 };
 
 /*
@@ -945,7 +953,7 @@ struct x86_codec
 
     uint flags;
     ushort rec;
-    short imm16e;
+    short imm2;
 
     union {
         struct {
@@ -971,6 +979,9 @@ static int x86_codec_field_cm(x86_codec *c) {
 static int x86_codec_field_ci(x86_codec *c) {
     return (c->flags & x86_ci_mask);
 }
+static int x86_codec_field_cj(x86_codec *c) {
+    return (c->flags & x86_cj_mask);
+}
 static int x86_codec_has_wait(x86_codec *c) {
     return (c->flags & x86_cp_wait) != 0;
 }
@@ -991,9 +1002,6 @@ static int x86_codec_has_asize(x86_codec *c) {
 }
 static int x86_codec_has_modrm(x86_codec *c) {
     return (c->flags & x86_cf_modrm) != 0;
-}
-static int x86_codec_has_i16e(x86_codec *c) {
-    return (c->flags & x86_cf_i16e) != 0;
 }
 static int x86_codec_is16(x86_codec *c) {
     return (c->flags & (x86_cf_ia32|x86_cf_amd64)) == 0;

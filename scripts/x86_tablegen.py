@@ -153,10 +153,12 @@ operand_map = {
     'VEX.vvvv (w)'                                          : 'vec/w',
     'ib'                                                    : 'imm',
     'iw'                                                    : 'imm',
+    'iwd'                                                   : 'imm',
     'i16'                                                   : 'imm',
     'i32'                                                   : 'imm',
     'i64'                                                   : 'imm',
-    'i16e'                                                  : 'ime',
+    'imm'                                                   : 'imm',
+    'ime'                                                   : 'ime',
     'ib[3:0]'                                               : 'imm',
     'ib[7:4]'                                               : 'is4/r',
     'Implicit XMM0 (r)'                                     : 'xmm0/r',
@@ -319,14 +321,13 @@ def translate_encoding(encoding):
     widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
     lengths = { 'lig', 'lz', 'l0', 'l1', '128', '256', '512' }
     flags = { 'nds', 'ndd', 'dds' }
-    imm = { 'ib', 'iw', 'i16', 'i32', 'i64' }
-    imm2 = { 'i16e' }
+    imm = { 'ib', 'iw', 'iwd', 'i16', 'i32', 'i64' }
     mods = { '/r', '/0', '/1', '/2', '/3', '/4', '/5', '/6', '/7' }
     pl = []
     opc = ['0x00','0x00']
     opm = ['0x00','0x00']
     oplen = 0
-    has_pfx, has_pbyte, has_map = False, False, False
+    has_imm, has_pfx, has_pbyte, has_map = False, False, False, False
     comps = encoding.split(" ")
     for el in comps:
         p = None
@@ -370,9 +371,15 @@ def translate_encoding(encoding):
         elif el in suffixes:
             pl += ['x86_enc_s_%s' % el]
         elif el in imm:
-            pl += ['x86_enc_i_%s' % el]
-        elif el in imm2:
-            pl += ['x86_enc_i2_%s' % el]
+            if has_imm:
+                # additional immediate used by CALLF/JMPF/ENTER
+                if el in { 'ib', 'i16' }:
+                    pl += ['x86_enc_j_%s' % el]
+                else:
+                    raise Exception("illegal immediate '%s' for encoding '%s" % (el, encoding))
+            else:
+                pl += ['x86_enc_i_%s' % el]
+                has_imm = True
         elif el in mods:
             if oplen == 2:
                 raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
@@ -384,7 +391,8 @@ def translate_encoding(encoding):
         elif len(el) == 2 and all(c in string.hexdigits for c in el[0:2]):
             if oplen == 2:
                 raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
-            pl += ['x86_enc_o_opcode' if oplen == 0 else 'x86_enc_f_opcode']
+            if oplen == 1:
+                pl += ['x86_enc_f_opcode']
             opc[oplen] = '0x%s' % el[0:2]
             opm[oplen] = '0xff'
             oplen += 1
