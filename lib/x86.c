@@ -1344,7 +1344,7 @@ int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
     return 0;
 }
 
-static int x86_filter_opdata(x86_codec *c, x86_opc_data *d, uint w)
+static int x86_filter_op(x86_codec *c, x86_opc_data *d, uint w)
 {
     if (x86_codec_is16(c) && !x86_mode_has16(d->mode)) return -1;
     if (x86_codec_is32(c) && !x86_mode_has32(d->mode)) return -1;
@@ -1366,6 +1366,18 @@ static int x86_filter_opdata(x86_codec *c, x86_opc_data *d, uint w)
     case x86_ce_evex >> x86_ce_shift:
         if (x86_enc_filter_evex(c->evex, d->enc) < 0) return -1;
         break;
+    }
+
+    if (x86_enc_has_a16(d->enc)) {
+        if (!x86_codec_is16(c) ||
+            !(x86_codec_is32(c) && x86_codec_has_asize(c))) return -1;
+    }
+    if (x86_enc_has_a32(d->enc)) {
+        if (!x86_codec_is32(c) ||
+            !(x86_codec_is64(c) && x86_codec_has_asize(c))) return -1;
+    }
+    if (x86_enc_has_a64(d->enc)) {
+        if (!x86_codec_is64(c) || x86_codec_has_asize(c)) return -1;
     }
 
     if (x86_enc_has_o16(d->enc)) {
@@ -2419,7 +2431,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 r = NULL;
                 break;
             }
-            if (x86_filter_opdata(c, r, 1) == 0) break;
+            if (x86_filter_op(c, r, 1) == 0) break;
             r++;
         }
     }
@@ -2445,7 +2457,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 r = NULL;
                 break;
             }
-            if (x86_filter_opdata(c, r, 0) == 0) break;
+            if (x86_filter_op(c, r, 0) == 0) break;
             r++;
         }
     }

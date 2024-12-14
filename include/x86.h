@@ -579,6 +579,9 @@ static uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
 static uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_o16) != 0; }
 static uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_o32) != 0; }
 static uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_o64) != 0; }
+static uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_a16) != 0; }
+static uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_a32) != 0; }
+static uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_a64) != 0; }
 
 /*
  * operand encoding
