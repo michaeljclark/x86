@@ -486,7 +486,8 @@ enum x86_enc
     x86_enc_f_shift          = x86_enc_o_shift + 1,
     x86_enc_i_shift          = x86_enc_f_shift + 3,
     x86_enc_j_shift          = x86_enc_i_shift + 3,
-    x86_enc_s_shift          = x86_enc_j_shift + 2,
+    x86_enc_r_shift          = x86_enc_j_shift + 2,
+    x86_enc_s_shift          = x86_enc_r_shift + 3,
 
     x86_enc_w_w0             = (1 << x86_enc_w_shift),
     x86_enc_w_w1             = (2 << x86_enc_w_shift),
@@ -551,18 +552,22 @@ enum x86_enc
     x86_enc_j_i16            = (2 << x86_enc_j_shift),
     x86_enc_j_mask           = (3 << x86_enc_j_shift),
 
-    x86_enc_s_lock           = (1 << (x86_enc_s_shift + 0)),
-    x86_enc_s_rep            = (1 << (x86_enc_s_shift + 1)),
-    x86_enc_s_o16            = (1 << (x86_enc_s_shift + 2)),
-    x86_enc_s_o32            = (1 << (x86_enc_s_shift + 3)),
-    x86_enc_s_o64            = (1 << (x86_enc_s_shift + 4)),
-    x86_enc_s_a16            = (1 << (x86_enc_s_shift + 5)),
-    x86_enc_s_a32            = (1 << (x86_enc_s_shift + 6)),
-    x86_enc_s_a64            = (1 << (x86_enc_s_shift + 7)),
-    x86_enc_s_mask           = (255 << x86_enc_s_shift),
+    x86_enc_r_rep            = (1 << x86_enc_r_shift),
+    x86_enc_r_lock           = (2 << x86_enc_r_shift),
+    x86_enc_r_norexb         = (4 << x86_enc_r_shift),
+    x86_enc_r_mask           = (7 << x86_enc_r_shift),
 
-    x86_enc_param_mask       = x86_enc_j_mask | x86_enc_i_mask |
-                               x86_enc_s_mask,
+    x86_enc_s_o16            = (1 << x86_enc_s_shift),
+    x86_enc_s_o32            = (2 << x86_enc_s_shift),
+    x86_enc_s_o64            = (3 << x86_enc_s_shift),
+    x86_enc_s_a16            = (4 << x86_enc_s_shift),
+    x86_enc_s_a32            = (5 << x86_enc_s_shift),
+    x86_enc_s_a64            = (6 << x86_enc_s_shift),
+    x86_enc_s_mask           = (7 << x86_enc_s_shift),
+
+    x86_enc_immediate_mask   = x86_enc_i_mask | x86_enc_j_mask,
+    x86_enc_suffix_mask      = x86_enc_r_mask | x86_enc_s_mask,
+    x86_enc_param_mask       = x86_enc_immediate_mask | x86_enc_suffix_mask
 };
 
 static uint x86_enc_width(uint enc) { return (enc & x86_enc_w_mask); }
@@ -574,14 +579,17 @@ static uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
 static uint x86_enc_imm(uint enc) { return (enc & x86_enc_i_mask); }
 static uint x86_enc_imm2(uint enc) { return (enc & x86_enc_j_mask); }
 static uint x86_enc_type(uint enc) { return (enc & x86_enc_t_mask); }
-static uint x86_enc_suffix(uint enc) { return (enc & x86_enc_s_mask); }
+static uint x86_enc_suffix(uint enc) { return (enc & x86_enc_suffix_mask); }
 static uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
-static uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_o16) != 0; }
-static uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_o32) != 0; }
-static uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_o64) != 0; }
-static uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_a16) != 0; }
-static uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_a32) != 0; }
-static uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_a64) != 0; }
+static uint x86_enc_has_rep(uint enc) { return (enc & x86_enc_r_rep); }
+static uint x86_enc_has_lock(uint enc) { return (enc & x86_enc_r_lock); }
+static uint x86_enc_has_norexb(uint enc) { return (enc & x86_enc_r_norexb); }
+static uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o16; }
+static uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o32; }
+static uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o64; }
+static uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a16; }
+static uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a32; }
+static uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a64; }
 
 /*
  * operand encoding

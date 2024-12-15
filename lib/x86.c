@@ -309,14 +309,15 @@ x86_map_str x86_opr_names[] =
 
 x86_map_str x86_enc_names[] =
 {
+    { x86_enc_r_norexb,         " .norexb"         },
+    { x86_enc_r_lock,           " .lock"           },
+    { x86_enc_r_rep,            " .rep"            },
     { x86_enc_s_a64,            " .a64"            },
     { x86_enc_s_a32,            " .a32"            },
     { x86_enc_s_a16,            " .a16"            },
     { x86_enc_s_o64,            " .o64"            },
     { x86_enc_s_o32,            " .o32"            },
     { x86_enc_s_o16,            " .o16"            },
-    { x86_enc_s_rep,            " .rep"            },
-    { x86_enc_s_lock,           " .lock"           },
     { x86_enc_j_i16,            " i16"             },
     { x86_enc_j_ib,             " ib"              },
     { x86_enc_i_i64,            " i64"             },
@@ -483,10 +484,12 @@ int x86_enc_filter_rex(x86_rex prefix, uint enc)
     uint eww =  (enc & x86_enc_w_mask) == x86_enc_w_ww;
     uint ewx =  (enc & x86_enc_w_mask) == x86_enc_w_wx;
     uint ewig = (enc & x86_enc_w_mask) == x86_enc_w_wig;
+    uint norexb = (enc & x86_enc_r_norexb) != 0;
 
     uint w = (prefix.data[0] >> 3) & 1;
 
     if (!lex) return -1;
+    if (norexb) return -1;
 
     switch (w) {
     case x86_vex_w0:

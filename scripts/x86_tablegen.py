@@ -315,7 +315,8 @@ def translate_modes(modes):
 # add 9b, del rex rex.w
 def translate_encoding(encoding):
     prefixes = [ 'hex', 'lex', 'vex', 'evex' ]
-    suffixes = [ 'lock', 'rep', 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
+    r_suffixes = [ 'rep', 'lock', 'norexb' ]
+    s_suffixes = [ 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
     pbytes = [ '66', '9b', 'f2', 'f3' ]
     maps = { '0f', '0f38', '0f3a', 'map4', 'map5', 'map6' }
     widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
@@ -368,7 +369,9 @@ def translate_encoding(encoding):
         elif el in maps and len(comps) > 1 and not (has_map or has_pfx):
             pl += ['x86_enc_m_%s' % el]
             has_map = True
-        elif el in suffixes:
+        elif el in r_suffixes:
+            pl += ['x86_enc_r_%s' % el]
+        elif el in s_suffixes:
             pl += ['x86_enc_s_%s' % el]
         elif el in imm:
             if has_imm:

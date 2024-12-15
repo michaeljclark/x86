@@ -303,8 +303,9 @@ void test_x86_enc_name()
     assert(strcmp(enc_name(x86_enc_s_a16), " .a16") == 0);
     assert(strcmp(enc_name(x86_enc_s_a32), " .a32") == 0);
     assert(strcmp(enc_name(x86_enc_s_a64), " .a64") == 0);
-    assert(strcmp(enc_name(x86_enc_s_lock), " .lock") == 0);
-    assert(strcmp(enc_name(x86_enc_s_rep), " .rep") == 0);
+    assert(strcmp(enc_name(x86_enc_r_rep), " .rep") == 0);
+    assert(strcmp(enc_name(x86_enc_r_lock), " .lock") == 0);
+    assert(strcmp(enc_name(x86_enc_r_norexb), " .norexb") == 0);
 }
 
 void test_x86_reg_name()
