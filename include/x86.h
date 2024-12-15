@@ -737,7 +737,7 @@ enum x86_opr
     x86_opr_relw             = x86_opr_imm | x86_opr_rel | x86_opr_size_w,
 
     /* memory offset */
-    x86_opr_moffs            = x86_opr_imm | x86_opr_mem | x86_opr_size_a,
+    x86_opr_moffs            = x86_opr_imm | x86_opr_mem | x86_opr_size_w,
 
     /* constant */
     x86_opr_1                = x86_opr_const | (1 << x86_opr_s4),
