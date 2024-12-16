@@ -1081,10 +1081,10 @@ struct x86_mem
 
 struct x86_opc_data
 {
-    ushort op : 12;
-    ushort mode : 4;
-    ushort opr : 9;
-    ushort ord : 7;
+    ushort op;
+    ushort mode;
+    ushort opr;
+    ushort ord;
     uint enc;
     uchar opc[2];
     uchar opm[2];
