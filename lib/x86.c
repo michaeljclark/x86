@@ -2201,13 +2201,47 @@ size_t x86_format_hex(char *buf, size_t buflen, uchar *data, size_t datalen)
     return len;
 }
 
+enum {
+    x86_enc_tpm_mask  = x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask
+};
+
+x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c, x86_opc_data k, int w)
+{
+    x86_opc_data *r = NULL;
+    /* key is type+prefix+map with substituted rexw=w flag */
+    k.enc = ((k.enc & ~x86_enc_p_rexw) |
+             (-w    &  x86_enc_p_rexw)) & x86_enc_tpm_mask;
+    x86_debugf("table_lookup { type:%x prefix:%x map:%x "
+        "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
+        (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
+        (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
+        (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
+        k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
+    r = x86_table_lookup(ctx->idx, &k);
+    while (r < ctx->idx->map + ctx->idx->map_count) {
+        /* substitute suffix of record for precise match */
+        k.enc = ((k.enc & x86_enc_tpm_mask) |
+                  (r->enc & ~x86_enc_tpm_mask));
+        size_t oprec = (r - ctx->idx->map);
+        x86_debugf("checking opdata %zu", oprec);
+        if (debug) x86_print_op(r, 1, 1);
+        if (x86_opc_data_compare_masked(&k, r) != 0) {
+            x86_debugf("** no matches");
+            r = NULL;
+            break;
+        }
+        if (x86_filter_op(c, r, w) == 0) break;
+        r++;
+    }
+    return r;
+}
+
 int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
     size_t *len, size_t limit)
 {
     x86_state state = x86_state_top;
     size_t nbytes = 0;
     uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
-    uint sufmask = ~(x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask);
     x86_opc_data k = { 0 }, *r = NULL;
     uchar b = 0, lastp = 0;
 
@@ -2442,54 +2476,26 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
 
     /* if REX.W=1 first attempt to lookup W=1 record */
     if (w) {
-        k.enc |= x86_enc_p_rexw;
-        k.enc = (k.enc & ~sufmask);
-        x86_debugf("table_lookup { type:%x prefix:%x map:%x "
-            "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
-            (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
-            (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
-            (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
-            k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
-        r = x86_table_lookup(ctx->idx, &k);
-        while (r < ctx->idx->map + ctx->idx->map_count) {
-            k.enc = (k.enc & ~sufmask) | (r->enc & sufmask);
-            k.enc = (k.enc & ~x86_enc_p_rexw) | (r->enc & x86_enc_p_rexw);
-            size_t oprec = (r - ctx->idx->map);
-            x86_debugf("checking opdata %zu", oprec);
-            if (debug) x86_print_op(r, 1, 1);
-            if (x86_opc_data_compare_masked(&k, r) != 0) {
-                x86_debugf("** no matches");
-                r = NULL;
-                break;
-            }
-            if (x86_filter_op(c, r, 1) == 0) break;
-            r++;
-        }
+        r = x86_table_match(ctx, c, k, 1);
     }
 
     /* if REX.W=0 or search failed lookup W=0/WIG record */
     if (!w || (w && !r)) {
-        k.enc &= ~x86_enc_p_rexw;
-        k.enc = (k.enc & ~sufmask);
-        x86_debugf("table_lookup { type:%x prefix:%x map:%x "
-            "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
-            (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
-            (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
-            (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
-            k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
-        r = x86_table_lookup(ctx->idx, &k);
-        while (r < ctx->idx->map + ctx->idx->map_count) {
-            k.enc = (k.enc & ~sufmask) | (r->enc & sufmask);
-            size_t oprec = (r - ctx->idx->map);
-            x86_debugf("checking opdata %zu", oprec);
-            if (debug) x86_print_op(r, 1, 1);
-            if (x86_opc_data_compare_masked(&k, r) != 0) {
-                x86_debugf("** no matches");
-                r = NULL;
-                break;
-            }
-            if (x86_filter_op(c, r, 0) == 0) break;
-            r++;
+        r = x86_table_match(ctx, c, k, 0);
+    }
+
+    /* now attempt lookup without using the prefix */
+    if (!r) {
+        k.enc &= ~x86_enc_p_mask;
+
+        /* if REX.W=1 first attempt to lookup W=1 record */
+        if (w) {
+            r = x86_table_match(ctx, c, k, 1);
+        }
+
+        /* if REX.W=0 or search failed lookup W=0/WIG record */
+        if (!w || (w && !r)) {
+            r = x86_table_match(ctx, c, k, 0);
         }
     }
 
