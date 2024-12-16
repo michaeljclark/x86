@@ -2176,7 +2176,23 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
     x86_operands q = x86_codec_operands(ctx, c);
 
     size_t len = 0;
+    uint prefix = d->enc & x86_enc_p_mask;
+
+    if (x86_codec_has_lock(c)) {
+        len += snprintf(buf+len, buflen-len, "lock ");
+    }
+    if (x86_codec_has_rep(c) && prefix != x86_enc_p_f3) {
+        len += snprintf(buf+len, buflen-len, "rep ");
+    }
+    if (x86_codec_has_repne(c) && prefix != x86_enc_p_f2) {
+        len += snprintf(buf+len, buflen-len, "repne ");
+    }
+    if (x86_codec_has_wait(c) && prefix != x86_enc_p_9b) {
+        len += snprintf(buf+len, buflen-len, "wait ");
+    }
+
     len += snprintf(buf+len, buflen-len, "%s", x86_op_names[d->op]);
+
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
     {
         len += snprintf(buf+len, buflen-len, i == 0 ? "\t" : ", ");
