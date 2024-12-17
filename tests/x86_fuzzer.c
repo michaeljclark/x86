@@ -373,7 +373,7 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
         break;
     }
 
-    uint rs = 4, isreg = 0, ismem = 0, issib = 0;
+    uint rs = 4, isreg = 0, ismem = 0, issib = 0, hask = 0;
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
     {
         uint ord = s->ord[i], opr = o->opr[i];
@@ -427,6 +427,10 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
             }
             break;
         case x86_ord_reg:
+            hask = (o->opr[i] & x86_opr_flag_k) != 0;
+            if (hask) {
+                x86_new_generator(gen, count, x86_gen_k, NULL, 1, 1, 1, 1);
+            }
             if (opr_type == x86_opr_k) {
                 x86_new_generator(gen, count, x86_gen_r, NULL, 0, 0, 7, rs);
             } else {
@@ -440,6 +444,10 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
             isreg = (o->opr[i] & x86_opr_type_mask) >= x86_opr_reg;
             ismem = (o->opr[i] & x86_opr_mem) != 0;
             issib = (s->ord[i] & ~x86_ord_flag_mask) == x86_ord_sib;
+            hask = (o->opr[i] & x86_opr_flag_k) != 0;
+            if (hask) {
+                x86_new_generator(gen, count, x86_gen_k, NULL, 1, 1, 1, 1);
+            }
             if (isreg && ismem && !issib) {
                 x86_new_generator(gen, count, x86_gen_mod, NULL, 0, 0, 3, 1);
             } else if (isreg && !issib) {
@@ -466,6 +474,10 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
                 }
             break;
         case x86_ord_vec:
+            hask = (o->opr[i] & x86_opr_flag_k) != 0;
+            if (hask) {
+                x86_new_generator(gen, count, x86_gen_k, NULL, 1, 1, 1, 1);
+            }
             if (opr_type == x86_opr_k) {
                 x86_new_generator(gen, count, x86_gen_v, NULL, 0, 0, 7, rs);
             } else {
