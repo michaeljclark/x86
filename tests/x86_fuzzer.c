@@ -711,6 +711,28 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
             c->vex3 = x86_enc_vex3(m, p, l, w, r, x, b, v);
             c->flags |= x86_ce_vex3;
         }
+
+        /* SIB */
+        switch (mod) {
+        case x86_mod_disp0:
+        case x86_mod_disp8:
+        case x86_mod_dispw:
+            if (rm == x86_rm_sp_sib) {
+                c->sib = x86_enc_sib(scale, x, b);
+            }
+            break;
+        default: break;
+        }
+
+        /* displacement */
+        switch (mod) {
+        case x86_mod_disp0:
+            if (rm == x86_rm_bp_disp0) c->disp32 = (i32)disp;
+            break;
+        case x86_mod_disp8: c->disp32 = (i8)disp; break;
+        case x86_mod_dispw: c->disp32 = (i32)disp; break;
+        default: break;
+        }
         break;
     case x86_enc_t_evex:
         /* set m, p, l, w, k, brd, z */
@@ -727,6 +749,28 @@ void x86_gen_codec(const x86_opc_data *d, x86_codec *c,
         }
         c->evex = x86_enc_evex(m, p, l, w, r, x, b, v, k, brd, z);
         c->flags |= x86_ce_evex;
+
+        /* SIB */
+        switch (mod) {
+        case x86_mod_disp0:
+        case x86_mod_disp8:
+        case x86_mod_dispw:
+            if (rm == x86_rm_sp_sib) {
+                c->sib = x86_enc_sib(scale, x, b);
+            }
+            break;
+        default: break;
+        }
+
+        /* displacement */
+        switch (mod) {
+        case x86_mod_disp0:
+            if (rm == x86_rm_bp_disp0) c->disp32 = (i32)disp;
+            break;
+        case x86_mod_disp8: c->disp32 = (i8)disp; break;
+        case x86_mod_dispw: c->disp32 = (i32)disp; break;
+        default: break;
+        }
         break;
     default:
         break;
