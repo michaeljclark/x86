@@ -88,6 +88,7 @@ struct x86_operands
     ullong k   : 5;
     ullong l   : 2;
     ullong w   : 1;
+    ullong brd : 1;
     ullong osz : 1;
 };
 
@@ -1618,6 +1619,7 @@ x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
         q.v |= (~c->evex.data[2] &   8) << 1; /* [3] -> v[4]*/
         q.k  = ( c->evex.data[2] >>  0) & 7;
         q.l  = ( c->evex.data[2] >>  5) & 3;
+        q.brd = (c->evex.data[2] >>  4) & 1;
         q.osz = (c->evex.data[1] & 3) == x86_pfx_66;
         break;
     }
@@ -1741,21 +1743,17 @@ static uint x86_sized_vec(uint reg, uint opr)
     }
 }
 
-static uint x86_disp8_scale(x86_codec *c, uint regsz)
+static uint x86_regsz_bytes(uint regsz)
 {
-    /* todo - EVEX compressed displacement for disp8 needs element size
-     * and tuple type. this code is a simple but broken heuristic. */
-    if (x86_codec_field_ce(c) == x86_ce_evex) {
-        switch (regsz) {
-        case x86_opr_size_8: return 1;
-        case x86_opr_size_16: return 2;
-        case x86_opr_size_32: return 4;
-        case x86_opr_size_64: return 8;
-        case x86_opr_size_128: return 16;
-        case x86_opr_size_256: return 32;
-        case x86_opr_size_512: return 64;
-        default: break;
-        }
+    switch (regsz) {
+    case x86_opr_size_8: return 1;
+    case x86_opr_size_16: return 2;
+    case x86_opr_size_32: return 4;
+    case x86_opr_size_64: return 8;
+    case x86_opr_size_128: return 16;
+    case x86_opr_size_256: return 32;
+    case x86_opr_size_512: return 64;
+    default: break;
     }
     return 1;
 }
@@ -1845,14 +1843,31 @@ static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
     return len;
 }
 
+static uint x86_opr_bcst_size(uint opr)
+{
+    switch (opr & (x86_opr_bcst | x86_opr_s4_mask)) {
+    case x86_opr_m16bcst: return x86_opr_size_16;
+    case x86_opr_m32bcst: return x86_opr_size_32;
+    case x86_opr_m64bcst: return x86_opr_size_64;
+    }
+    return 0;
+}
+
 static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     x86_codec *c, x86_operands q, uint opr, uint enc, x86_opr_formats *fmt)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint ptrsz = x86_opr_ptr_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);
+    uint bcstsz = x86_opr_bcst_size(opr);
+    uint bcstsc = 1;
     int disp = c->disp32;
     size_t len = 0;
+
+    if (bcstsz && q.brd) {
+        bcstsc = x86_regsz_bytes(ptrsz) / x86_regsz_bytes(bcstsz);
+        regsz = ptrsz = bcstsz;
+    }
 
     switch(q.mod) {
     case x86_mod_disp0:
@@ -1914,7 +1929,11 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         }
         break;
     case x86_mod_disp8:
-         disp *= x86_disp8_scale(c, regsz);
+        /* todo - EVEX compressed displacement for disp8 needs element size
+         * and tuple type. this code is a simple but broken heuristic. */
+        if (x86_codec_field_ce(c) == x86_ce_evex) {
+            disp *= x86_regsz_bytes(ptrsz);
+        }
          /* fallthrough */
     case x86_mod_dispw:
         if ((q.rm != x86_rm_sp_sib) ||
@@ -1975,6 +1994,10 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     if ((q.k & 7) > 0 && (opr & x86_opr_flag_k) != 0) {
         len += snprintf(buf+len, buflen-len, " {%s}",
             x86_reg_name(x86_reg_kmask | (q.k & 7)));
+    }
+
+    if (bcstsz && q.brd) {
+        len += snprintf(buf+len, buflen-len, "{1to%u}", bcstsc);
     }
 
     return len;

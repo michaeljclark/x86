@@ -617,6 +617,11 @@ enum x86_opr
     x86_opr_flag_z           = 1 << 8,
     x86_opr_flag_rs          = 1 << 9,
 
+    x86_opr_s1_mask          = 15 << x86_opr_s1,
+    x86_opr_s2_mask          = 15 << x86_opr_s2,
+    x86_opr_s3_mask          = 15 << x86_opr_s3,
+    x86_opr_s4_mask          = 15 << x86_opr_s4,
+
     /* operand type */
     x86_opr_const            = 1 << x86_opr_s1, /* constant */
     x86_opr_imm              = 2 << x86_opr_s1, /* immediate */
@@ -774,13 +779,13 @@ enum x86_opr
     x86_opr_zmm_m512_m64bcst = x86_opr_zmm_m512 | x86_opr_m64bcst,
 
     /* enter / far displacement */
-    x86_opr_far16_16         = x86_opr_imm | x86_opr_far | (3 << x86_opr_s4),
-    x86_opr_far16_32         = x86_opr_imm | x86_opr_far | (4 << x86_opr_s4),
+    x86_opr_far16_16         = x86_opr_imm | x86_opr_far | (1 << x86_opr_s4),
+    x86_opr_far16_32         = x86_opr_imm | x86_opr_far | (2 << x86_opr_s4),
 
     /* far memory indirect */
-    x86_opr_memfar16_16      = x86_opr_mem | x86_opr_far | (1 << x86_opr_s4),
-    x86_opr_memfar16_32      = x86_opr_mem | x86_opr_far | (2 << x86_opr_s4),
-    x86_opr_memfar16_64      = x86_opr_mem | x86_opr_far | (3 << x86_opr_s4),
+    x86_opr_memfar16_16      = x86_opr_mem | x86_opr_far | (3 << x86_opr_s4),
+    x86_opr_memfar16_32      = x86_opr_mem | x86_opr_far | (4 << x86_opr_s4),
+    x86_opr_memfar16_64      = x86_opr_mem | x86_opr_far | (5 << x86_opr_s4),
 
     /* implicit register */
     x86_opr_reg_a            = x86_opr_ind | x86_opr_reg | (0 << x86_opr_s4),
