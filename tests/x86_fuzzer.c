@@ -334,6 +334,28 @@ int x86_imm_rax_iw_osize_pred(x86_operand_gen *generators, size_t idx)
            (v == -1 || v == x86_ax);
 }
 
+int x86_brd_mem_pred(x86_operand_gen *generators, size_t idx)
+{
+    int mod = -1, rm = -1, brd = -1;
+    for (size_t i = 0; i < idx; i++) {
+        if (generators[i].type == x86_gen_mod) {
+            mod = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_rm) {
+            rm = (int)generators[i].value;
+        }
+        if (generators[i].type == x86_gen_brd) {
+            brd = (int)generators[i].value;
+        }
+    }
+    if (brd == 0 || (brd == 1 && mod != x86_mod_reg && rm == x86_rm_sp_sib)) {
+        return 1;
+    } else {
+        generators[idx].value = 0;
+        return 0;
+    }
+}
+
 void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
 {
     const x86_opr_data *o = x86_opr_table + d->opr;
@@ -487,8 +509,8 @@ void x86_gen_synth(const x86_opc_data *d, x86_operand_gen *gen, size_t *count)
         default:
             break;
         }
-        if (opr & x86_opr_m16bcst) {
-            x86_new_generator(gen, count, x86_gen_brd, NULL, 0, 0, 1, 1);
+        if (opr & x86_opr_bcst) {
+            x86_new_generator(gen, count, x86_gen_brd, x86_brd_mem_pred, 0, 0, 1, 1);
         }
     }
 }
