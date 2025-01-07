@@ -600,55 +600,59 @@ enum x86_opr
     x86_opr_none,
 
     /* operand field shifts */
-    x86_opr_s1               = 10,
-    x86_opr_s2               = x86_opr_s1 + 4,
-    x86_opr_s3               = x86_opr_s2 + 4,
-    x86_opr_s4               = x86_opr_s3 + 4,
+    x86_opr_ot               = 8,
+    x86_opr_os               = x86_opr_ot + 4,
+    x86_opr_ms               = x86_opr_os + 4,
+    x86_opr_av               = x86_opr_ms + 4,
+    x86_opr_et               = x86_opr_av + 4,
+    x86_opr_ew               = x86_opr_et + 2,
+    x86_opr_ec               = x86_opr_ew + 3,
+
+    x86_opr_ot_mask          = 15 << x86_opr_ot, /* operand type */
+    x86_opr_os_mask          = 15 << x86_opr_os, /* operand size */
+    x86_opr_ms_mask          = 15 << x86_opr_ms, /* memory size */
+    x86_opr_av_mask          = 15 << x86_opr_av, /* auxiliary value */
+    x86_opr_et_mask          = 3 << x86_opr_et, /* element type */
+    x86_opr_ew_mask          = 7 << x86_opr_ew, /* element width */
+    x86_opr_ec_mask          = 7 << x86_opr_ec, /* element count */
 
     /* operand flags */
     x86_opr_mem              = 1 << 0,
-    x86_opr_rel              = 1 << 1,
-    x86_opr_ind              = 1 << 2,
-    x86_opr_far              = 1 << 3,
-    x86_opr_bcst             = 1 << 4,
-    x86_opr_flag_er          = 1 << 5,
-    x86_opr_flag_k           = 1 << 6,
-    x86_opr_flag_sae         = 1 << 7,
-    x86_opr_flag_z           = 1 << 8,
-    x86_opr_flag_rs          = 1 << 9,
-
-    x86_opr_s1_mask          = 15 << x86_opr_s1,
-    x86_opr_s2_mask          = 15 << x86_opr_s2,
-    x86_opr_s3_mask          = 15 << x86_opr_s3,
-    x86_opr_s4_mask          = 15 << x86_opr_s4,
+    x86_opr_ind              = 1 << 1,
+    x86_opr_bcst             = 1 << 2,
+    x86_opr_flag_er          = 1 << 3,
+    x86_opr_flag_k           = 1 << 4,
+    x86_opr_flag_sae         = 1 << 5,
+    x86_opr_flag_z           = 1 << 6,
+    x86_opr_flag_rs          = 1 << 7,
 
     /* operand type */
-    x86_opr_const            = 1 << x86_opr_s1, /* constant */
-    x86_opr_imm              = 2 << x86_opr_s1, /* immediate */
-    x86_opr_reg              = 3 << x86_opr_s1, /* register */
-    x86_opr_vec              = 4 << x86_opr_s1, /* vector */
-    x86_opr_st               = 5 << x86_opr_s1, /* x87 */
-    x86_opr_k                = 6 << x86_opr_s1, /* mask */
-    x86_opr_seg              = 7 << x86_opr_s1, /* segment */
-    x86_opr_creg             = 8 << x86_opr_s1, /* control */
-    x86_opr_dreg             = 9 << x86_opr_s1, /* debug */
-    x86_opr_bnd              = 10 << x86_opr_s1, /* bound */
-    x86_opr_type_mask        = 15 << x86_opr_s1,
+    x86_opr_const            = 1 << x86_opr_ot, /* constant */
+    x86_opr_imm              = 2 << x86_opr_ot, /* immediate */
+    x86_opr_reg              = 3 << x86_opr_ot, /* register */
+    x86_opr_vec              = 4 << x86_opr_ot, /* vector */
+    x86_opr_st               = 5 << x86_opr_ot, /* x87 */
+    x86_opr_k                = 6 << x86_opr_ot, /* mask */
+    x86_opr_seg              = 7 << x86_opr_ot, /* segment */
+    x86_opr_creg             = 8 << x86_opr_ot, /* control */
+    x86_opr_dreg             = 9 << x86_opr_ot, /* debug */
+    x86_opr_bnd              = 10 << x86_opr_ot, /* bound */
+    x86_opr_type_mask        = x86_opr_ot_mask,
 
     /* operand sizes */
-    x86_opr_size_8           = 1 << x86_opr_s2,
-    x86_opr_size_16          = 2 << x86_opr_s2,
-    x86_opr_size_32          = 3 << x86_opr_s2,
-    x86_opr_size_64          = 4 << x86_opr_s2,
-    x86_opr_size_128         = 5 << x86_opr_s2,
-    x86_opr_size_256         = 6 << x86_opr_s2,
-    x86_opr_size_512         = 7 << x86_opr_s2,
-    x86_opr_size_1024        = 8 << x86_opr_s2,
-    x86_opr_size_80          = 9 << x86_opr_s2,
-    x86_opr_size_wd          = 13 << x86_opr_s2,
-    x86_opr_size_w           = 14 << x86_opr_s2,
-    x86_opr_size_a           = 15 << x86_opr_s2,
-    x86_opr_size_mask        = 15 << x86_opr_s2,
+    x86_opr_size_8           = 1 << x86_opr_os,
+    x86_opr_size_16          = 2 << x86_opr_os,
+    x86_opr_size_32          = 3 << x86_opr_os,
+    x86_opr_size_64          = 4 << x86_opr_os,
+    x86_opr_size_128         = 5 << x86_opr_os,
+    x86_opr_size_256         = 6 << x86_opr_os,
+    x86_opr_size_512         = 7 << x86_opr_os,
+    x86_opr_size_1024        = 8 << x86_opr_os,
+    x86_opr_size_80          = 9 << x86_opr_os,
+    x86_opr_size_wd          = 13 << x86_opr_os,
+    x86_opr_size_w           = 14 << x86_opr_os,
+    x86_opr_size_a           = 15 << x86_opr_os,
+    x86_opr_size_mask        = x86_opr_os_mask,
 
     /* sized register */
     x86_opr_r8               = x86_opr_reg | x86_opr_size_8,
@@ -663,22 +667,22 @@ enum x86_opr
     x86_opr_zmm              = x86_opr_vec | x86_opr_size_512,
 
     /* sized memory */
-    x86_opr_m8               = x86_opr_mem | (1 << x86_opr_s3), /* byte */
-    x86_opr_m16              = x86_opr_mem | (2 << x86_opr_s3), /* word */
-    x86_opr_m32              = x86_opr_mem | (3 << x86_opr_s3), /* dword */
-    x86_opr_m64              = x86_opr_mem | (4 << x86_opr_s3), /* qword */
-    x86_opr_m128             = x86_opr_mem | (5 << x86_opr_s3), /* oword/xmmword */
-    x86_opr_m256             = x86_opr_mem | (6 << x86_opr_s3), /* ymmword */
-    x86_opr_m512             = x86_opr_mem | (7 << x86_opr_s3), /* zmmword */
-    x86_opr_m1024            = x86_opr_mem | (8 << x86_opr_s3),
-    x86_opr_m80              = x86_opr_mem | (9 << x86_opr_s3), /* tword/tbyte */
-    x86_opr_m384             = x86_opr_mem | (10 << x86_opr_s3),
-    x86_opr_mib              = x86_opr_mem | (11 << x86_opr_s3), /* bound */
-    x86_opr_vm32             = x86_opr_mem | (12 << x86_opr_s3), /* vecmem32 */
-    x86_opr_vm64             = x86_opr_mem | (13 << x86_opr_s3), /* vecmem64 */
-    x86_opr_mw               = x86_opr_mem | (14 << x86_opr_s3), /* 16/32/64 */
-    x86_opr_mp               = x86_opr_mem | (15 << x86_opr_s3), /* pointer */
-    x86_opr_mem_mask         = x86_opr_mem | (15 << x86_opr_s3),
+    x86_opr_m8               = x86_opr_mem | (1 << x86_opr_ms), /* byte */
+    x86_opr_m16              = x86_opr_mem | (2 << x86_opr_ms), /* word */
+    x86_opr_m32              = x86_opr_mem | (3 << x86_opr_ms), /* dword */
+    x86_opr_m64              = x86_opr_mem | (4 << x86_opr_ms), /* qword */
+    x86_opr_m128             = x86_opr_mem | (5 << x86_opr_ms), /* oword/xmmword */
+    x86_opr_m256             = x86_opr_mem | (6 << x86_opr_ms), /* ymmword */
+    x86_opr_m512             = x86_opr_mem | (7 << x86_opr_ms), /* zmmword */
+    x86_opr_m1024            = x86_opr_mem | (8 << x86_opr_ms),
+    x86_opr_m80              = x86_opr_mem | (9 << x86_opr_ms), /* tword/tbyte */
+    x86_opr_m384             = x86_opr_mem | (10 << x86_opr_ms),
+    x86_opr_mib              = x86_opr_mem | (11 << x86_opr_ms), /* bound */
+    x86_opr_vm32             = x86_opr_mem | (12 << x86_opr_ms), /* vecmem32 */
+    x86_opr_vm64             = x86_opr_mem | (13 << x86_opr_ms), /* vecmem64 */
+    x86_opr_mw               = x86_opr_mem | (14 << x86_opr_ms), /* 16/32/64 */
+    x86_opr_mp               = x86_opr_mem | (15 << x86_opr_ms), /* pointer */
+    x86_opr_mem_mask         = x86_opr_mem | (15 << x86_opr_ms),
 
     /* unsized register / sized memory */
     x86_opr_r_m8             = x86_opr_reg | x86_opr_m8,
@@ -745,24 +749,21 @@ enum x86_opr
     x86_opr_iwd              = x86_opr_imm | x86_opr_size_wd,
     x86_opr_iw               = x86_opr_imm | x86_opr_size_w,
 
-    /* relative displacement */
-    x86_opr_rel8             = x86_opr_imm | x86_opr_rel | x86_opr_size_8,
-    x86_opr_relw             = x86_opr_imm | x86_opr_rel | x86_opr_size_w,
-
     /* memory offset */
     x86_opr_moffs            = x86_opr_imm | x86_opr_mem | x86_opr_size_w,
 
     /* constant */
-    x86_opr_1                = x86_opr_const | (1 << x86_opr_s4),
+    x86_opr_1                = x86_opr_const | (1 << x86_opr_av),
 
     /* registers sequential */
-    x86_opr_flag_rs2         = x86_opr_flag_rs | (1 << x86_opr_s4),
-    x86_opr_flag_rs4         = x86_opr_flag_rs | (2 << x86_opr_s4),
+    x86_opr_flag_rs2         = x86_opr_flag_rs | (1 << x86_opr_av),
+    x86_opr_flag_rs4         = x86_opr_flag_rs | (2 << x86_opr_av),
 
     /* sized broadcast */
-    x86_opr_m16bcst          = x86_opr_bcst | (1 << x86_opr_s4),
-    x86_opr_m32bcst          = x86_opr_bcst | (2 << x86_opr_s4),
-    x86_opr_m64bcst          = x86_opr_bcst | (3 << x86_opr_s4),
+    x86_opr_m16bcst          = x86_opr_bcst | (1 << x86_opr_av),
+    x86_opr_m32bcst          = x86_opr_bcst | (2 << x86_opr_av),
+    x86_opr_m64bcst          = x86_opr_bcst | (3 << x86_opr_av),
+    x86_opr_bcst_mask        = x86_opr_bcst | x86_opr_av_mask,
 
     /* sized vector / sized memory / broadcast */
     x86_opr_xmm_m32_m16bcst  = x86_opr_mm_m32   | x86_opr_m16bcst,
@@ -778,31 +779,35 @@ enum x86_opr
     x86_opr_zmm_m512_m32bcst = x86_opr_zmm_m512 | x86_opr_m32bcst,
     x86_opr_zmm_m512_m64bcst = x86_opr_zmm_m512 | x86_opr_m64bcst,
 
+    /* relative displacement */
+    x86_opr_rel8             = x86_opr_imm | x86_opr_ind | x86_opr_size_8,
+    x86_opr_relw             = x86_opr_imm | x86_opr_ind | x86_opr_size_w,
+
     /* enter / far displacement */
-    x86_opr_far16_16         = x86_opr_imm | x86_opr_far | (1 << x86_opr_s4),
-    x86_opr_far16_32         = x86_opr_imm | x86_opr_far | (2 << x86_opr_s4),
+    x86_opr_far16_16         = x86_opr_imm | x86_opr_ind | (1 << x86_opr_av),
+    x86_opr_far16_32         = x86_opr_imm | x86_opr_ind | (2 << x86_opr_av),
 
     /* far memory indirect */
-    x86_opr_memfar16_16      = x86_opr_mem | x86_opr_far | (3 << x86_opr_s4),
-    x86_opr_memfar16_32      = x86_opr_mem | x86_opr_far | (4 << x86_opr_s4),
-    x86_opr_memfar16_64      = x86_opr_mem | x86_opr_far | (5 << x86_opr_s4),
+    x86_opr_memfar16_16      = x86_opr_mem | x86_opr_ind | (3 << x86_opr_av),
+    x86_opr_memfar16_32      = x86_opr_mem | x86_opr_ind | (4 << x86_opr_av),
+    x86_opr_memfar16_64      = x86_opr_mem | x86_opr_ind | (5 << x86_opr_av),
 
     /* implicit register */
-    x86_opr_reg_a            = x86_opr_ind | x86_opr_reg | (0 << x86_opr_s4),
-    x86_opr_reg_c            = x86_opr_ind | x86_opr_reg | (1 << x86_opr_s4),
-    x86_opr_reg_d            = x86_opr_ind | x86_opr_reg | (2 << x86_opr_s4),
-    x86_opr_reg_b            = x86_opr_ind | x86_opr_reg | (3 << x86_opr_s4),
-    x86_opr_reg_si           = x86_opr_ind | x86_opr_reg | (4 << x86_opr_s4),
-    x86_opr_reg_di           = x86_opr_ind | x86_opr_reg | (5 << x86_opr_s4),
-    x86_opr_reg_ah           = x86_opr_ind | x86_opr_reg | (6 << x86_opr_s4),
-    x86_opr_reg_v0           = x86_opr_ind | x86_opr_vec | (0 << x86_opr_s4),
-    x86_opr_reg_st0          = x86_opr_ind | x86_opr_st  | (0 << x86_opr_s4),
-    x86_opr_seg_es           = x86_opr_ind | x86_opr_seg | (0 << x86_opr_s4),
-    x86_opr_seg_cs           = x86_opr_ind | x86_opr_seg | (1 << x86_opr_s4),
-    x86_opr_seg_ss           = x86_opr_ind | x86_opr_seg | (2 << x86_opr_s4),
-    x86_opr_seg_ds           = x86_opr_ind | x86_opr_seg | (3 << x86_opr_s4),
-    x86_opr_seg_fs           = x86_opr_ind | x86_opr_seg | (4 << x86_opr_s4),
-    x86_opr_seg_gs           = x86_opr_ind | x86_opr_seg | (5 << x86_opr_s4),
+    x86_opr_reg_a            = x86_opr_reg | x86_opr_ind | (1 << x86_opr_av),
+    x86_opr_reg_c            = x86_opr_reg | x86_opr_ind | (2 << x86_opr_av),
+    x86_opr_reg_d            = x86_opr_reg | x86_opr_ind | (3 << x86_opr_av),
+    x86_opr_reg_b            = x86_opr_reg | x86_opr_ind | (4 << x86_opr_av),
+    x86_opr_reg_si           = x86_opr_reg | x86_opr_ind | (5 << x86_opr_av),
+    x86_opr_reg_di           = x86_opr_reg | x86_opr_ind | (6 << x86_opr_av),
+    x86_opr_reg_ah           = x86_opr_reg | x86_opr_ind | (7 << x86_opr_av),
+    x86_opr_reg_v0           = x86_opr_vec | x86_opr_ind | (1 << x86_opr_av),
+    x86_opr_reg_st0          = x86_opr_st  | x86_opr_ind | (1 << x86_opr_av),
+    x86_opr_seg_es           = x86_opr_seg | x86_opr_ind | (1 << x86_opr_av),
+    x86_opr_seg_cs           = x86_opr_seg | x86_opr_ind | (2 << x86_opr_av),
+    x86_opr_seg_ss           = x86_opr_seg | x86_opr_ind | (3 << x86_opr_av),
+    x86_opr_seg_ds           = x86_opr_seg | x86_opr_ind | (4 << x86_opr_av),
+    x86_opr_seg_fs           = x86_opr_seg | x86_opr_ind | (5 << x86_opr_av),
+    x86_opr_seg_gs           = x86_opr_seg | x86_opr_ind | (6 << x86_opr_av),
 
     /* sized implicit register */
     x86_opr_reg_al           = x86_opr_reg_a | x86_opr_size_8,
@@ -831,6 +836,82 @@ enum x86_opr
     x86_opr_reg_pdi          = x86_opr_reg_di | x86_opr_size_a,
     x86_opr_reg_xmm0         = x86_opr_reg_v0 | x86_opr_size_128,
     x86_opr_reg_xmm0_7       = x86_opr_reg_v0 | x86_opr_size_1024,
+
+    /* element type */
+    x86_opr_et_none          = (0 << x86_opr_et),
+    x86_opr_et_i             = (1 << x86_opr_et),
+    x86_opr_et_f             = (2 << x86_opr_et),
+    x86_opr_et_bf            = (3 << x86_opr_et),
+
+    /* element width */
+    x86_opr_ew_8             = (1 << x86_opr_ew),
+    x86_opr_ew_16            = (2 << x86_opr_ew),
+    x86_opr_ew_32            = (3 << x86_opr_ew),
+    x86_opr_ew_64            = (4 << x86_opr_ew),
+    x86_opr_ew_128           = (5 << x86_opr_ew),
+    x86_opr_ew_256           = (6 << x86_opr_ew),
+    x86_opr_ew_512           = (7 << x86_opr_ew),
+
+    /* element count */
+    x86_opr_ec_x1            = (1 << x86_opr_ec),
+    x86_opr_ec_x2            = (2 << x86_opr_ec),
+    x86_opr_ec_x4            = (3 << x86_opr_ec),
+    x86_opr_ec_x8            = (4 << x86_opr_ec),
+    x86_opr_ec_x16           = (5 << x86_opr_ec),
+    x86_opr_ec_x32           = (6 << x86_opr_ec),
+    x86_opr_ec_x64           = (7 << x86_opr_ec),
+
+    /* tuple type */
+    x86_opr_i8x1             = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x1,
+    x86_opr_i8x2             = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x2,
+    x86_opr_i8x4             = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x4,
+    x86_opr_i8x8             = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x8,
+    x86_opr_i8x16            = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x16,
+    x86_opr_i8x32            = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x32,
+    x86_opr_i8x64            = x86_opr_et_i | x86_opr_ew_8 | x86_opr_ec_x64,
+    x86_opr_i16x1            = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x1,
+    x86_opr_i16x2            = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x2,
+    x86_opr_i16x4            = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x4,
+    x86_opr_i16x8            = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x8,
+    x86_opr_i16x16           = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x16,
+    x86_opr_i16x32           = x86_opr_et_i | x86_opr_ew_16 | x86_opr_ec_x32,
+    x86_opr_i32x1            = x86_opr_et_i | x86_opr_ew_32 | x86_opr_ec_x1,
+    x86_opr_i32x2            = x86_opr_et_i | x86_opr_ew_32 | x86_opr_ec_x2,
+    x86_opr_i32x4            = x86_opr_et_i | x86_opr_ew_32 | x86_opr_ec_x4,
+    x86_opr_i32x8            = x86_opr_et_i | x86_opr_ew_32 | x86_opr_ec_x8,
+    x86_opr_i32x16           = x86_opr_et_i | x86_opr_ew_32 | x86_opr_ec_x16,
+    x86_opr_i64x1            = x86_opr_et_i | x86_opr_ew_64 | x86_opr_ec_x1,
+    x86_opr_i64x2            = x86_opr_et_i | x86_opr_ew_64 | x86_opr_ec_x2,
+    x86_opr_i64x4            = x86_opr_et_i | x86_opr_ew_64 | x86_opr_ec_x4,
+    x86_opr_i64x8            = x86_opr_et_i | x86_opr_ew_64 | x86_opr_ec_x8,
+    x86_opr_i128x1           = x86_opr_et_i | x86_opr_ew_128 | x86_opr_ec_x1,
+    x86_opr_i128x2           = x86_opr_et_i | x86_opr_ew_128 | x86_opr_ec_x2,
+    x86_opr_i128x4           = x86_opr_et_i | x86_opr_ew_128 | x86_opr_ec_x4,
+    x86_opr_i256x1           = x86_opr_et_i | x86_opr_ew_256 | x86_opr_ec_x1,
+    x86_opr_i256x2           = x86_opr_et_i | x86_opr_ew_256 | x86_opr_ec_x2,
+    x86_opr_i512x1           = x86_opr_et_i | x86_opr_ew_512 | x86_opr_ec_x1,
+    x86_opr_f8x1             = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x1,
+    x86_opr_f8x2             = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x2,
+    x86_opr_f8x4             = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x4,
+    x86_opr_f8x8             = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x8,
+    x86_opr_f8x16            = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x16,
+    x86_opr_f8x32            = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x32,
+    x86_opr_f8x64            = x86_opr_et_f | x86_opr_ew_8 | x86_opr_ec_x64,
+    x86_opr_f16x1            = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x1,
+    x86_opr_f16x2            = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x2,
+    x86_opr_f16x4            = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x4,
+    x86_opr_f16x8            = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x8,
+    x86_opr_f16x16           = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x16,
+    x86_opr_f16x32           = x86_opr_et_f | x86_opr_ew_16 | x86_opr_ec_x32,
+    x86_opr_f32x1            = x86_opr_et_f | x86_opr_ew_32 | x86_opr_ec_x1,
+    x86_opr_f32x2            = x86_opr_et_f | x86_opr_ew_32 | x86_opr_ec_x2,
+    x86_opr_f32x4            = x86_opr_et_f | x86_opr_ew_32 | x86_opr_ec_x4,
+    x86_opr_f32x8            = x86_opr_et_f | x86_opr_ew_32 | x86_opr_ec_x8,
+    x86_opr_f32x16           = x86_opr_et_f | x86_opr_ew_32 | x86_opr_ec_x16,
+    x86_opr_f64x1            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x1,
+    x86_opr_f64x2            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x2,
+    x86_opr_f64x4            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x4,
+    x86_opr_f64x8            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x8,
 };
 
 /*

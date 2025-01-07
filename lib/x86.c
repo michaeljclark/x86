@@ -74,6 +74,10 @@ struct x86_opr_formats
     const char *imm64;
     const char *imm32;
     const char *reg;
+    const char *tuple_ptr_reg_scaled_reg;
+    const char *tuple_ptr_reg_scaled_reg_disp;
+    const char *tuple_ptr_reg_reg;
+    const char *tuple_ptr_reg_reg_disp;
 };
 
 struct x86_operands
@@ -156,22 +160,11 @@ x86_map_str x86_ord_names[] =
 
 x86_map_str x86_opr_names[] =
 {
-    { x86_opr_memfar16_64,      "memfar16:64"      },
-    { x86_opr_memfar16_32,      "memfar16:32"      },
-    { x86_opr_memfar16_16,      "memfar16:16"      },
-    { x86_opr_far16_32,         "far16:32"         },
-    { x86_opr_far16_16,         "far16:16"         },
     { x86_opr_bnd_mem,          "bnd/mem"          },
     { x86_opr_k_m64,            "k/m64"            },
     { x86_opr_k_m32,            "k/m32"            },
     { x86_opr_k_m16,            "k/m16"            },
     { x86_opr_k_m8,             "k/m8"             },
-    { x86_opr_seg_gs,           "gs"               },
-    { x86_opr_seg_fs,           "fs"               },
-    { x86_opr_seg_ds,           "ds"               },
-    { x86_opr_seg_ss,           "ss"               },
-    { x86_opr_seg_cs,           "cs"               },
-    { x86_opr_seg_es,           "es"               },
     { x86_opr_vm64z,            "vm64z"            },
     { x86_opr_vm64y,            "vm64y"            },
     { x86_opr_vm64x,            "vm64x"            },
@@ -231,6 +224,12 @@ x86_map_str x86_opr_names[] =
     { x86_opr_m32,              "m32"              },
     { x86_opr_m16,              "m16"              },
     { x86_opr_m8,               "m8"               },
+    { x86_opr_seg_gs,           "gs"               },
+    { x86_opr_seg_fs,           "fs"               },
+    { x86_opr_seg_ds,           "ds"               },
+    { x86_opr_seg_ss,           "ss"               },
+    { x86_opr_seg_cs,           "cs"               },
+    { x86_opr_seg_es,           "es"               },
     { x86_opr_reg_xmm0_7,       "xmm0_7"           },
     { x86_opr_reg_xmm0,         "xmm0"             },
     { x86_opr_reg_pdi,          "pdi"              },
@@ -265,6 +264,11 @@ x86_map_str x86_opr_names[] =
     { x86_opr_reg_d,            "d"                },
     { x86_opr_reg_c,            "c"                },
     { x86_opr_reg_a,            "a"                },
+    { x86_opr_memfar16_64,      "memfar16:64"      },
+    { x86_opr_memfar16_32,      "memfar16:32"      },
+    { x86_opr_memfar16_16,      "memfar16:16"      },
+    { x86_opr_far16_32,         "far16:32"         },
+    { x86_opr_far16_16,         "far16:16"         },
     { x86_opr_relw,             "relw"             },
     { x86_opr_rel8,             "rel8"             },
     { x86_opr_moffs,            "moffs"            },
@@ -295,9 +299,6 @@ x86_map_str x86_opr_names[] =
     { x86_opr_reg,              "reg"              },
     { x86_opr_imm,              "imm"              },
     { x86_opr_bcst,             "bcst"             },
-    { x86_opr_far,              "far"              },
-    { x86_opr_ind,              "ind"              },
-    { x86_opr_rel,              "rel"              },
     { x86_opr_mem,              "mem"              },
     { x86_opr_flag_er,          "{er}"             },
     { x86_opr_flag_k,           "{k}"              },
@@ -305,6 +306,56 @@ x86_map_str x86_opr_names[] =
     { x86_opr_flag_z,           "{z}"              },
     { x86_opr_flag_rs2,         "{rs2}"            },
     { x86_opr_flag_rs4,         "{rs4}"            },
+    { x86_opr_f64x8,            "/f64x8"           },
+    { x86_opr_f64x4,            "/f64x4"           },
+    { x86_opr_f64x2,            "/f64x2"           },
+    { x86_opr_f64x1,            "/f64x1"           },
+    { x86_opr_f32x16,           "/f32x16"          },
+    { x86_opr_f32x8,            "/f32x8"           },
+    { x86_opr_f32x4,            "/f32x4"           },
+    { x86_opr_f32x2,            "/f32x2"           },
+    { x86_opr_f32x1,            "/f32x1"           },
+    { x86_opr_f16x32,           "/f16x32"          },
+    { x86_opr_f16x16,           "/f16x16"          },
+    { x86_opr_f16x8,            "/f16x8"           },
+    { x86_opr_f16x4,            "/f16x4"           },
+    { x86_opr_f16x2,            "/f16x2"           },
+    { x86_opr_f16x1,            "/f16x1"           },
+    { x86_opr_f8x64,            "/f8x64"           },
+    { x86_opr_f8x32,            "/f8x32"           },
+    { x86_opr_f8x16,            "/f8x16"           },
+    { x86_opr_f8x8,             "/f8x8"            },
+    { x86_opr_f8x4,             "/f8x4"            },
+    { x86_opr_f8x2,             "/f8x2"            },
+    { x86_opr_f8x1,             "/f8x1"            },
+    { x86_opr_i512x1,           "/i512x1"          },
+    { x86_opr_i256x2,           "/i256x2"          },
+    { x86_opr_i256x1,           "/i256x1"          },
+    { x86_opr_i128x4,           "/i128x4"          },
+    { x86_opr_i128x2,           "/i128x2"          },
+    { x86_opr_i128x1,           "/i128x1"          },
+    { x86_opr_i64x8,            "/i64x8"           },
+    { x86_opr_i64x4,            "/i64x4"           },
+    { x86_opr_i64x2,            "/i64x2"           },
+    { x86_opr_i64x1,            "/i64x1"           },
+    { x86_opr_i32x16,           "/i32x16"          },
+    { x86_opr_i32x8,            "/i32x8"           },
+    { x86_opr_i32x4,            "/i32x4"           },
+    { x86_opr_i32x2,            "/i32x2"           },
+    { x86_opr_i32x1,            "/i32x1"           },
+    { x86_opr_i16x32,           "/i16x32"          },
+    { x86_opr_i16x16,           "/i16x16"          },
+    { x86_opr_i16x8,            "/i16x8"           },
+    { x86_opr_i16x4,            "/i16x4"           },
+    { x86_opr_i16x2,            "/i16x2"           },
+    { x86_opr_i16x1,            "/i16x1"           },
+    { x86_opr_i8x64,            "/i8x64"           },
+    { x86_opr_i8x32,            "/i8x32"           },
+    { x86_opr_i8x16,            "/i8x16"           },
+    { x86_opr_i8x8,             "/i8x8"            },
+    { x86_opr_i8x4,             "/i8x4"            },
+    { x86_opr_i8x2,             "/i8x2"            },
+    { x86_opr_i8x1,             "/i8x1"            },
     { 0,                        NULL               },
 };
 
@@ -1661,9 +1712,51 @@ int x86_opr_mem_size(uint opr)
     case x86_opr_m128: return x86_opr_size_128;
     case x86_opr_m256: return x86_opr_size_256;
     case x86_opr_m512: return x86_opr_size_512;
-    case x86_opr_mw: return x86_opr_size_w;
-    default: return 0;
+    case x86_opr_mw:
+    default: return x86_opr_size_w;
     }
+}
+
+static uint x86_opr_ew_bytes(uint opr)
+{
+    switch(opr & x86_opr_ew_mask) {
+    case x86_opr_ew_8: return 1;
+    case x86_opr_ew_16: return 2;
+    case x86_opr_ew_32: return 4;
+    case x86_opr_ew_64: return 8;
+    case x86_opr_ew_128: return 16;
+    case x86_opr_ew_256: return 32;
+    case x86_opr_ew_512: return 64;
+    }
+    return 0;
+}
+
+static uint x86_opr_ew_size(uint opr)
+{
+    switch(opr & x86_opr_ew_mask) {
+    case x86_opr_ew_8: return x86_opr_size_8;
+    case x86_opr_ew_16: return x86_opr_size_16;
+    case x86_opr_ew_32: return x86_opr_size_32;
+    case x86_opr_ew_64: return x86_opr_size_64;
+    case x86_opr_ew_128: return x86_opr_size_128;
+    case x86_opr_ew_256: return x86_opr_size_256;
+    case x86_opr_ew_512: return x86_opr_size_512;
+    }
+    return 0;
+}
+
+static uint x86_opr_ec_mult(uint opr)
+{
+    switch((opr & x86_opr_ec_mask)) {
+    case x86_opr_ec_x1: return 1;
+    case x86_opr_ec_x2: return 2;
+    case x86_opr_ec_x4: return 4;
+    case x86_opr_ec_x8: return 8;
+    case x86_opr_ec_x16: return 16;
+    case x86_opr_ec_x32: return 32;
+    case x86_opr_ec_x64: return 64;
+    }
+    return 0;
 }
 
 uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
@@ -1708,7 +1801,8 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     return x86_codec_addr_size(c);
 }
 
-static uint x86_opr_ptr_size(x86_codec *c, x86_operands q, uint opr, uint enc)
+static uint x86_opr_ptr_size(x86_codec *c,
+    x86_operands q, uint opr, uint enc)
 {
     uint memsz = x86_opr_mem_size(opr);
     if (memsz == x86_opr_size_w) {
@@ -1773,42 +1867,49 @@ static const struct x86_mod_data { ushort r8, rw, b, x; } x86_mod_real[8] =
 
 x86_opr_formats x86_opr_formats_intel_hex =
 {
-    .ptr_rip                     = "%s[rip]",
-    .ptr_rip_disp                = "%s[rip %s 0x%x]",
-    .ptr_reg                     = "%s[%s]",
-    .ptr_reg_disp                = "%s[%s %s 0x%x]",
-    .ptr_reg_scaled_reg          = "%s[%s + %d*%s]",
-    .ptr_reg_scaled_reg_disp     = "%s[%s + %d*%s %s 0x%x]",
-    .ptr_reg_reg                 = "%s[%s + %s]",
-    .ptr_reg_reg_disp            = "%s[%s + %s %s 0x%x]",
-    .ptr_scaled_reg              = "%s[%d*%s]",
-    .ptr_disp                    = "%s[%s0x%x]",
-    .ptr_imm64                   = "%s[%s0x%llx]",
-    .ptr_imm32                   = "%s[%s0x%x]",
-    .imm64                       = "%s0x%llx",
-    .imm32                       = "%s0x%x",
-    .reg                         = "%s"
+    .ptr_rip                        = "%s[rip]",
+    .ptr_rip_disp                   = "%s[rip %s 0x%x]",
+    .ptr_reg                        = "%s[%s]",
+    .ptr_reg_disp                   = "%s[%s %s 0x%x]",
+    .ptr_reg_scaled_reg             = "%s[%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp        = "%s[%s + %d*%s %s 0x%x]",
+    .ptr_reg_reg                    = "%s[%s + %s]",
+    .ptr_reg_reg_disp               = "%s[%s + %s %s 0x%x]",
+    .ptr_scaled_reg                 = "%s[%d*%s]",
+    .ptr_disp                       = "%s[%s0x%x]",
+    .ptr_imm64                      = "%s[%s0x%llx]",
+    .ptr_imm32                      = "%s[%s0x%x]",
+    .imm64                          = "%s0x%llx",
+    .imm32                          = "%s0x%x",
+    .reg                            = "%s",
+    .tuple_ptr_reg_scaled_reg       = "%s* %d [%s + %d*%s]",
+    .tuple_ptr_reg_scaled_reg_disp  = "%s* %d [%s + %d*%s %s 0x%x]",
+    .tuple_ptr_reg_reg              = "%s* %d [%s + %s]",
+    .tuple_ptr_reg_reg_disp         = "%s* %d [%s + %s %s 0x%x]"
 };
 
 x86_opr_formats x86_opr_formats_intel_dec =
 {
-    .ptr_rip                     = "%s[rip]",
-    .ptr_rip_disp                = "%s[rip %s %u]",
-    .ptr_reg                     = "%s[%s]",
-    .ptr_reg_disp                = "%s[%s %s %u]",
-    .ptr_reg_scaled_reg          = "%s[%s + %d*%s]",
-    .ptr_reg_scaled_reg_disp     = "%s[%s + %d*%s %s %u]",
-    .ptr_reg_reg                 = "%s[%s + %s]",
-    .ptr_reg_reg_disp            = "%s[%s + %s %s %u]",
-    .ptr_scaled_reg              = "%s[%d*%s]",
-    .ptr_disp                    = "%s[%s%u]",
-    .ptr_imm64                   = "%s[%s%llu]",
-    .ptr_imm32                   = "%s[%s%u]",
-    .imm64                       = "%s%llu",
-    .imm32                       = "%s%u",
-    .reg                         = "%s"
+    .ptr_rip                        = "%s[rip]",
+    .ptr_rip_disp                   = "%s[rip %s %u]",
+    .ptr_reg                        = "%s[%s]",
+    .ptr_reg_disp                   = "%s[%s %s %u]",
+    .ptr_reg_scaled_reg             = "%s[%s + %d*%s]",
+    .ptr_reg_scaled_reg_disp        = "%s[%s + %d*%s %s %u]",
+    .ptr_reg_reg                    = "%s[%s + %s]",
+    .ptr_reg_reg_disp               = "%s[%s + %s %s %u]",
+    .ptr_scaled_reg                 = "%s[%d*%s]",
+    .ptr_disp                       = "%s[%s%u]",
+    .ptr_imm64                      = "%s[%s%llu]",
+    .ptr_imm32                      = "%s[%s%u]",
+    .imm64                          = "%s%llu",
+    .imm32                          = "%s%u",
+    .reg                            = "%s",
+    .tuple_ptr_reg_scaled_reg       = "%s* %d [%s + %d*%s]",
+    .tuple_ptr_reg_scaled_reg_disp  = "%s* %d [%s + %d*%s %s %u]",
+    .tuple_ptr_reg_reg              = "%s* %d [%s + %s]",
+    .tuple_ptr_reg_reg_disp         = "%s* %d [%s + %s %s %u]"
 };
-
 
 static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
     x86_codec *c, x86_operands q, uint opr, uint enc, uint reg)
@@ -1845,7 +1946,7 @@ static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
 
 static uint x86_opr_bcst_size(uint opr)
 {
-    switch (opr & (x86_opr_bcst | x86_opr_s4_mask)) {
+    switch (opr & x86_opr_bcst_mask) {
     case x86_opr_m16bcst: return x86_opr_size_16;
     case x86_opr_m32bcst: return x86_opr_size_32;
     case x86_opr_m64bcst: return x86_opr_size_64;
@@ -1861,12 +1962,22 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     uint addrsz = x86_codec_addr_size(c);
     uint bcstsz = x86_opr_bcst_size(opr);
     uint bcstsc = 1;
+    uint vmsz = 0;
+    uint vmsc = 0;
     int disp = c->disp32;
     size_t len = 0;
 
     if (bcstsz && q.brd) {
         bcstsc = x86_regsz_bytes(ptrsz) / x86_regsz_bytes(bcstsz);
         regsz = ptrsz = bcstsz;
+    }
+
+    switch (opr & x86_opr_mem_mask) {
+    case x86_opr_vm32:
+    case x86_opr_vm64:
+        vmsc = x86_opr_ec_mult(opr);
+        vmsz = x86_opr_ew_size(opr);
+        break;
     }
 
     switch(q.mod) {
@@ -1904,11 +2015,19 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
             }
         } else if (q.rm == x86_rm_sp_sib) {
             if (q.s != 0) {
-                len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                if (vmsz) {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
+                        x86_ptr_size_str(vmsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                } else {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                }
             }
             else if ((q.b & 7) == x86_sp && q.x == x86_sp) {
                 len = snprintf(buf, buflen, fmt->ptr_reg,
@@ -1916,11 +2035,19 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                     x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
             }
             else {
-                len = snprintf(buf, buflen, fmt->ptr_reg_reg,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                if (vmsz) {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
+                        x86_ptr_size_str(vmsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                } else {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_reg,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                }
             }
         } else {
             len = snprintf(buf, buflen, fmt->ptr_reg,
@@ -1932,7 +2059,11 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         /* todo - EVEX compressed displacement for disp8 needs element size
          * and tuple type. this code is a simple but broken heuristic. */
         if (x86_codec_field_ce(c) == x86_ce_evex) {
-            disp *= x86_regsz_bytes(ptrsz);
+            if ((opr & x86_opr_et_mask) != x86_opr_et_none) {
+                disp *= x86_opr_ew_bytes(opr);
+            } else {
+                disp *= x86_regsz_bytes(ptrsz);
+            }
         }
          /* fallthrough */
     case x86_mod_dispw:
@@ -1954,36 +2085,72 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         }
         else if (q.rm == x86_rm_sp_sib && q.s != 0) {
             if (disp) {
-                len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg_disp,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
-                    disp < 0 ? "-" : "+",
-                    disp < 0 ? -disp : disp);
+                if (vmsz) {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg_disp,
+                        x86_ptr_size_str(vmsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)),
+                        disp < 0 ? "-" : "+",
+                        disp < 0 ? -disp : disp);
+                } else {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg_disp,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
+                        disp < 0 ? "-" : "+",
+                        disp < 0 ? -disp : disp);
+                }
             } else {
-                len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                if (vmsz) {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
+                        x86_ptr_size_str(vmsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                } else {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                }
             }
         }
         else if (q.rm == x86_rm_sp_sib) {
-            if (disp) {
-                len = snprintf(buf, buflen, fmt->ptr_reg_reg_disp,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
-                    disp < 0 ? "-" : "+",
-                    disp < 0 ? -disp : disp);
+            if (vmsz) {
+                if (disp) {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg_disp,
+                        x86_ptr_size_str(vmsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)),
+                        disp < 0 ? "-" : "+",
+                        disp < 0 ? -disp : disp);
+                } else {
+                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
+                        x86_ptr_size_str(ptrsz), vmsc,
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                }
             } else {
-                len = snprintf(buf, buflen, fmt->ptr_reg_reg,
-                    x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                    (q.x & 15) == x86_sp ? "riz" :
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                if (disp) {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_reg_disp,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
+                        disp < 0 ? "-" : "+",
+                        disp < 0 ? -disp : disp);
+                } else {
+                    len = snprintf(buf, buflen, fmt->ptr_reg_reg,
+                        x86_ptr_size_str(ptrsz),
+                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                        (q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                }
             }
         }
         break;
@@ -2095,14 +2262,15 @@ size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
 }
 
 size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q,  uint opr, uint enc)
+    x86_operands q, uint opr, uint enc)
 {
     int imm = c->imm2;
     return snprintf(buf, buflen, "%s%u",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
-uint x86_opr_intel_const_reg(x86_codec *c, x86_operands q, uint opr, uint enc)
+uint x86_opr_intel_const_reg(x86_codec *c,
+    x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
     uint addrsz = x86_codec_addr_size(c);

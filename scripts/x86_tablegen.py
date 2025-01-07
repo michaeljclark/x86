@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import csv
 import glob
 import string
@@ -412,6 +413,7 @@ def translate_encoding(encoding):
 
 def translate_operands(operands):
     oprlist = []
+    typpat = re.compile('([if])(\\d+)x(\\d+)')
     for i,arg0 in enumerate(operands):
         flags = arg0.split('{')
         argcomps = []
@@ -419,8 +421,14 @@ def translate_operands(operands):
             cp = arg1.find('}')
             if cp == -1:
                 arg1 = arg1.replace(':','_')
-                arg1 = arg1.replace('/','_')
-                argcomps += ['x86_opr_' + arg1]
+                argp = []
+                for arg2 in arg1.split('/'):
+                    m = typpat.match(arg2)
+                    if m:
+                        argcomps += ['x86_opr_' + arg2]
+                    else:
+                        argp += [arg2]
+                argcomps += ['x86_opr_' + '_'.join(argp)]
             else:
                 arg1 = arg1.replace('}','')
                 argcomps += ['x86_opr_flag_' + arg1]
