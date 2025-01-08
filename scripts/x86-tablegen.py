@@ -168,27 +168,6 @@ operand_map = {
     ''                                                      : None
 }
 
-tuple_map = {
-    'Full'                : 'full',
-    'Full Mem'            : 'full_mem',
-    'Full Vector'         : 'full',
-    'Full Vector Mem'     : 'full_mem',
-    'Half Vector'         : 'half',
-    'Half Vector Mem'     : 'half_mem',
-    'MOVDDUP'             : 'movddup',
-    'Mem128'              : 'mem128',
-    'Oct Vector Mem'      : 'octant_mem',
-    'Quarter Vector'      : 'quarter',
-    'Quarter Vector Mem'  : 'quarter_mem',
-    'Scalar'              : 'tuple1_scalar',
-    'Tuple1 Fixed'        : 'tuple1_fixed',
-    'Tuple1 Scalar'       : 'tuple1_scalar',
-    'Tuple1_4X'           : 'tuple1_rs4',
-    'Tuple2'              : 'tuple2',
-    'Tuple4'              : 'tuple4',
-    'Tuple8'              : 'tuple8'
-}
-
 opcode_map = {
     '<xmm0>'  : 'reg_xmm0',
     '<xmm0-7>': 'reg_xmm0_7',
@@ -703,15 +682,11 @@ args = parser.parse_args()
 
 x86_reg = reg_table()
 x86_insn = read_data(args.files)
-x86_desc_tab = parse_table(read_file('doc/x86_desc.md'))
-x86_desc = { 'tab': x86_desc_tab, 'insn': make_map(x86_insn) }
 
 if args.output_file:
     sys.stdout = args.output_file
 if args.print_insn:
     print_insn(x86_insn)
-if args.print_fancy_insn:
-    print_fancy_insn(x86_desc)
 if args.print_opcode_enums:
     print_opcode_enums(x86_reg, x86_insn)
 if args.print_opcode_tables:
