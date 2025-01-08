@@ -46,7 +46,7 @@ enum
     x86_reg_d     = 0b0010 << 5,
     x86_reg_q     = 0b0011 << 5,
 
-    x86_reg_mm    = 0b0100 << 5,
+    x86_reg_mmx   = 0b0100 << 5,
     x86_reg_xmm   = 0b0101 << 5,
     x86_reg_ymm   = 0b0110 << 5,
     x86_reg_zmm   = 0b0111 << 5,
@@ -631,12 +631,13 @@ enum x86_opr
     x86_opr_imm              = 2 << x86_opr_ot, /* immediate */
     x86_opr_reg              = 3 << x86_opr_ot, /* register */
     x86_opr_vec              = 4 << x86_opr_ot, /* vector */
-    x86_opr_st               = 5 << x86_opr_ot, /* x87 */
-    x86_opr_k                = 6 << x86_opr_ot, /* mask */
-    x86_opr_seg              = 7 << x86_opr_ot, /* segment */
-    x86_opr_creg             = 8 << x86_opr_ot, /* control */
-    x86_opr_dreg             = 9 << x86_opr_ot, /* debug */
-    x86_opr_bnd              = 10 << x86_opr_ot, /* bound */
+    x86_opr_mmx              = 5 << x86_opr_ot, /* mmx */
+    x86_opr_st               = 6 << x86_opr_ot, /* x87 */
+    x86_opr_k                = 7 << x86_opr_ot, /* mask */
+    x86_opr_seg              = 8 << x86_opr_ot, /* segment */
+    x86_opr_creg             = 9 << x86_opr_ot, /* control */
+    x86_opr_dreg             = 10 << x86_opr_ot, /* debug */
+    x86_opr_bnd              = 11 << x86_opr_ot, /* bound */
     x86_opr_type_mask        = x86_opr_ot_mask,
 
     /* operand sizes */

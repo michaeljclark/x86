@@ -75,7 +75,7 @@ def reg_table():
     t += gen_list(gpr_q, "reg_q", 0)
     t += gen_range("r%d", "reg_q", 8, gpr_count)
     t += gen_sep()
-    t += gen_range("mm%d", "reg_mm", 0, 16)
+    t += gen_range("mm%d", "reg_mmx", 0, 8)
     t += gen_sep()
     t += gen_range("xmm%d", "reg_xmm", 0, vec_count)
     t += gen_sep()

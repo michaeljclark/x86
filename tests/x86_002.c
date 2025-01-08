@@ -112,6 +112,7 @@ void test_x86_opr_name()
     assert(strcmp(arg_name(x86_opr_imm), "imm") == 0);
     assert(strcmp(arg_name(x86_opr_reg), "reg") == 0);
     assert(strcmp(arg_name(x86_opr_vec), "vec") == 0);
+    assert(strcmp(arg_name(x86_opr_mmx), "mmx") == 0);
     assert(strcmp(arg_name(x86_opr_st), "st") == 0);
     assert(strcmp(arg_name(x86_opr_k), "k") == 0);
     assert(strcmp(arg_name(x86_opr_seg), "seg") == 0);
@@ -382,7 +383,7 @@ void test_x86_reg_name()
     assert(strcmp(reg_name(x86_r15), "r15") == 0);
     assert(strcmp(reg_name(x86_r31), "r31") == 0);
     assert(strcmp(reg_name(x86_mm0), "mm0") == 0);
-    assert(strcmp(reg_name(x86_mm15), "mm15") == 0);
+    assert(strcmp(reg_name(x86_mm7), "mm7") == 0);
     assert(strcmp(reg_name(x86_xmm0), "xmm0") == 0);
     assert(strcmp(reg_name(x86_xmm31), "xmm31") == 0);
     assert(strcmp(reg_name(x86_ymm0), "ymm0") == 0);

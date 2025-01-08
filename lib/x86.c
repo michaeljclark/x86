@@ -295,6 +295,7 @@ x86_map_str x86_opr_names[] =
     { x86_opr_seg,              "seg"              },
     { x86_opr_k,                "k"                },
     { x86_opr_st,               "st"               },
+    { x86_opr_mmx,              "mmx"              },
     { x86_opr_vec,              "vec"              },
     { x86_opr_reg,              "reg"              },
     { x86_opr_imm,              "imm"              },
@@ -1827,7 +1828,7 @@ static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
 static uint x86_sized_vec(uint reg, uint opr)
 {
     switch (opr & x86_opr_size_mask) {
-    case x86_opr_size_64: return x86_reg_mm | (reg & 7);
+    case x86_opr_size_64:  return x86_reg_mmx | (reg & 7);
     case x86_opr_size_128: return x86_reg_xmm | (reg & 31);
     case x86_opr_size_256: return x86_reg_ymm | (reg & 31);
     case x86_opr_size_512: return x86_reg_zmm | (reg & 31);
@@ -1922,6 +1923,8 @@ static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
         x86_reg_name(x86_sized_vec(reg, opr))); break;
     case x86_opr_k: len = snprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_kmask | (reg & 7))); break;
+    case x86_opr_mmx: len = snprintf(buf, buflen, "%s",
+        x86_reg_name(x86_reg_mmx | (reg & 7))); break;
     case x86_opr_st: len = snprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_fpu | (reg & 7))); break;
     case x86_opr_bnd: len = snprintf(buf, buflen, "%s",
