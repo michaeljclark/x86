@@ -2054,8 +2054,6 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         }
         break;
     case x86_mod_disp8:
-        /* todo - EVEX compressed displacement for disp8 needs element size
-         * and tuple type. this code is a simple but broken heuristic. */
         if (x86_codec_field_ce(c) == x86_ce_evex) {
             if ((opr & x86_opr_et_mask) != x86_opr_et_none) {
                 disp *= x86_opr_ew_bytes(opr);
@@ -2063,7 +2061,7 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 disp *= x86_regsz_bytes(ptrsz);
             }
         }
-         /* fallthrough */
+        /* fallthrough */
     case x86_mod_dispw:
         if ((q.rm != x86_rm_sp_sib) ||
             (q.rm == x86_rm_sp_sib && q.s == 0 &&
