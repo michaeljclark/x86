@@ -1797,7 +1797,7 @@ uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
         return oprsz;
     }
 
-    return x86_codec_addr_size(c);
+    return 0;
 }
 
 static uint x86_opr_ptr_size(x86_codec *c,
