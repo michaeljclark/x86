@@ -800,11 +800,9 @@ static int x86_opc_data_compare_masked(const void *p1, const void *p2)
     uint pre2 = enc2 & (x86_enc_t_mask | x86_enc_m_mask | x86_enc_prexw_mask);
     if (pre1 < pre2) return -1;
     if (pre1 > pre2) return 1;
-    for (size_t i = 0; i < 2; i++) {
-        uchar mask = om1->opm[i] & om2->opm[i];
-        if ((om1->opc[i] & mask) < (om2->opc[i] & mask)) return -1;
-        if ((om1->opc[i] & mask) > (om2->opc[i] & mask)) return 1;
-    }
+    ushort mask_s = om1->opm_s & om2->opm_s;
+    if ((om1->opc_s & mask_s) < (om2->opc_s & mask_s)) return -1;
+    if ((om1->opc_s & mask_s) > (om2->opc_s & mask_s)) return 1;
     /* suffix is unnecessary for matching opcodes because it contains format*/
     return 0;
 }

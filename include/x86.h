@@ -1172,8 +1172,14 @@ struct x86_opc_data
     ushort opr;
     ushort ord;
     uint enc;
-    uchar opc[2];
-    uchar opm[2];
+    union {
+        uchar opc[2];
+        ushort opc_s;
+    };
+    union {
+        uchar opm[2];
+        ushort opm_s;
+    };
 };
 
 struct x86_opr_data
