@@ -1625,12 +1625,17 @@ int x86_enc_filter_vex2(x86_vex2 prefix, uint enc);
 int x86_enc_filter_vex3(x86_vex3 prefix, uint enc);
 int x86_enc_filter_evex(x86_evex prefix, uint enc);
 
+typedef size_t (*x86_fmt_symbol)(char *buf, size_t buflen, x86_codec *c,
+    size_t pc_offset);
+
 x86_table_idx x86_opc_table_identity(void);
 x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort);
 x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes);
 x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
 void x86_print_op(const x86_opc_data *d, uint compact, uint opcode);
 size_t x86_format_op(char *buf, size_t len, x86_ctx *ctx, x86_codec *c);
+size_t x86_format_op_symbol(char *buf, size_t buflen, x86_ctx *ctx,
+    x86_codec *c, size_t pc_offset, x86_fmt_symbol sym_cb);
 size_t x86_format_hex(char *buf, size_t len, uchar *data, size_t datalen);
 
 x86_ctx* x86_ctx_create(uint mode);

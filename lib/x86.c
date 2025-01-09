@@ -41,6 +41,8 @@ typedef struct x86_opr_formats x86_opr_formats;
 
 typedef size_t (*x86_opr_str_fn)(char *buf, size_t buflen, x86_codec *c,
     x86_arg a);
+typedef size_t (*x86_opr_addr_fn)(char *buf, size_t buflen, x86_codec *c,
+    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb);
 
 enum x86_state
 {
@@ -76,6 +78,7 @@ struct x86_opr_formatter
     x86_opr_str_fn fmt_opb;
     x86_opr_str_fn fmt_is4;
     x86_opr_str_fn fmt_ime;
+    x86_opr_addr_fn fmt_rel;
 };
 
 struct x86_opr_formats
@@ -2296,6 +2299,28 @@ static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
+static size_t x86_opr_intel_rel_hex_str(char *buf, size_t buflen, x86_codec *c,
+    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
+{
+    size_t len = x86_opr_intel_imm_str_internal(buf, buflen, c, a,
+        &x86_opr_formats_intel_hex);
+    if (sym_cb) {
+        len += sym_cb(buf+len, buflen-len, c, pc_offset);
+    }
+    return len;
+}
+
+static size_t x86_opr_intel_rel_dec_str(char *buf, size_t buflen, x86_codec *c,
+    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
+{
+    size_t len = x86_opr_intel_imm_str_internal(buf, buflen, c, a,
+        &x86_opr_formats_intel_dec);
+    if (sym_cb) {
+        len += sym_cb(buf+len, buflen-len, c, pc_offset);
+    }
+    return len;
+}
+
 static uint x86_opr_intel_const_reg(x86_codec *c,
     x86_arg a)
 {
@@ -2365,7 +2390,8 @@ x86_opr_formatter x86_format_intel_hex =
     .fmt_vec = &x86_opr_intel_vec_str,
     .fmt_opb = &x86_opr_intel_opb_str,
     .fmt_is4 = &x86_opr_intel_is4_str,
-    .fmt_ime = &x86_opr_intel_ime_hex_str
+    .fmt_ime = &x86_opr_intel_ime_hex_str,
+    .fmt_rel = &x86_opr_intel_rel_hex_str
 };
 
 x86_opr_formatter x86_format_intel_dec =
@@ -2377,11 +2403,12 @@ x86_opr_formatter x86_format_intel_dec =
     .fmt_vec = &x86_opr_intel_vec_str,
     .fmt_opb = &x86_opr_intel_opb_str,
     .fmt_is4 = &x86_opr_intel_is4_str,
-    .fmt_ime = &x86_opr_intel_ime_dec_str
+    .fmt_ime = &x86_opr_intel_ime_dec_str,
+    .fmt_rel = &x86_opr_intel_rel_dec_str
 };
 
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a, x86_opr_formatter *fmt)
+    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb, x86_opr_formatter *fmt)
 {
     switch(a.ord & x86_ord_type_mask) {
     case x86_ord_const: return fmt->fmt_const(buf, buflen, c, a);
@@ -2390,7 +2417,9 @@ static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
     case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, a);
     case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, a);
     case x86_ord_imm:
-        if ((a.ord & ~x86_ord_flag_mask) == x86_ord_is4) {
+        if (a.opr == x86_opr_rel8 || a.opr == x86_opr_relw) {
+            return fmt->fmt_rel(buf, buflen, c, a, pc_offset, sym_cb);
+        } else if ((a.ord & ~x86_ord_flag_mask) == x86_ord_is4) {
             return fmt->fmt_is4(buf, buflen, c, a);
         } else if ((a.ord & ~x86_ord_flag_mask) == x86_ord_ime) {
             return fmt->fmt_ime(buf, buflen, c, a);
@@ -2401,7 +2430,8 @@ static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
-size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
+static size_t x86_format_op_internal(char *buf, size_t buflen, x86_ctx *ctx,
+    x86_codec *c, size_t pc_offset, x86_fmt_symbol sym_cb)
 {
     const x86_opc_data *d = ctx->idx->map + c->rec;
     const x86_opr_data *o = x86_opr_table + d->opr;
@@ -2432,10 +2462,22 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
         x86_arg a = x86_codec_meta(d->enc, o->opr[i], s->ord[i], q);
         len += snprintf(buf+len, buflen-len, i == 0 ? "\t" : ", ");
         len += x86_format_operand(buf+len, buflen-len, c, a,
-            &x86_format_intel_dec);
+            pc_offset, sym_cb, &x86_format_intel_dec);
     }
 
     return len;
+}
+
+size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
+{
+    return x86_format_op_internal(buf, buflen, ctx, c, 0, NULL);
+}
+
+size_t x86_format_op_symbol(char *buf, size_t buflen, x86_ctx *ctx,
+    x86_codec *c, size_t pc_offset, x86_fmt_symbol sym_cb)
+{
+    /* note: caller needs to add instruction length to pc_offset */
+    return x86_format_op_internal(buf, buflen, ctx, c, pc_offset, sym_cb);
 }
 
 size_t x86_format_hex(char *buf, size_t buflen, uchar *data, size_t datalen)
