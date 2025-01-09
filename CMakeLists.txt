@@ -42,10 +42,8 @@ if ( LLVM_FOUND )
 
     add_executable(llvm_dump tests/llvm_dump.c)
     add_executable(llvm_dumppp tests/llvm_dumppp.cpp)
-    add_executable(llvm_bench tests/llvm_bench.c)
     target_link_libraries(llvm_dump LLVM)
     target_link_libraries(llvm_dumppp LLVM)
-    target_link_libraries(llvm_bench LLVM)
 endif()
 
 #
