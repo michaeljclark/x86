@@ -35,11 +35,12 @@ typedef enum x86_state x86_state;
 typedef struct x86_table_col x86_table_col;
 typedef struct x86_map_str x86_map_str;
 typedef struct x86_operands x86_operands;
+typedef struct x86_arg x86_arg;
 typedef struct x86_opr_formatter x86_opr_formatter;
 typedef struct x86_opr_formats x86_opr_formats;
 
 typedef size_t (*x86_opr_str_fn)(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc);
+    x86_arg a);
 
 enum x86_state
 {
@@ -114,6 +115,14 @@ struct x86_operands
     ullong w   : 1;
     ullong brd : 1;
     ullong osz : 1;
+};
+
+struct x86_arg
+{
+    uint enc;
+    uint opr;
+    uint ord;
+    x86_operands q;
 };
 
 extern x86_opr_formatter x86_format_intel_hex;
@@ -1695,6 +1704,13 @@ static x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
     return q;
 }
 
+static inline x86_arg x86_codec_meta(uint enc, uint opr, uint ord,
+    x86_operands q)
+{
+    x86_arg a = { enc, opr, ord, q };
+    return a;
+}
+
 static uint x86_codec_addr_size(x86_codec *c)
 {
     /* todo - handle address size prefix */
@@ -1776,34 +1792,35 @@ static uint x86_opr_ec_mult(uint opr)
     return 0;
 }
 
-static uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
+static uint x86_opr_reg_size(x86_codec *c, x86_arg a)
 {
-    uint oprty = (opr & x86_opr_type_mask);
-    uint oprsz = (opr & x86_opr_size_mask);
+    uint oprty = (a.opr & x86_opr_type_mask);
+    uint oprsz = (a.opr & x86_opr_size_mask);
 
     /* 'rw' or 'mw' deduce size from mode, operand size prefix and REX.W */
     if ((oprty == x86_opr_reg && oprsz == x86_opr_size_w) ||
-        (opr & x86_opr_mem_mask) == x86_opr_mw ||
-        (opr == x86_opr_moffs || opr == x86_opr_reg_psi || opr == x86_opr_reg_pdi))
+         (a.opr & x86_opr_mem_mask) == x86_opr_mw ||
+        (a.opr == x86_opr_moffs || a.opr == x86_opr_reg_psi ||
+         a.opr == x86_opr_reg_pdi))
     {
-        switch (x86_enc_width(enc)) {
+        switch (x86_enc_width(a.enc)) {
         case x86_enc_w_wb: return x86_opr_size_8;
         case x86_enc_w_ww:
             if (x86_codec_is16(c))
-                return (q.osz ? x86_opr_size_32 : x86_opr_size_16);
+                return (a.q.osz ? x86_opr_size_32 : x86_opr_size_16);
             if (x86_codec_is32(c))
-                return (q.osz ? x86_opr_size_16 : x86_opr_size_32);
+                return (a.q.osz ? x86_opr_size_16 : x86_opr_size_32);
             if (x86_codec_is64(c))
-                return (q.osz ? x86_opr_size_16 : x86_opr_size_64);
+                return (a.q.osz ? x86_opr_size_16 : x86_opr_size_64);
             break;
         case x86_enc_w_wx:
             if (x86_codec_is16(c))
-                return (q.osz ? x86_opr_size_32 : x86_opr_size_16);
+                return (a.q.osz ? x86_opr_size_32 : x86_opr_size_16);
             if (x86_codec_is32(c))
-                return (q.osz ? x86_opr_size_16 : x86_opr_size_32);
+                return (a.q.osz ? x86_opr_size_16 : x86_opr_size_32);
             if (x86_codec_is64(c))
-                return (q.osz ? x86_opr_size_16 :
-                        q.w ? x86_opr_size_64 : x86_opr_size_32);
+                return (a.q.osz ? x86_opr_size_16 :
+                        a.q.w ? x86_opr_size_64 : x86_opr_size_32);
             break;
         case x86_enc_w_w0: return x86_opr_size_32;
         case x86_enc_w_w1: return x86_opr_size_64;
@@ -1818,12 +1835,11 @@ static uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
     return 0;
 }
 
-static uint x86_opr_ptr_size(x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+static uint x86_opr_ptr_size(x86_codec *c, x86_arg a)
 {
-    uint memsz = x86_opr_mem_size(opr);
+    uint memsz = x86_opr_mem_size(a.opr);
     if (memsz == x86_opr_size_w) {
-        memsz = x86_opr_reg_size(c, q, opr, enc);
+        memsz = x86_opr_reg_size(c, a);
     }
     return memsz;
 }
@@ -1915,17 +1931,17 @@ x86_opr_formats x86_opr_formats_intel_dec =
     .tuple_ptr_reg_reg_disp         = "%s* %d [%s + %s %s %u]"
 };
 
-static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
-    x86_codec *c, x86_operands q, uint opr, uint enc, uint reg)
+static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a, uint reg)
 {
     size_t len = 0;
 
-    switch (opr & x86_opr_type_mask) {
+    switch (a.opr & x86_opr_type_mask) {
     case x86_opr_reg: len = snprintf(buf, buflen, "%s",
         x86_reg_name(x86_sized_gpr(c, reg,
-        x86_opr_reg_size(c, q, opr, enc)))); break;
+        x86_opr_reg_size(c, a)))); break;
     case x86_opr_vec: len = snprintf(buf, buflen, "%s",
-        x86_reg_name(x86_sized_vec(reg, opr))); break;
+        x86_reg_name(x86_sized_vec(reg, a.opr))); break;
     case x86_opr_k: len = snprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_kmask | (reg & 7))); break;
     case x86_opr_mmx: len = snprintf(buf, buflen, "%s",
@@ -1943,10 +1959,11 @@ static size_t x86_opr_intel_reg_sized_str(char *buf, size_t buflen,
     default: len = snprintf(buf, buflen, "%s", "unknown"); break;
     }
 
-    if ((q.k & 7) > 0 && (opr & x86_opr_flag_k) != 0) {
+    if ((a.q.k & 7) > 0 && (a.opr & x86_opr_flag_k) != 0) {
         len += snprintf(buf+len, buflen-len, " {%s}",
-                        x86_reg_name(x86_reg_kmask | (q.k & 7)));
+                        x86_reg_name(x86_reg_kmask | (a.q.k & 7)));
     }
+
     return len;
 }
 
@@ -1961,34 +1978,34 @@ static uint x86_opr_bcst_size(uint opr)
 }
 
 static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
-    x86_codec *c, x86_operands q, uint opr, uint enc, x86_opr_formats *fmt)
+    x86_codec *c, x86_arg a, x86_opr_formats *fmt)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
-    uint ptrsz = x86_opr_ptr_size(c, q, opr, enc);
+    uint regsz = x86_opr_reg_size(c, a);
+    uint ptrsz = x86_opr_ptr_size(c, a);
     uint addrsz = x86_codec_addr_size(c);
-    uint bcstsz = x86_opr_bcst_size(opr);
+    uint bcstsz = x86_opr_bcst_size(a.opr);
     uint bcstsc = 1;
     uint vmsz = 0;
     uint vmsc = 0;
     int disp = c->disp32;
     size_t len = 0;
 
-    if (bcstsz && q.brd) {
+    if (bcstsz && a.q.brd) {
         bcstsc = x86_regsz_bytes(ptrsz) / x86_regsz_bytes(bcstsz);
         regsz = ptrsz = bcstsz;
     }
 
-    switch (opr & x86_opr_mem_mask) {
+    switch (a.opr & x86_opr_mem_mask) {
     case x86_opr_vm32:
     case x86_opr_vm64:
-        vmsc = x86_opr_ec_mult(opr);
-        vmsz = x86_opr_ew_size(opr);
+        vmsc = x86_opr_ec_mult(a.opr);
+        vmsz = x86_opr_ew_size(a.opr);
         break;
     }
 
-    switch(q.mod) {
+    switch(a.q.mod) {
     case x86_mod_disp0:
-        if (q.rm != x86_rm_sp_sib && (q.b & 7) == x86_rm_bp_disp0) {
+        if (a.q.rm != x86_rm_sp_sib && (a.q.b & 7) == x86_rm_bp_disp0) {
             if (x86_codec_is64(c) && disp) {
                 len = snprintf(buf, buflen, fmt->ptr_rip_disp,
                     x86_ptr_size_str(ptrsz),
@@ -2005,104 +2022,108 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                     disp < 0 ? "-" : "",
                     disp < 0 ? -disp : disp);
             }
-        } else if (q.rm == x86_rm_sp_sib && (q.b & 7) == x86_rm_bp_disp0) {
-            if (q.x == x86_sp && q.s != 0) {
+        } else if (a.q.rm == x86_rm_sp_sib && (a.q.b & 7) == x86_rm_bp_disp0) {
+            if (a.q.x == x86_sp && a.q.s != 0) {
                 len = snprintf(buf, buflen, fmt->ptr_scaled_reg,
-                    x86_ptr_size_str(ptrsz), (1 << q.s), "riz");
+                    x86_ptr_size_str(ptrsz), (1 << a.q.s), "riz");
             }
-            else if (q.x == x86_sp) {
+            else if (a.q.x == x86_sp) {
                 len = snprintf(buf, buflen, fmt->ptr_disp,
                     x86_ptr_size_str(ptrsz), "", 0);
             }
             else {
                 len = snprintf(buf, buflen, fmt->ptr_scaled_reg,
-                    x86_ptr_size_str(ptrsz), (1 << q.s),
-                    x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                    x86_ptr_size_str(ptrsz), (1 << a.q.s),
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
-        } else if (q.rm == x86_rm_sp_sib) {
-            if (q.s != 0) {
+        } else if (a.q.rm == x86_rm_sp_sib) {
+            if (a.q.s != 0) {
                 if (vmsz) {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
                         x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
                     len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
                 }
             }
-            else if ((q.b & 7) == x86_sp && q.x == x86_sp) {
+            else if ((a.q.b & 7) == x86_sp && a.q.x == x86_sp) {
                 len = snprintf(buf, buflen, fmt->ptr_reg,
                     x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
             }
             else {
                 if (vmsz) {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
                         x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
                     len = snprintf(buf, buflen, fmt->ptr_reg_reg,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
                 }
             }
         } else {
             len = snprintf(buf, buflen, fmt->ptr_reg,
                 x86_ptr_size_str(ptrsz),
-                x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
+                x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
         }
         break;
     case x86_mod_disp8:
         if (x86_codec_field_ce(c) == x86_ce_evex) {
-            if ((opr & x86_opr_et_mask) != x86_opr_et_none) {
-                disp *= x86_opr_ew_bytes(opr);
+            if ((a.opr & x86_opr_et_mask) != x86_opr_et_none) {
+                disp *= x86_opr_ew_bytes(a.opr);
             } else {
                 disp *= x86_regsz_bytes(ptrsz);
             }
         }
         /* fallthrough */
     case x86_mod_dispw:
-        if ((q.rm != x86_rm_sp_sib) ||
-            (q.rm == x86_rm_sp_sib && q.s == 0 &&
-            (q.b & 7) == x86_sp && q.x == x86_sp))
+        if ((a.q.rm != x86_rm_sp_sib) ||
+            (a.q.rm == x86_rm_sp_sib && a.q.s == 0 &&
+            (a.q.b & 7) == x86_sp && a.q.x == x86_sp))
         {
            if (disp) {
                 len = snprintf(buf, buflen, fmt->ptr_reg_disp,
                     x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
             } else {
                 len = snprintf(buf, buflen, fmt->ptr_reg,
                     x86_ptr_size_str(ptrsz),
-                    x86_reg_name(x86_sized_gpr(c, q.b, addrsz)));
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
             }
         }
-        else if (q.rm == x86_rm_sp_sib && q.s != 0) {
+        else if (a.q.rm == x86_rm_sp_sib && a.q.s != 0) {
             if (disp) {
                 if (vmsz) {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg_disp,
                         x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)),
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)),
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
                     len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg_disp,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 }
@@ -2110,64 +2131,66 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 if (vmsz) {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
                         x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
                     len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)), (1 << q.s),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (1 << a.q.s),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
                 }
             }
         }
-        else if (q.rm == x86_rm_sp_sib) {
+        else if (a.q.rm == x86_rm_sp_sib) {
             if (vmsz) {
                 if (disp) {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg_disp,
                         x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)),
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)),
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
                     len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
                         x86_ptr_size_str(ptrsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(q.x, regsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 }
             } else {
                 if (disp) {
                     len = snprintf(buf, buflen, fmt->ptr_reg_reg_disp,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)),
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
                     len = snprintf(buf, buflen, fmt->ptr_reg_reg,
                         x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, q.b, addrsz)),
-                        (q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, q.x, addrsz)));
+                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                        (a.q.x & 15) == x86_sp ? "riz" :
+                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
                 }
             }
         }
         break;
     case x86_mod_reg:
-        return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.b);
+        return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.b);
     }
 
-    if ((q.k & 7) > 0 && (opr & x86_opr_flag_k) != 0) {
+    if ((a.q.k & 7) > 0 && (a.opr & x86_opr_flag_k) != 0) {
         len += snprintf(buf+len, buflen-len, " {%s}",
-            x86_reg_name(x86_reg_kmask | (q.k & 7)));
+            x86_reg_name(x86_reg_kmask | (a.q.k & 7)));
     }
 
-    if (bcstsz && q.brd) {
+    if (bcstsz && a.q.brd) {
         len += snprintf(buf+len, buflen-len, "{1to%u}", bcstsc);
     }
 
@@ -2175,49 +2198,49 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
 }
 
 static size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
+    return x86_opr_intel_mrm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_dec);
 }
 
 static size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
+    return x86_opr_intel_mrm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_hex);
 }
 
 static size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.r);
+    return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.r);
 }
 
 static size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.v);
+    return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.v);
 }
 
 static size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.b);
+    return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.b);
 }
 
 static size_t x86_opr_intel_is4_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
     uint reg = (c->imm32 >> 4) & 15;
-    return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, reg);
+    return x86_opr_intel_reg_str_internal(buf, buflen, c, a, reg);
 }
 
 static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q,  uint opr, uint enc, x86_opr_formats *fmt)
+    x86_arg a, x86_opr_formats *fmt)
 {
-    if (opr == x86_opr_moffs) {
-        uint regsz = x86_opr_reg_size(c, q, opr, enc);
+    if (a.opr == x86_opr_moffs) {
+        uint regsz = x86_opr_reg_size(c, a);
         if ((x86_codec_field_ci(c)) == x86_ci_i64) {
             llong imm = c->imm64;
             return snprintf(buf, buflen, fmt->ptr_imm64,
@@ -2244,21 +2267,21 @@ static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen, x86_codec
 }
 
 static size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q,  uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_imm_str_internal(buf, buflen, c, q, opr, enc,
+    return x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_hex);
 }
 
 static size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q,  uint opr, uint enc)
+    x86_arg a)
 {
-    return x86_opr_intel_imm_str_internal(buf, buflen, c, q, opr, enc,
+    return x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_dec);
 }
 
 static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q,  uint opr, uint enc)
+    x86_arg a)
 {
     int imm = c->imm2;
     return snprintf(buf, buflen, "%s0x%x",
@@ -2266,7 +2289,7 @@ static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
 }
 
 static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
     int imm = c->imm2;
     return snprintf(buf, buflen, "%s%u",
@@ -2274,12 +2297,12 @@ static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
 }
 
 static uint x86_opr_intel_const_reg(x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
+    uint regsz = x86_opr_reg_size(c, a);
     uint addrsz = x86_codec_addr_size(c);
 
-    switch (opr) {
+    switch (a.opr) {
     case x86_opr_reg_al: return x86_al;
     case x86_opr_reg_cl: return x86_cl;
     case x86_opr_reg_ax: return x86_ax;
@@ -2308,17 +2331,17 @@ static uint x86_opr_intel_const_reg(x86_codec *c,
 }
 
 static size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint opr, uint enc)
+    x86_arg a)
 {
-    uint regsz = x86_opr_reg_size(c, q, opr, enc);
+    uint regsz = x86_opr_reg_size(c, a);
     uint addrsz = x86_codec_addr_size(c);
-    int regname = x86_opr_intel_const_reg(c, q, opr, enc);
+    int regname = x86_opr_intel_const_reg(c, a);
 
     if (regname >= 0) {
         return snprintf(buf, buflen, "%s", x86_reg_name(regname));
     }
 
-    switch (opr) {
+    switch (a.opr) {
     case x86_opr_1: return snprintf(buf, buflen, "1");
     case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "xmm0");
     case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "xmm0_7");
@@ -2358,21 +2381,21 @@ x86_opr_formatter x86_format_intel_dec =
 };
 
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
-    x86_operands q, uint ord, uint opr, uint enc, x86_opr_formatter *fmt)
+    x86_arg a, x86_opr_formatter *fmt)
 {
-    switch(ord & x86_ord_type_mask) {
-    case x86_ord_const: return fmt->fmt_const(buf, buflen, c, q, opr, enc);
-    case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, q, opr, enc);
-    case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, q, opr, enc);
-    case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, q, opr, enc);
-    case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, q, opr, enc);
+    switch(a.ord & x86_ord_type_mask) {
+    case x86_ord_const: return fmt->fmt_const(buf, buflen, c, a);
+    case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, a);
+    case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, a);
+    case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, a);
+    case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, a);
     case x86_ord_imm:
-        if ((ord & ~x86_ord_flag_mask) == x86_ord_is4) {
-            return fmt->fmt_is4(buf, buflen, c, q, opr, enc);
-        } else if ((ord & ~x86_ord_flag_mask) == x86_ord_ime) {
-            return fmt->fmt_ime(buf, buflen, c, q, opr, enc);
+        if ((a.ord & ~x86_ord_flag_mask) == x86_ord_is4) {
+            return fmt->fmt_is4(buf, buflen, c, a);
+        } else if ((a.ord & ~x86_ord_flag_mask) == x86_ord_ime) {
+            return fmt->fmt_ime(buf, buflen, c, a);
         } else {
-            return fmt->fmt_imm(buf, buflen, c, q, opr, enc);
+            return fmt->fmt_imm(buf, buflen, c, a);
         }
     default: return 0;
     }
@@ -2406,9 +2429,10 @@ size_t x86_format_op(char *buf, size_t buflen, x86_ctx *ctx, x86_codec *c)
 
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
     {
+        x86_arg a = x86_codec_meta(d->enc, o->opr[i], s->ord[i], q);
         len += snprintf(buf+len, buflen-len, i == 0 ? "\t" : ", ");
-        len += x86_format_operand(buf+len, buflen-len, c, q,
-            s->ord[i], o->opr[i], d->enc, &x86_format_intel_dec);
+        len += x86_format_operand(buf+len, buflen-len, c, a,
+            &x86_format_intel_dec);
     }
 
     return len;
