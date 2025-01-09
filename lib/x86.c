@@ -431,7 +431,7 @@ static size_t x86_name_map(x86_map_str * p, char * buf, size_t len, uint ord,
         if (p->str == NULL) break;
         if (buf == NULL || len - count <= len) {
             ret = snprintf(buf ? buf + count : NULL,
-                buf ? len - count : INT_MAX,
+                buf ? len - count : 0,
                 "%s%s", count == 0 ? "" : sep, p->str);
             if (ret > 0) count += ret;
         }
@@ -483,7 +483,7 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
     return count;
 }
 
-char * x86_table_type_name(uint type)
+const char * x86_table_type_name(uint type)
 {
     switch (type) {
     case x86_table_none: return "none";
@@ -494,7 +494,7 @@ char * x86_table_type_name(uint type)
     }
 }
 
-char * x86_table_map_name(uint map)
+const char * x86_table_map_name(uint map)
 {
     switch (map) {
     case x86_map_none: return "";
@@ -508,7 +508,7 @@ char * x86_table_map_name(uint map)
     }
 }
 
-char * x86_table_prefix_name(uint prefix)
+const char * x86_table_prefix_name(uint prefix)
 {
     switch (prefix) {
     case x86_pfx_66: return "66";
@@ -755,7 +755,7 @@ static x86_table_idx x86_opc_table_index(size_t n)
     return tab;
 }
 
-x86_table_idx x86_opc_table_identity()
+x86_table_idx x86_opc_table_identity(void)
 {
     return x86_opc_table_index(x86_opc_table_size);
 }
@@ -986,12 +986,12 @@ static void x86_build_prefix_table(x86_acc_idx *idx,
         rec.enc |= tp.pfx;
         n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
         if (tp.pfx_w) {
-            x86_opc_data rec = *d;
+            rec = *d;
             rec.enc |= tp.pfx | tp.pfx_w;
             n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
         }
         if (tp.pfx_o) {
-            x86_opc_data rec = *d;
+            rec = *d;
             rec.enc |= tp.pfx | tp.pfx_o;
             n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
         }
@@ -1049,7 +1049,7 @@ static void x86_build_accel_table(x86_acc_idx *idx, x86_acc_entry *acc)
     }
 }
 
-x86_acc_idx* x86_table_build(uint modes)
+static x86_acc_idx* x86_table_build(uint modes)
 {
     x86_acc_idx *idx = calloc(1, sizeof(x86_acc_idx));
     x86_table_idx tab = x86_opc_table_sorted(x86_opc_table_filter(
@@ -1204,8 +1204,6 @@ void x86_print_op(const x86_opc_data *d, uint compact, uint opcode)
         len += x86_ord_mnem(buf+len, sizeof(buf)-len, p->ord);
         cols[count++] = x86_new_column(4, buf);
     }
-
-    uint enc = x86_enc_leading(d->enc);
 
     buf[(len = 0)] = '\0';
     len += x86_format_enc(buf, sizeof(buf), d);
@@ -1575,7 +1573,7 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     return nbytes;
 }
 
-x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
+static x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
 {
     x86_operands q;
     memset(&q, 0, sizeof(q));
@@ -1677,7 +1675,7 @@ x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
     return q;
 }
 
-uint x86_codec_addr_size(x86_codec *c)
+static uint x86_codec_addr_size(x86_codec *c)
 {
     /* todo - handle address size prefix */
     if (x86_codec_is32(c)) return x86_opr_size_32;
@@ -1685,7 +1683,7 @@ uint x86_codec_addr_size(x86_codec *c)
     return x86_opr_size_16;
 }
 
-const char* x86_ptr_size_str(uint sz)
+static const char* x86_ptr_size_str(uint sz)
 {
     switch (sz) {
     case x86_opr_size_8: return "byte ptr ";
@@ -1700,7 +1698,7 @@ const char* x86_ptr_size_str(uint sz)
     }
 }
 
-int x86_opr_mem_size(uint opr)
+static int x86_opr_mem_size(uint opr)
 {
     switch (opr & x86_opr_mem_mask) {
     case x86_opr_m8: return x86_opr_size_8;
@@ -1758,7 +1756,7 @@ static uint x86_opr_ec_mult(uint opr)
     return 0;
 }
 
-uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
+static uint x86_opr_reg_size(x86_codec *c, x86_operands q, uint opr, uint enc)
 {
     uint oprty = (opr & x86_opr_type_mask);
     uint oprsz = (opr & x86_opr_size_mask);
@@ -2169,39 +2167,39 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     return len;
 }
 
-size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
         &x86_opr_formats_intel_dec);
 }
 
-size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     return x86_opr_intel_mrm_str_internal(buf, buflen, c, q, opr, enc,
         &x86_opr_formats_intel_hex);
 }
 
-size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.r);
 }
 
-size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.v);
 }
 
-size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     return x86_opr_intel_reg_sized_str(buf, buflen, c, q, opr, enc, q.b);
 }
 
-size_t x86_opr_intel_is4_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_is4_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint reg = (c->imm32 >> 4) & 15;
@@ -2238,21 +2236,21 @@ static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen, x86_codec
     }
 }
 
-size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
     return x86_opr_intel_imm_str_internal(buf, buflen, c, q, opr, enc,
         &x86_opr_formats_intel_hex);
 }
 
-size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
     return x86_opr_intel_imm_str_internal(buf, buflen, c, q, opr, enc,
         &x86_opr_formats_intel_dec);
 }
 
-size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q,  uint opr, uint enc)
 {
     int imm = c->imm2;
@@ -2260,7 +2258,7 @@ size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
-size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     int imm = c->imm2;
@@ -2268,7 +2266,7 @@ size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
-uint x86_opr_intel_const_reg(x86_codec *c,
+static uint x86_opr_intel_const_reg(x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
@@ -2302,7 +2300,7 @@ uint x86_opr_intel_const_reg(x86_codec *c,
     return -1;
 }
 
-size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
+static size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     x86_operands q, uint opr, uint enc)
 {
     uint regsz = x86_opr_reg_size(c, q, opr, enc);
@@ -2427,7 +2425,7 @@ enum {
     x86_enc_tpm_mask  = x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask
 };
 
-x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c, x86_opc_data k, int w)
+static x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c, x86_opc_data k, int w)
 {
     x86_opc_data *r = NULL;
     /* key is type+prefix+map with substituted rexw=w flag */
@@ -2683,6 +2681,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             case x86_pfx_f3: k.enc |= x86_enc_p_f3; break;
             }
             state = x86_state_done;
+            (void)l; /* l can be added to the index key */
             break;
         default:
             abort();

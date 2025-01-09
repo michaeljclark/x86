@@ -11,7 +11,6 @@ size_t x86_disasm_decode(x86_ctx *ctx, uchar *insn, size_t insnlen)
 {
     x86_buffer buf;
     x86_codec codec;
-    char str[128];
     size_t nbytes = 0, offset = 0, count = 0;
 
     x86_buffer_init_ex(&buf, insn, 0, insnlen);

@@ -570,26 +570,26 @@ enum x86_enc
     x86_enc_param_mask       = x86_enc_immediate_mask | x86_enc_suffix_mask
 };
 
-static uint x86_enc_width(uint enc) { return (enc & x86_enc_w_mask); }
-static uint x86_enc_prefix(uint enc) { return (enc & x86_enc_prexw_mask); }
-static uint x86_enc_length(uint enc) { return (enc & x86_enc_l_mask); }
-static uint x86_enc_opcode(uint enc) { return (enc & x86_enc_o_mask); }
-static uint x86_enc_func(uint enc) { return (enc & x86_enc_f_mask); }
-static uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
-static uint x86_enc_imm(uint enc) { return (enc & x86_enc_i_mask); }
-static uint x86_enc_imm2(uint enc) { return (enc & x86_enc_j_mask); }
-static uint x86_enc_type(uint enc) { return (enc & x86_enc_t_mask); }
-static uint x86_enc_suffix(uint enc) { return (enc & x86_enc_suffix_mask); }
-static uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
-static uint x86_enc_has_rep(uint enc) { return (enc & x86_enc_r_rep); }
-static uint x86_enc_has_lock(uint enc) { return (enc & x86_enc_r_lock); }
-static uint x86_enc_has_norexb(uint enc) { return (enc & x86_enc_r_norexb); }
-static uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o16; }
-static uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o32; }
-static uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o64; }
-static uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a16; }
-static uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a32; }
-static uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a64; }
+static inline uint x86_enc_width(uint enc) { return (enc & x86_enc_w_mask); }
+static inline uint x86_enc_prefix(uint enc) { return (enc & x86_enc_prexw_mask); }
+static inline uint x86_enc_length(uint enc) { return (enc & x86_enc_l_mask); }
+static inline uint x86_enc_opcode(uint enc) { return (enc & x86_enc_o_mask); }
+static inline uint x86_enc_func(uint enc) { return (enc & x86_enc_f_mask); }
+static inline uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
+static inline uint x86_enc_imm(uint enc) { return (enc & x86_enc_i_mask); }
+static inline uint x86_enc_imm2(uint enc) { return (enc & x86_enc_j_mask); }
+static inline uint x86_enc_type(uint enc) { return (enc & x86_enc_t_mask); }
+static inline uint x86_enc_suffix(uint enc) { return (enc & x86_enc_suffix_mask); }
+static inline uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
+static inline uint x86_enc_has_rep(uint enc) { return (enc & x86_enc_r_rep); }
+static inline uint x86_enc_has_lock(uint enc) { return (enc & x86_enc_r_lock); }
+static inline uint x86_enc_has_norexb(uint enc) { return (enc & x86_enc_r_norexb); }
+static inline uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o16; }
+static inline uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o32; }
+static inline uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o64; }
+static inline uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a16; }
+static inline uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a32; }
+static inline uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a64; }
 
 /*
  * operand encoding
@@ -1068,46 +1068,46 @@ struct x86_codec
  * codec fields and flags
  */
 
-static int x86_codec_field_ce(x86_codec *c) {
+static inline int x86_codec_field_ce(x86_codec *c) {
     return (c->flags & x86_ce_mask);
 }
-static int x86_codec_field_cm(x86_codec *c) {
+static inline int x86_codec_field_cm(x86_codec *c) {
     return (c->flags & x86_cm_mask);
 }
-static int x86_codec_field_ci(x86_codec *c) {
+static inline int x86_codec_field_ci(x86_codec *c) {
     return (c->flags & x86_ci_mask);
 }
-static int x86_codec_field_cj(x86_codec *c) {
+static inline int x86_codec_field_cj(x86_codec *c) {
     return (c->flags & x86_cj_mask);
 }
-static int x86_codec_has_wait(x86_codec *c) {
+static inline int x86_codec_has_wait(x86_codec *c) {
     return (c->flags & x86_cp_wait) != 0;
 }
-static int x86_codec_has_lock(x86_codec *c) {
+static inline int x86_codec_has_lock(x86_codec *c) {
     return (c->flags & x86_cp_lock) != 0;
 }
-static int x86_codec_has_rep(x86_codec *c) {
+static inline int x86_codec_has_rep(x86_codec *c) {
     return (c->flags & x86_cp_rep) != 0;
 }
-static int x86_codec_has_repne(x86_codec *c) {
+static inline int x86_codec_has_repne(x86_codec *c) {
     return (c->flags & x86_cp_repne) != 0;
 }
-static int x86_codec_has_osize(x86_codec *c) {
+static inline int x86_codec_has_osize(x86_codec *c) {
     return (c->flags & x86_cp_osize) != 0;
 }
-static int x86_codec_has_asize(x86_codec *c) {
+static inline int x86_codec_has_asize(x86_codec *c) {
     return (c->flags & x86_cp_asize) != 0;
 }
-static int x86_codec_has_modrm(x86_codec *c) {
+static inline int x86_codec_has_modrm(x86_codec *c) {
     return (c->flags & x86_cf_modrm) != 0;
 }
-static int x86_codec_is16(x86_codec *c) {
+static inline int x86_codec_is16(x86_codec *c) {
     return (c->flags & (x86_cf_ia32|x86_cf_amd64)) == 0;
 }
-static int x86_codec_is32(x86_codec *c) {
+static inline int x86_codec_is32(x86_codec *c) {
     return (c->flags & x86_cf_ia32) != 0;
 }
-static int x86_codec_is64(x86_codec *c) {
+static inline int x86_codec_is64(x86_codec *c) {
     return (c->flags & x86_cf_amd64) != 0;
 }
 
@@ -1122,13 +1122,13 @@ enum x86_modes
     x86_modes_64 = (1 << 2),
 };
 
-static int x86_mode_has16(uint mode) {
+static inline int x86_mode_has16(uint mode) {
     return (mode & x86_modes_16) != 0;
 }
-static int x86_mode_has32(uint mode) {
+static inline int x86_mode_has32(uint mode) {
     return (mode & x86_modes_32) != 0;
 }
-static int x86_mode_has64(uint mode) {
+static inline int x86_mode_has64(uint mode) {
     return (mode & x86_modes_64) != 0;
 }
 
@@ -1412,17 +1412,17 @@ struct x86_acc_entry
  * opcode acceleration functions
  */
 
-static uint x86_acc_page(uint type, uint prefix, uint map)
+static inline uint x86_acc_page(uint type, uint prefix, uint map)
 {
     return (type & 3) | ((prefix & 15) << 2) | ((map & 7) << 6);
 }
 
-static size_t x86_acc_offset(x86_acc_idx *idx, size_t acc_page)
+static inline size_t x86_acc_offset(x86_acc_idx *idx, size_t acc_page)
 {
     return (size_t)idx->page_offsets[acc_page] << 8;
 }
 
-static x86_acc_entry* x86_acc_lookup(x86_acc_idx *idx, size_t offset)
+static inline x86_acc_entry* x86_acc_lookup(x86_acc_idx *idx, size_t offset)
 {
     return idx->acc + offset;
 }
@@ -1593,9 +1593,9 @@ size_t x86_opr_name(char * buf, size_t len, uint opr);
 size_t x86_enc_name(char * buf, size_t len, uint enc);
 const char* x86_reg_name(uint reg);
 
-char * x86_table_type_name(uint type);
-char * x86_table_map_name(uint map);
-char * x86_table_prefix_name(uint prefix);
+const char * x86_table_type_name(uint type);
+const char * x86_table_map_name(uint map);
+const char * x86_table_prefix_name(uint prefix);
 
 int x86_enc_filter_rex(x86_rex prefix, uint enc);
 int x86_enc_filter_rex2(x86_rex2 prefix, uint enc);
@@ -1603,7 +1603,7 @@ int x86_enc_filter_vex2(x86_vex2 prefix, uint enc);
 int x86_enc_filter_vex3(x86_vex3 prefix, uint enc);
 int x86_enc_filter_evex(x86_evex prefix, uint enc);
 
-x86_table_idx x86_opc_table_identity();
+x86_table_idx x86_opc_table_identity(void);
 x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort);
 x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes);
 x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
