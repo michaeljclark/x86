@@ -1849,19 +1849,6 @@ static uint x86_regsz_bytes(uint regsz)
     return 1;
 }
 
-static const struct x86_mod_data { ushort r8, rw, b, x; } x86_mod_real[8] =
-{
-    /* todo - handle real mode base index encoding */
-    { x86_al,   x86_ax,   x86_bx,   x86_si   },
-    { x86_cl,   x86_cx,   x86_bx,   x86_di   },
-    { x86_dl,   x86_dx,   x86_bp,   x86_si   },
-    { x86_bl,   x86_bx,   x86_bp,   x86_di   },
-    { x86_ah,   x86_sp,   x86_si,   x86_none },
-    { x86_ch,   x86_bp,   x86_di,   x86_none },
-    { x86_dh,   x86_si,   x86_bp,   x86_none },
-    { x86_bh,   x86_di,   x86_bx,   x86_none },
-};
-
 x86_opr_formats x86_opr_formats_intel_hex =
 {
     .ptr_rip                        = "%s[rip]",
