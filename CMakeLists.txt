@@ -14,13 +14,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #
 file(GLOB x86_metadata data/*.csv)
 
-LIST(APPEND x86_gen_opt --print-reg-enum --print-reg-strings
-    --print-opcode-enum --print-opcode-strings --print-opcode-table
-    --print-operand-table --print-order-table)
-
-LIST(APPEND x86_gen_src x86_reg_enum.inc x86_reg_strings.inc
-    x86_op_enum.inc x86_op_strings.inc x86_opc_table.inc
-    x86_opr_table.inc x86_ord_table.inc)
+LIST(APPEND x86_gen_opt --print-opcode-enums --print-opcode-tables)
+LIST(APPEND x86_gen_src x86_opc_enums.inc x86_opc_tables.inc)
 
 foreach(gen_opt gen_src IN ZIP_LISTS x86_gen_opt x86_gen_src)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/gen/${gen_src}

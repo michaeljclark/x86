@@ -3,11 +3,7 @@
 
 #include "x86.h"
 
-#include "x86_reg_strings.inc"
-#include "x86_opc_table.inc"
-#include "x86_opr_table.inc"
-#include "x86_ord_table.inc"
-#include "x86_op_strings.inc"
+#include "x86_opc_tables.inc"
 
 #define array_size(arr) sizeof(arr)/sizeof(arr[0])
 

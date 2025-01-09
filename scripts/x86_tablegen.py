@@ -24,26 +24,6 @@ cc_all =      [ 'EQ', 'NEQ', 'GT', 'NLE', 'GE', 'NLT', 'LT', 'NGE', 'LE', 'NGT',
 cc_signed =   [ 'EQ', 'GE', 'GT', 'LE', 'LT', 'NEQ', 'NGT', 'NLE', 'NLT' ]
 cc_unsigned = [ 'EQ', 'AE', 'A',  'BE', 'B',  'NEQ', 'NA',  'NBE', 'NB' ]
 
-def print_reg_strings(t):
-    print("const char* x86_reg_names[512] =\n{")
-    for i,s,f in t:
-        n = s.replace("(","").replace(")","")
-        if len(s) == 0:
-            print()
-        else:
-            print("    %-12s = \"%s\"," % ("[x86_%s]" % n, s))
-    print("};")
-
-def print_reg_enum(t):
-    print("enum x86_reg\n{")
-    for i,s,f in t:
-        n = s.replace("(","").replace(")","")
-        if len(s) == 0:
-            print()
-        else:
-            print("    %-10s = %s," % ("x86_%s" % n, "x86_%s | %d" % (f, i)))
-    print("};")
-
 def gen_range(fmt,f,s,e):
     t = []
     for i in range(s,e):
@@ -474,55 +454,62 @@ def order_list(x86_insn):
         ordset.add(tuple(translate_order(order)))
     return sorted(ordset)
 
-def print_opcode_enum(x86_insn):
-    oplist = opcode_list(x86_insn)
+def print_opcode_enums(x86_reg, x86_insn):
+    print("enum x86_reg\n{")
+    for i,s,f in x86_reg:
+        n = s.replace("(","").replace(")","")
+        if len(s) == 0:
+            print()
+        else:
+            print("    %-10s = %s," % ("x86_%s" % n, "x86_%s | %d" % (f, i)))
+    print("};")
     print("enum x86_op\n{")
-    for op in oplist:
+    for op in opcode_list(x86_insn):
         print('    x86_op_' + op + ',')
     print("};")
 
-def print_opcode_strings(x86_insn):
+def print_opcode_tables(x86_reg, x86_insn):
     oplist = opcode_list(x86_insn)
-    print('const size_t x86_op_names_size = %d;' % (len(oplist)))
-    print("const char* x86_op_names[] =\n{")
-    for op in oplist:
-        print('    "' + op.lower() + '",')
-    print("};")
-
-def print_opcode_table(x86_insn):
-    print('const size_t x86_opc_table_size = %d;' % (len(x86_insn) + 1))
-    print("const x86_opc_data x86_opc_table[] =\n{")
-    print('  { x86_op_NIL, 0, 0, 0,\n    0, { } },')
     oprlist = operand_list(x86_insn)
     ordlist = order_list(x86_insn)
+    print('const size_t x86_opc_table_size = %d;' % (len(x86_insn) + 1))
+    print("const x86_opc_data x86_opc_table[] =\n{")
+    print('  { x86_op_NIL, 0, 0, 0, 0, { } },')
     oprmap = {v: i for i, v in enumerate(oprlist)}
     ordmap = {v: i for i, v in enumerate(ordlist)}
     for idx, row in enumerate(x86_insn):
         opcode, encoding, modes, ext, order, tupletype, description = row
         op, opr = split_opcode(opcode)
-        oprlist = translate_operands(opr)
-        ordlist = translate_order(order)
+        oprl = translate_operands(opr)
+        ordl = translate_order(order)
         modes = translate_modes(modes)
         enc, opc, opm = translate_encoding(encoding)
-        print('  { %s, %s, %d, %d,\n    %s, { %s, %s }, { %s, %s } },' %
-            ('x86_op_%s' % op, modes, oprmap[tuple(oprlist)],
-                ordmap[tuple(ordlist)], enc, opc[0], opc[1], opm[0], opm[1]))
+        print('  { %s, %s, %d, %d, %s, { { %s, %s } }, { { %s, %s } } },' %
+            ('x86_op_%s' % op, modes, oprmap[tuple(oprl)],
+                ordmap[tuple(ordl)], enc, opc[0], opc[1], opm[0], opm[1]))
     print("};")
-
-def print_operand_table(x86_insn):
-    oprlist = operand_list(x86_insn)
     print('const size_t x86_opr_table_size = %d;' % (len(oprlist)))
     print("const x86_opr_data x86_opr_table[] =\n{")
     for x in oprlist:
         print('  { { %s } },' % (", ".join(x)))
     print("};")
-
-def print_order_table(x86_insn):
-    ordlist = order_list(x86_insn)
     print('const size_t x86_ord_table_size = %d;' % (len(ordlist)))
     print("const x86_ord_data x86_ord_table[] =\n{")
     for x in ordlist:
         print('  { { %s } },' % (", ".join(x)))
+    print("};")
+    print('const size_t x86_op_names_size = %d;' % (len(oplist)))
+    print("const char* x86_op_names[] =\n{")
+    for op in oplist:
+        print('    "' + op.lower() + '",')
+    print("};")
+    print("const char* x86_reg_names[512] =\n{")
+    for i,s,f in x86_reg:
+        n = s.replace("(","").replace(")","")
+        if len(s) == 0:
+            print()
+        else:
+            print("    %-12s = \"%s\"," % ("[x86_%s]" % n, s))
     print("};")
 
 def read_data(files):
@@ -665,13 +652,8 @@ parser = argparse.ArgumentParser(description='x86 table generator')
 parser.add_argument('files', nargs='*', default='data/*.csv', help='x86 csv metadata')
 parser.add_argument('--print-insn', default=False, action='store_true', help='print instructions')
 parser.add_argument('--print-fancy-insn', default=False, action='store_true', help='print fancy instructions')
-parser.add_argument('--print-opcode-enum', default=False, action='store_true', help='print opcode enum')
-parser.add_argument('--print-opcode-strings', default=False, action='store_true', help='print opcode strings')
-parser.add_argument('--print-opcode-table', default=False, action='store_true', help='print opcode table')
-parser.add_argument('--print-operand-table', default=False, action='store_true', help='print operand table')
-parser.add_argument('--print-order-table', default=False, action='store_true', help='print order table')
-parser.add_argument('--print-reg-enum', default=False, action='store_true', help='print register enum')
-parser.add_argument('--print-reg-strings', default=False, action='store_true', help='print register strings')
+parser.add_argument('--print-opcode-enums', default=False, action='store_true', help='print register enum')
+parser.add_argument('--print-opcode-tables', default=False, action='store_true', help='print register strings')
 args = parser.parse_args()
 
 x86_reg = reg_table()
@@ -683,17 +665,7 @@ if args.print_insn:
     print_insn(x86_insn)
 if args.print_fancy_insn:
     print_fancy_insn(x86_desc)
-if args.print_opcode_enum:
-    print_opcode_enum(x86_insn)
-if args.print_opcode_strings:
-    print_opcode_strings(x86_insn)
-if args.print_opcode_table:
-    print_opcode_table(x86_insn)
-if args.print_operand_table:
-    print_operand_table(x86_insn)
-if args.print_order_table:
-    print_order_table(x86_insn)
-if args.print_reg_enum:
-    print_reg_enum(x86_reg)
-if args.print_reg_strings:
-    print_reg_strings(x86_reg)
+if args.print_opcode_enums:
+    print_opcode_enums(x86_reg, x86_insn)
+if args.print_opcode_tables:
+    print_opcode_tables(x86_reg, x86_insn)

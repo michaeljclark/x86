@@ -1620,5 +1620,4 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len, siz
  * registers sand opcodes
  */
 
-#include "x86_reg_enum.inc"
-#include "x86_op_enum.inc"
+#include "x86_opc_enums.inc"
