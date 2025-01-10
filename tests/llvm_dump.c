@@ -20,7 +20,7 @@ static buffer parse_hex(int argc, char **argv)
 {
     uint8_t *data = malloc(argc);
     for (size_t i = 0; i < argc; i++) {
-        int x = 0;
+        unsigned x = 0;
         sscanf(argv[i], "%x", &x);
         data[i] = (uint8_t)x;
     }

@@ -31,7 +31,6 @@
 
 #define array_size(arr) sizeof(arr)/sizeof(arr[0])
 
-typedef enum x86_state x86_state;
 typedef struct x86_table_col x86_table_col;
 typedef struct x86_map_str x86_map_str;
 typedef struct x86_operands x86_operands;
@@ -506,7 +505,7 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
     const char codes[8] = " -irmvo ";
     size_t count = 0;
     for (size_t i = 0; i < array_size(x86_ord_table[0].ord) && ord[i]; i++) {
-        uint type = ord[i] & 0b111;
+        uint type = ord[i] & x86_ord_type_mask;
         if (buf && count < len) {
             buf[count++] = codes[type];
         }
@@ -1783,7 +1782,7 @@ static uint x86_opr_ew_size(uint opr)
 
 static uint x86_opr_ec_mult(uint opr)
 {
-    switch((opr & x86_opr_ec_mask)) {
+    switch(opr & x86_opr_ec_mask) {
     case x86_opr_ec_x1: return 1;
     case x86_opr_ec_x2: return 2;
     case x86_opr_ec_x4: return 4;
@@ -2532,7 +2531,7 @@ static x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c, x86_opc_data k,
 int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
     size_t *len, size_t limit)
 {
-    x86_state state = x86_state_top;
+    uint state = x86_state_top;
     size_t nbytes = 0;
     uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
     x86_opc_data k = { 0 }, *r = NULL;

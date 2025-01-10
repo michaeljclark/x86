@@ -474,7 +474,7 @@ def print_opcode_tables(x86_reg, x86_insn):
     ordlist = order_list(x86_insn)
     print('const size_t x86_opc_table_size = %d;' % (len(x86_insn) + 1))
     print("const x86_opc_data x86_opc_table[] =\n{")
-    print('  { x86_op_NIL, 0, 0, 0, 0, { } },')
+    print('  { x86_op_NIL, 0, 0, 0, 0, { { 0, 0 } }, { { 0, 0 } } },')
     oprmap = {v: i for i, v in enumerate(oprlist)}
     ordmap = {v: i for i, v in enumerate(ordlist)}
     for idx, row in enumerate(x86_insn):
@@ -491,11 +491,13 @@ def print_opcode_tables(x86_reg, x86_insn):
     print('const size_t x86_opr_table_size = %d;' % (len(oprlist)))
     print("const x86_opr_data x86_opr_table[] =\n{")
     for x in oprlist:
+        x = ['0'] if not x else x
         print('  { { %s } },' % (", ".join(x)))
     print("};")
     print('const size_t x86_ord_table_size = %d;' % (len(ordlist)))
     print("const x86_ord_data x86_ord_table[] =\n{")
     for x in ordlist:
+        x = ['0'] if not x else x
         print('  { { %s } },' % (", ".join(x)))
     print("};")
     print('const size_t x86_op_names_size = %d;' % (len(oplist)))
