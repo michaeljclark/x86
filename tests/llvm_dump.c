@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     int ret = 0;
     if (buf.data && buf.length) {
         LLVMDisasmContextRef ctx =  LLVMCreateDisasmCPUFeatures
-            ("x86_64", "", "", NULL, 0, NULL, NULL);
+            (triple, "", "", NULL, 0, NULL, NULL);
         ret = disasm_dump(ctx, buf.data, buf.length, show_off, show_hex);
         LLVMDisasmDispose(ctx);
     }
