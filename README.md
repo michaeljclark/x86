@@ -9,7 +9,7 @@ disassembler using revised instruction set metadata which encodes
 legacy instructions using a parameterized LEX (legacy extension) format.
 
 - metadata driven disassembler with LLVM style output.
-- written in C99 for compatibility with projects written in pure C.
+- written in C11 for compatibility with projects written in pure C.
 - low-level instruction encoder and decoder uses <= 32-bytes.
 - python tablegen program to generate C tables from CSV metadata.
 - metadata table tool to inspect operand encode and decode tables.
