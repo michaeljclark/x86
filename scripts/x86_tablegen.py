@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import sys
 import csv
 import glob
 import string
@@ -516,7 +517,9 @@ def print_opcode_tables(x86_reg, x86_insn):
 
 def read_data(files):
     data = []
-    for csvpath in glob.glob(files):
+    if not isinstance(files, list):
+        files = glob.glob(files)
+    for csvpath in files:
         file = open(csvpath, encoding='utf-8-sig', newline='')
         reader = csv.DictReader(file, delimiter=',', quotechar='"')
         for row in reader:
@@ -656,6 +659,7 @@ parser.add_argument('--print-insn', default=False, action='store_true', help='pr
 parser.add_argument('--print-fancy-insn', default=False, action='store_true', help='print fancy instructions')
 parser.add_argument('--print-opcode-enums', default=False, action='store_true', help='print register enum')
 parser.add_argument('--print-opcode-tables', default=False, action='store_true', help='print register strings')
+parser.add_argument('--output-file', type=argparse.FileType('w'), help="filename to write output to")
 args = parser.parse_args()
 
 x86_reg = reg_table()
@@ -663,6 +667,8 @@ x86_insn = read_data(args.files)
 x86_desc_tab = parse_table(read_file('doc/x86_desc.md'))
 x86_desc = { 'tab': x86_desc_tab, 'insn': make_map(x86_insn) }
 
+if args.output_file:
+    sys.stdout = args.output_file
 if args.print_insn:
     print_insn(x86_insn)
 if args.print_fancy_insn:
