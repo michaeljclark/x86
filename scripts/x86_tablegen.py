@@ -455,65 +455,66 @@ def order_list(x86_insn):
         ordset.add(tuple(translate_order(order)))
     return sorted(ordset)
 
+opcode_enums_template = """/* generated source */
+enum x86_reg\n{%s};
+enum x86_op\n{%s};"""
+
+opcode_table_template = """/* generated source */
+const size_t x86_opc_table_size = %d;
+const size_t x86_opr_table_size = %d;
+const size_t x86_ord_table_size = %d;
+const size_t x86_op_names_size = %d;
+const x86_opc_data x86_opc_table[] =\n{
+  { x86_op_NIL, 0, 0, 0, 0, { { 0, 0 } }, { { 0, 0 } } },%s};
+const x86_opr_data x86_opr_table[] =\n{%s};
+const x86_ord_data x86_ord_table[] =\n{%s};
+const char* x86_op_names[] =\n{%s};
+const char* x86_reg_names[512] =\n{%s};"""
+
 def print_opcode_enums(x86_reg, x86_insn):
-    print("enum x86_reg\n{")
+    regstr, opstr = '\n', '\n'
     for i,s,f in x86_reg:
-        n = s.replace("(","").replace(")","")
-        if len(s) == 0:
-            print()
-        else:
-            print("    %-10s = %s," % ("x86_%s" % n, "x86_%s | %d" % (f, i)))
-    print("};")
-    print("enum x86_op\n{")
+        n = s.replace('(','').replace(')','')
+        regstr += '\n' if len(s) == 0 else \
+            '  %-10s = %s,\n' % ('x86_%s' % n, 'x86_%s | %d' % (f, i))
     for op in opcode_list(x86_insn):
-        print('    x86_op_' + op + ',')
-    print("};")
+        opstr += '    x86_op_%s,\n' % op
+    print(opcode_enums_template % (regstr, opstr))
 
 def print_opcode_tables(x86_reg, x86_insn):
     oplist = opcode_list(x86_insn)
     oprlist = operand_list(x86_insn)
     ordlist = order_list(x86_insn)
-    print('const size_t x86_opc_table_size = %d;' % (len(x86_insn) + 1))
-    print("const x86_opc_data x86_opc_table[] =\n{")
-    print('  { x86_op_NIL, 0, 0, 0, 0, { { 0, 0 } }, { { 0, 0 } } },')
     oprmap = {v: i for i, v in enumerate(oprlist)}
     ordmap = {v: i for i, v in enumerate(ordlist)}
+    opcstr, oprstr, ordstr, opsstr, regstr = '\n', '\n', '\n', '\n', '\n'
     for idx, row in enumerate(x86_insn):
         opcode, encoding, modes, ext, order, tupletype, description = row
         op, opr = split_opcode(opcode)
         oprl = translate_operands(opr)
         ordl = translate_order(order)
+        oprc = oprmap[tuple(oprl)]
+        ordc = ordmap[tuple(ordl)]
         modes = translate_modes(modes)
         enc, opc, opm = translate_encoding(encoding)
-        print('  { %s, %s, %d, %d, %s, { { %s, %s } }, { { %s, %s } } },' %
-            ('x86_op_%s' % op, modes, oprmap[tuple(oprl)],
-                ordmap[tuple(ordl)], enc, opc[0], opc[1], opm[0], opm[1]))
-    print("};")
-    print('const size_t x86_opr_table_size = %d;' % (len(oprlist)))
-    print("const x86_opr_data x86_opr_table[] =\n{")
+        opcstr += '  { %s, %s, %d, %d, %s, { %s }, { %s } },\n' % \
+            ('x86_op_%s' % op, modes, oprc, ordc, enc,
+                '{ %s, %s }' % (opc[0], opc[1]),
+                '{ %s, %s }' % (opm[0], opm[1]))
     for x in oprlist:
-        x = ['0'] if not x else x
-        print('  { { %s } },' % (", ".join(x)))
-    print("};")
-    print('const size_t x86_ord_table_size = %d;' % (len(ordlist)))
-    print("const x86_ord_data x86_ord_table[] =\n{")
+        oprstr += '  { { %s } },\n' % (", ".join(['0'] if not x else x))
     for x in ordlist:
-        x = ['0'] if not x else x
-        print('  { { %s } },' % (", ".join(x)))
-    print("};")
-    print('const size_t x86_op_names_size = %d;' % (len(oplist)))
-    print("const char* x86_op_names[] =\n{")
+        ordstr += '  { { %s } },\n' % (", ".join(['0'] if not x else x))
     for op in oplist:
-        print('    "' + op.lower() + '",')
-    print("};")
-    print("const char* x86_reg_names[512] =\n{")
+        opsstr += '    "' + op.lower() + '",\n'
     for i,s,f in x86_reg:
-        n = s.replace("(","").replace(")","")
-        if len(s) == 0:
-            print()
-        else:
-            print("    %-12s = \"%s\"," % ("[x86_%s]" % n, s))
-    print("};")
+        n = s.replace('(','').replace(')','')
+        regstr += '\n' if len(s) == 0 else \
+                  '    %-12s = \"%s\",\n' % ('[x86_%s]' % n, s)
+    print(opcode_table_template % (
+        len(x86_insn) + 1, len(oprlist), len(ordlist), len(oplist),
+        opcstr, oprstr, ordstr, opsstr, regstr)
+    )
 
 def read_data(files):
     data = []
