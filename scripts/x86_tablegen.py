@@ -20,9 +20,9 @@ seg_r = ["es", "cs", "ss", "ds", "fs", "gs", "seg6", "seg7"]
 sys_r = ["rip", "rflags","fpcsr", "mxcsr"]
 sys_n = ["none"]
 
-cc_all =      [ 'EQ', 'NEQ', 'GT', 'NLE', 'GE', 'NLT', 'LT', 'NGE', 'LE', 'NGT',
-                             'A',  'NBE', 'AE', 'NB',  'B',  'NAE', 'BE', 'NA' ]
-cc_signed =   [ 'EQ', 'GE', 'GT', 'LE', 'LT', 'NEQ', 'NGT', 'NLE', 'NLT' ]
+cc_all = [ 'EQ', 'NEQ', 'GT', 'NLE', 'GE', 'NLT', 'LT', 'NGE', 'LE', 'NGT',
+                        'A',  'NBE', 'AE', 'NB',  'B',  'NAE', 'BE', 'NA' ]
+cc_signed = [ 'EQ', 'GE', 'GT', 'LE', 'LT', 'NEQ', 'NGT', 'NLE', 'NLT' ]
 cc_unsigned = [ 'EQ', 'AE', 'A',  'BE', 'B',  'NEQ', 'NA',  'NBE', 'NB' ]
 
 def gen_range(fmt,f,s,e):
@@ -260,7 +260,8 @@ def cleanup_oprs(args):
     args = list(map(lambda x : 'rw/mw' if x == 'r/m' else x, args))
     for reg in ('k', 'bnd', 'mm', 'xmm', 'ymm', 'zmm'):
         for i in range(0,5):
-            args = list(map(lambda x : x.replace(reg + str(i), reg) if x.find(reg) == 0 else x, args))
+            args = list(map(lambda x : x.replace(reg + str(i), reg) \
+                if x.find(reg) == 0 else x, args))
     args = list(map(lambda x : x.replace(' ', ''), args))
     return args
 
@@ -278,13 +279,13 @@ def cleanup_opcode(opcode):
     else:
         return op
 
-def cleanup_encoding(encoding):
-    encoding = encoding.lower()
-    encoding = encoding.replace('/is4', 'ib')
-    encoding = encoding.replace('0f 38', '0f38')
-    encoding = encoding.replace('0f 3a', '0f3a')
-    encoding = encoding.replace('  ', ' ')
-    return encoding
+def cleanup_encoding(enc):
+    enc = enc.lower()
+    enc = enc.replace('/is4', 'ib')
+    enc = enc.replace('0f 38', '0f38')
+    enc = enc.replace('0f 3a', '0f3a')
+    enc = enc.replace('  ', ' ')
+    return enc
 
 def translate_modes(modes):
     modelist = []
@@ -295,7 +296,7 @@ def translate_modes(modes):
     return "|".join(modelist)
 
 # add 9b, del rex rex.w
-def translate_encoding(encoding):
+def translate_encoding(enc):
     prefixes = [ 'hex', 'lex', 'vex', 'evex' ]
     r_suffixes = [ 'rep', 'lock', 'norexb' ]
     s_suffixes = [ 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
@@ -311,8 +312,9 @@ def translate_encoding(encoding):
     opm = ['0x00','0x00']
     oplen = 0
     has_imm, has_pfx, has_pbyte, has_map = False, False, False, False
-    comps = encoding.split(" ")
+    comps = enc.split(" ")
     for el in comps:
+        is_hex = all(c in string.hexdigits for c in el[0:2])
         p = None
         for sel in prefixes:
             if el.find(sel) == 0 and ( p == None or len(sel) > len(p) ):
@@ -335,7 +337,8 @@ def translate_encoding(encoding):
                 elif sel in flags:
                     vf = 'x86_enc_f_%s' % sel
                 else:
-                    raise Exception("unknown element '%s' for encoding '%s" % (sel, encoding))
+                    raise Exception("unknown element '%s' for encoding"
+                        " '%s" % (sel, enc))
             if vp:
                 pl += [vp]
             if vm:
@@ -361,35 +364,40 @@ def translate_encoding(encoding):
                 if el in { 'ib', 'i16' }:
                     pl += ['x86_enc_j_%s' % el]
                 else:
-                    raise Exception("illegal immediate '%s' for encoding '%s" % (el, encoding))
+                    raise Exception("illegal immediate '%s' for encoding"
+                        " '%s" % (el, enc))
             else:
                 pl += ['x86_enc_i_%s' % el]
                 has_imm = True
         elif el in mods:
             if oplen == 2:
-                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
+                raise Exception("opcode '%s' limit exceeded for encoding"
+                    " '%s" % (el, enc))
             pl += ['x86_enc_f_modrm_r' if el == '/r' else 'x86_enc_f_modrm_n']
             if el != '/r':
                 opc[oplen] = '0x{:02x}'.format(int(el[1]) << 3)
                 opm[oplen] = '0x38'
             oplen += 1
-        elif len(el) == 2 and all(c in string.hexdigits for c in el[0:2]):
+        elif len(el) == 2 and is_hex:
             if oplen == 2:
-                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
+                raise Exception("opcode '%s' limit exceeded for encoding"
+                    " '%s" % (el, enc))
             if oplen == 1:
                 pl += ['x86_enc_f_opcode']
             opc[oplen] = '0x%s' % el[0:2]
             opm[oplen] = '0xff'
             oplen += 1
-        elif len(el) == 4 and all(c in string.hexdigits for c in el[0:2]) and el[2:4] == '+r':
+        elif len(el) == 4 and is_hex and el[2:4] == '+r':
             if oplen == 2:
-                raise Exception("opcode '%s' limit exceeded for encoding '%s" % (el, encoding))
-            pl += ['x86_enc_o_opcode_r' if oplen == 0 else 'x86_enc_f_opcode_r']
+                raise Exception("opcode '%s' limit exceeded for encoding "
+                    "'%s" % (el, enc))
+            pl += ['x86_enc_%s_opcode_r' % ('o' if oplen == 0 else 'f')]
             opc[oplen] = '0x%s' % el[0:2]
             opm[oplen] = '0xf8'
             oplen += 1
         else:
-            raise Exception("unknown element '%s' for encoding '%s" % (el, encoding))
+            raise Exception("unknown element '%s' for encoding "
+                "'%s" % (el, enc))
     return "|".join(pl), opc, opm
 
 def translate_operands(operands):
@@ -417,25 +425,24 @@ def translate_operands(operands):
     return oprlist
 
 def translate_order(order):
-    orderlist = []
+    ol = []
     if order:
-        for o1 in order.split(','):
-            o1 = o1.replace(':','_')
-            order = o1.replace('[','_')
-            o1 = o1.replace(']','')
-            orderlist.append("|".join(map(lambda x: 'x86_ord_' + x, o1.split('/'))))
-    return orderlist
+        for o in order.split(','):
+            o = o.replace(':','_')
+            ol.append("|".join(map(lambda x: 'x86_ord_' + x, o.split('/'))))
+    return ol
 
 def print_insn(x86_insn):
     for row in x86_insn:
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         opcode = opcode.replace('reg_','')
-        print("| %-53s | %-31s | %-23s | %-8s |" % (opcode, encoding, order, modes))
+        print("| %-53s | %-31s | %-23s | %-8s |" % \
+            (opcode, enc, order, modes))
 
 def opcode_list(x86_insn):
     ops = set()
     for row in x86_insn:
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         op, opr = split_opcode(opcode)
         ops.add(op)
     return ['NIL'] + sorted(ops)
@@ -443,7 +450,7 @@ def opcode_list(x86_insn):
 def operand_list(x86_insn):
     oprset = set()
     for idx, row in enumerate(x86_insn):
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         op, opr = split_opcode(opcode)
         oprset.add(tuple(translate_operands(opr)))
     return sorted(oprset)
@@ -451,7 +458,7 @@ def operand_list(x86_insn):
 def order_list(x86_insn):
     ordset = set()
     for idx, row in enumerate(x86_insn):
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         ordset.add(tuple(translate_order(order)))
     return sorted(ordset)
 
@@ -489,14 +496,14 @@ def print_opcode_tables(x86_reg, x86_insn):
     ordmap = {v: i for i, v in enumerate(ordlist)}
     opcstr, oprstr, ordstr, opsstr, regstr = '\n', '\n', '\n', '\n', '\n'
     for idx, row in enumerate(x86_insn):
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         op, opr = split_opcode(opcode)
         oprl = translate_operands(opr)
         ordl = translate_order(order)
         oprc = oprmap[tuple(oprl)]
         ordc = ordmap[tuple(ordl)]
         modes = translate_modes(modes)
-        enc, opc, opm = translate_encoding(encoding)
+        enc, opc, opm = translate_encoding(enc)
         opcstr += '  { %s, %s, %d, %d, %s, { %s }, { %s } },\n' % \
             ('x86_op_%s' % op, modes, oprc, ordc, enc,
                 '{ %s, %s }' % (opc[0], opc[1]),
@@ -532,13 +539,13 @@ def read_data(files):
     insn = []
     for row in data:
         opcode = cleanup_opcode(row['Instruction'])
-        encoding = cleanup_encoding(row['Opcode'])
+        enc = cleanup_encoding(row['Opcode'])
         modes = x86_mode(row)
         ext = row['Feature Flags']
         order = x86_operand(opcode,row)
-        tupletype = row['Tuple Type']
-        description = row['Description']
-        insn += [[opcode, encoding, modes, ext, order, tupletype, description]]
+        tt = row['Tuple Type']
+        desc = row['Description']
+        insn += [[opcode, enc, modes, ext, order, tt, desc]]
     return insn
 
 def parse_table(rows):
@@ -583,7 +590,7 @@ def read_file(file_path):
 def make_map(x86_insn):
     insn_map = dict()
     for row in x86_insn:
-        opcode, encoding, modes, ext, order, tupletype, description = row
+        opcode, enc, modes, ext, order, tt, desc = row
         op, opr = split_opcode(opcode)
         if op not in insn_map:
             insn_map[op] = list()
@@ -633,15 +640,19 @@ def table_data_insn(self,x86_desc):
         insn_list.append(insn)
     if len(insn_list) > 0:
         text += "\n"
-        text += "| %-51s | %-29s | %-23s | %-8s |\n" % ("opcode", "encoding", "order", "modes")
-        text += "|:%-51s-|:%-29s-|:%-23s-|:%-8s-|\n" % ("-"*51, "-"*29, "-"*23, "-"*8)
+        text += "| %-51s | %-29s | %-23s | %-8s |\n" % \
+            ("opcode", "encoding", "order", "modes")
+        text += "|:%-51s-|:%-29s-|:%-23s-|:%-8s-|\n" % \
+            ("-"*51, "-"*29, "-"*23, "-"*8)
         for insn_name in insn_list:
             if insn_name in insn_map:
                 for row in insn_map[insn_name]:
-                    opcode, encoding, modes, ext, order, tupletype, description = row
+                    opcode, enc, modes, ext, order, tt, desc = row
                     opcode = opcode.replace('reg_','')
-                    text += "| %-51s | %-29s | %-23s | %-8s |\n" % (opcode, encoding, order, modes)
-        text += "|:%-51s-|:%-29s-|:%-23s-|:%-8s-|\n" % ("-"*51, "-"*29, "-"*23, "-"*8)
+                    text += "| %-51s | %-29s | %-23s | %-8s |\n" % \
+                        (opcode, enc, order, modes)
+        text += "|:%-51s-|:%-29s-|:%-23s-|:%-8s-|\n" % \
+            ("-"*51, "-"*29, "-"*23, "-"*8)
     text += "\n\n"
     return "%s %s\n%s" % ("[%s]" % insn, "# %s" % desc, text)
 
@@ -655,12 +666,23 @@ def print_fancy_insn(x86_desc):
         print(table_insn[type(obj)](obj, x86_desc), end="")
 
 parser = argparse.ArgumentParser(description='x86 table generator')
-parser.add_argument('files', nargs='*', default='data/*.csv', help='x86 csv metadata')
-parser.add_argument('--print-insn', default=False, action='store_true', help='print instructions')
-parser.add_argument('--print-fancy-insn', default=False, action='store_true', help='print fancy instructions')
-parser.add_argument('--print-opcode-enums', default=False, action='store_true', help='print register enum')
-parser.add_argument('--print-opcode-tables', default=False, action='store_true', help='print register strings')
-parser.add_argument('--output-file', type=argparse.FileType('w'), help="filename to write output to")
+parser.add_argument('files',
+                    default='data/*.csv', nargs='*',
+                    help='x86 csv metadata')
+parser.add_argument('--print-insn',
+                    default=False, action='store_true',
+                    help='print instructions')
+parser.add_argument('--print-fancy-insn',
+                    default=False, action='store_true',
+                    help='print fancy instructions')
+parser.add_argument('--print-opcode-enums',
+                    default=False, action='store_true',
+                    help='print register enum')
+parser.add_argument('--print-opcode-tables',
+                    default=False, action='store_true',
+                    help='print register strings')
+parser.add_argument('--output-file', type=argparse.FileType('w'),
+                    help="filename to write output to")
 args = parser.parse_args()
 
 x86_reg = reg_table()
