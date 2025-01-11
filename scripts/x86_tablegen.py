@@ -7,10 +7,6 @@ import glob
 import string
 import argparse
 
-bnd_count = 8
-gpr_count = 32
-vec_count = 32
-
 gpr_bh = ["ah", "ch", "dh", "bh"]
 gpr_b = ["al", "cl", "dl", "bl", "spl", "bpl", "sil", "dil"]
 gpr_w = ["ax", "cx", "dx", "bx", "sp", "bp", "si", "di"]
@@ -45,30 +41,30 @@ def reg_table():
     t += gen_list(gpr_bh, "reg_bl", 4)
     t += gen_sep()
     t += gen_list(gpr_b, "reg_b", 0)
-    t += gen_range("r%db", "reg_b", 8, gpr_count)
+    t += gen_range("r%db", "reg_b", 8, 32)
     t += gen_sep()
     t += gen_list(gpr_w, "reg_w", 0)
-    t += gen_range("r%dw", "reg_w", 8, gpr_count)
+    t += gen_range("r%dw", "reg_w", 8, 32)
     t += gen_sep()
     t += gen_list(gpr_d, "reg_d", 0)
-    t += gen_range("r%dd", "reg_d", 8, gpr_count)
+    t += gen_range("r%dd", "reg_d", 8, 32)
     t += gen_sep()
     t += gen_list(gpr_q, "reg_q", 0)
-    t += gen_range("r%d", "reg_q", 8, gpr_count)
+    t += gen_range("r%d", "reg_q", 8, 32)
     t += gen_sep()
     t += gen_range("mm%d", "reg_mmx", 0, 8)
     t += gen_sep()
-    t += gen_range("xmm%d", "reg_xmm", 0, vec_count)
+    t += gen_range("xmm%d", "reg_xmm", 0, 32)
     t += gen_sep()
-    t += gen_range("ymm%d", "reg_ymm", 0, vec_count)
+    t += gen_range("ymm%d", "reg_ymm", 0, 32)
     t += gen_sep()
-    t += gen_range("zmm%d", "reg_zmm", 0, vec_count)
+    t += gen_range("zmm%d", "reg_zmm", 0, 32)
     t += gen_sep()
     t += gen_range("k%d", "reg_kmask", 0, 8)
     t += gen_sep()
     t += gen_range("st(%d)", "reg_fpu", 0, 8)
     t += gen_sep()
-    t += gen_range("bnd%d", "reg_bnd", 0, bnd_count)
+    t += gen_range("bnd%d", "reg_bnd", 0, 8)
     t += gen_sep()
     t += gen_range("dr%d", "reg_dreg", 0, 16)
     t += gen_sep()
