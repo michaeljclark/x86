@@ -1015,16 +1015,19 @@ static void x86_build_prefix_table(x86_acc_idx *idx,
 
         x86_opc_data rec = *d;
         rec.enc |= tp.pfx;
-        n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
+        n += x86_add_opc_data(op_map, n, rec,
+            tp.modreg, tp.modmem, modcla);
         if (tp.pfx_w) {
             rec = *d;
             rec.enc |= tp.pfx | tp.pfx_w;
-            n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
+            n += x86_add_opc_data(op_map, n, rec,
+                tp.modreg, tp.modmem, modcla);
         }
         if (tp.pfx_o) {
             rec = *d;
             rec.enc |= tp.pfx | tp.pfx_o;
-            n += x86_add_opc_data(op_map, n, rec, tp.modreg, tp.modmem, modcla);
+            n += x86_add_opc_data(op_map, n, rec,
+                tp.modreg, tp.modmem, modcla);
         }
     }
 
@@ -1091,7 +1094,8 @@ static x86_acc_idx* x86_table_build(uint modes)
     x86_build_prefix_table(idx, tab, NULL, &idx->map_count, modfun, modmod);
     idx->map = calloc(idx->map_count, sizeof(x86_opc_data));
     x86_build_prefix_table(idx, tab, idx->map, NULL, modfun, modmod);
-    qsort(idx->map, idx->map_count, sizeof(x86_opc_data), x86_opc_data_compare_build);
+    qsort(idx->map, idx->map_count, sizeof(x86_opc_data),
+        x86_opc_data_compare_build);
     idx->page_offsets = calloc(512, sizeof(uchar));
     idx->acc_count = x86_build_accel_offsets(idx);
     idx->acc = calloc(sizeof(x86_acc_entry), idx->acc_count);
@@ -1102,7 +1106,8 @@ static x86_acc_idx* x86_table_build(uint modes)
     return idx;
 }
 
-static x86_opc_data* x86_table_lookup_slow(x86_acc_idx *idx, const x86_opc_data *m)
+static x86_opc_data* x86_table_lookup_slow(x86_acc_idx *idx,
+    const x86_opc_data *m)
 {
     size_t begin = 0, end = idx->map_count;
     while (end != 0) {
@@ -1829,8 +1834,9 @@ static uint x86_opr_reg_size(x86_codec *c, x86_arg a)
         default: break;
         }
     }
+
     /* operand contains the register size */
-    else if (oprsz != 0 && oprsz != x86_opr_size_w && oprsz != x86_opr_size_a) {
+    if (oprsz != 0 && oprsz != x86_opr_size_w && oprsz != x86_opr_size_a) {
         return oprsz;
     }
 
@@ -2009,46 +2015,56 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     case x86_mod_disp0:
         if (a.q.rm != x86_rm_sp_sib && (a.q.b & 7) == x86_rm_bp_disp0) {
             if (x86_codec_is64(c) && disp) {
-                len = snprintf(buf, buflen, fmt->ptr_rip_disp,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_rip_disp,
                     x86_ptr_size_str(ptrsz),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
             }
             else if (x86_codec_is64(c)) {
-                len = snprintf(buf, buflen, fmt->ptr_rip,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_rip,
                     x86_ptr_size_str(ptrsz));
             }
             else {
-                len = snprintf(buf, buflen, fmt->ptr_disp,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_disp,
                     x86_ptr_size_str(ptrsz),
                     disp < 0 ? "-" : "",
                     disp < 0 ? -disp : disp);
             }
         } else if (a.q.rm == x86_rm_sp_sib && (a.q.b & 7) == x86_rm_bp_disp0) {
             if (a.q.x == x86_sp && a.q.s != 0) {
-                len = snprintf(buf, buflen, fmt->ptr_scaled_reg,
-                    x86_ptr_size_str(ptrsz), (1 << a.q.s), "riz");
+                len = snprintf(buf, buflen,
+                    fmt->ptr_scaled_reg,
+                    x86_ptr_size_str(ptrsz),
+                    (1 << a.q.s), "riz");
             }
             else if (a.q.x == x86_sp) {
-                len = snprintf(buf, buflen, fmt->ptr_disp,
-                    x86_ptr_size_str(ptrsz), "", 0);
+                len = snprintf(buf, buflen,
+                    fmt->ptr_disp,
+                    x86_ptr_size_str(ptrsz),
+                    "", 0);
             }
             else {
-                len = snprintf(buf, buflen, fmt->ptr_scaled_reg,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_scaled_reg,
                     x86_ptr_size_str(ptrsz), (1 << a.q.s),
                     x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
         } else if (a.q.rm == x86_rm_sp_sib) {
             if (a.q.s != 0) {
                 if (vmsz) {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_scaled_reg,
                         x86_ptr_size_str(vmsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
                         (a.q.x & 15) == x86_sp ? "riz" :
                         x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_scaled_reg,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
@@ -2057,19 +2073,22 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 }
             }
             else if ((a.q.b & 7) == x86_sp && a.q.x == x86_sp) {
-                len = snprintf(buf, buflen, fmt->ptr_reg,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
             }
             else {
                 if (vmsz) {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_reg,
                         x86_ptr_size_str(vmsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
                         x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_reg,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
@@ -2077,7 +2096,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 }
             }
         } else {
-            len = snprintf(buf, buflen, fmt->ptr_reg,
+            len = snprintf(buf, buflen,
+                fmt->ptr_reg,
                 x86_ptr_size_str(ptrsz),
                 x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
         }
@@ -2097,13 +2117,15 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
             (a.q.b & 7) == x86_sp && a.q.x == x86_sp))
         {
            if (disp) {
-                len = snprintf(buf, buflen, fmt->ptr_reg_disp,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_disp,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                     disp < 0 ? "-" : "+",
                     disp < 0 ? -disp : disp);
             } else {
-                len = snprintf(buf, buflen, fmt->ptr_reg,
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
             }
@@ -2111,7 +2133,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         else if (a.q.rm == x86_rm_sp_sib && a.q.s != 0) {
             if (disp) {
                 if (vmsz) {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg_disp,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_scaled_reg_disp,
                         x86_ptr_size_str(vmsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
@@ -2120,7 +2143,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg_disp,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_scaled_reg_disp,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
@@ -2131,14 +2155,16 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 }
             } else {
                 if (vmsz) {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_scaled_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_scaled_reg,
                         x86_ptr_size_str(vmsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
                         (a.q.x & 15) == x86_sp ? "riz" :
                         x86_reg_name(x86_sized_vec(a.q.x, regsz)));
                 } else {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_scaled_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_scaled_reg,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (1 << a.q.s),
@@ -2150,7 +2176,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         else if (a.q.rm == x86_rm_sp_sib) {
             if (vmsz) {
                 if (disp) {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg_disp,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_reg_disp,
                         x86_ptr_size_str(vmsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
@@ -2158,7 +2185,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
-                    len = snprintf(buf, buflen, fmt->tuple_ptr_reg_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->tuple_ptr_reg_reg,
                         x86_ptr_size_str(ptrsz), vmsc,
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
@@ -2166,7 +2194,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 }
             } else {
                 if (disp) {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_reg_disp,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_reg_disp,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
@@ -2174,7 +2203,8 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                         disp < 0 ? "-" : "+",
                         disp < 0 ? -disp : disp);
                 } else {
-                    len = snprintf(buf, buflen, fmt->ptr_reg_reg,
+                    len = snprintf(buf, buflen,
+                        fmt->ptr_reg_reg,
                         x86_ptr_size_str(ptrsz),
                         x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
                         (a.q.x & 15) == x86_sp ? "riz" :
@@ -2199,47 +2229,47 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     return len;
 }
 
-static size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_mrm_dec_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_mrm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_dec);
 }
 
-static size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_mrm_hex_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_mrm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_hex);
 }
 
-static size_t x86_opr_intel_reg_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_reg_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.r);
 }
 
-static size_t x86_opr_intel_vec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_vec_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.v);
 }
 
-static size_t x86_opr_intel_opb_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_opb_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.b);
 }
 
-static size_t x86_opr_intel_is4_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_is4_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     uint reg = (c->imm32 >> 4) & 15;
     return x86_opr_intel_reg_str_internal(buf, buflen, c, a, reg);
 }
 
-static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a, x86_opr_formats *fmt)
+static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a, x86_opr_formats *fmt)
 {
     if (a.opr == x86_opr_moffs) {
         uint regsz = x86_opr_reg_size(c, a);
@@ -2268,38 +2298,38 @@ static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen, x86_codec
     }
 }
 
-static size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_imm_hex_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_hex);
 }
 
-static size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_imm_dec_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     return x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_dec);
 }
 
-static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     int imm = c->imm2;
     return snprintf(buf, buflen, "%s0x%x",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
-static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a)
+static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a)
 {
     int imm = c->imm2;
     return snprintf(buf, buflen, "%s%u",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
-static size_t x86_opr_intel_rel_hex_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
+static size_t x86_opr_intel_rel_hex_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
 {
     size_t len = x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_hex);
@@ -2309,8 +2339,8 @@ static size_t x86_opr_intel_rel_hex_str(char *buf, size_t buflen, x86_codec *c,
     return len;
 }
 
-static size_t x86_opr_intel_rel_dec_str(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
+static size_t x86_opr_intel_rel_dec_str(char *buf, size_t buflen,
+    x86_codec *c, x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb)
 {
     size_t len = x86_opr_intel_imm_str_internal(buf, buflen, c, a,
         &x86_opr_formats_intel_dec);
@@ -2366,16 +2396,26 @@ static size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     }
 
     switch (a.opr) {
-    case x86_opr_1: return snprintf(buf, buflen, "1");
-    case x86_opr_reg_xmm0: return snprintf(buf, buflen, "%s", "xmm0");
-    case x86_opr_reg_xmm0_7: return snprintf(buf, buflen, "%s", "xmm0_7");
-    case x86_opr_seg_fs: return snprintf(buf, buflen, "fs");
-    case x86_opr_seg_gs: return snprintf(buf, buflen, "gs");
-    case x86_opr_reg_st0: return snprintf(buf, buflen, "st");
-    case x86_opr_reg_psi: return snprintf(buf, buflen, "%s[%s]",
-        x86_ptr_size_str(regsz), x86_reg_name(x86_sized_gpr(c, x86_sil, addrsz)));
-    case x86_opr_reg_pdi: return snprintf(buf, buflen, "%s[%s]",
-        x86_ptr_size_str(regsz), x86_reg_name(x86_sized_gpr(c, x86_dil, addrsz)));
+    case x86_opr_1:
+        return snprintf(buf, buflen, "1");
+    case x86_opr_reg_xmm0:
+        return snprintf(buf, buflen, "%s", "xmm0");
+    case x86_opr_reg_xmm0_7:
+        return snprintf(buf, buflen, "%s", "xmm0_7");
+    case x86_opr_seg_fs:
+        return snprintf(buf, buflen, "fs");
+    case x86_opr_seg_gs:
+        return snprintf(buf, buflen, "gs");
+    case x86_opr_reg_st0:
+        return snprintf(buf, buflen, "st");
+    case x86_opr_reg_psi:
+        return snprintf(buf, buflen, "%s[%s]",
+            x86_ptr_size_str(regsz),
+            x86_reg_name(x86_sized_gpr(c, x86_sil, addrsz)));
+    case x86_opr_reg_pdi:
+        return snprintf(buf, buflen, "%s[%s]",
+            x86_ptr_size_str(regsz),
+            x86_reg_name(x86_sized_gpr(c, x86_dil, addrsz)));
     default: return snprintf(buf, buflen, "%s", "unknown");
     }
 }
@@ -2410,11 +2450,16 @@ static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
     x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb, x86_opr_formatter *fmt)
 {
     switch(a.ord & x86_ord_type_mask) {
-    case x86_ord_const: return fmt->fmt_const(buf, buflen, c, a);
-    case x86_ord_reg: return fmt->fmt_reg(buf, buflen, c, a);
-    case x86_ord_mrm: return fmt->fmt_mrm(buf, buflen, c, a);
-    case x86_ord_vec: return fmt->fmt_vec(buf, buflen, c, a);
-    case x86_ord_opr: return fmt->fmt_opb(buf, buflen, c, a);
+    case x86_ord_const:
+        return fmt->fmt_const(buf, buflen, c, a);
+    case x86_ord_reg:
+        return fmt->fmt_reg(buf, buflen, c, a);
+    case x86_ord_mrm:
+        return fmt->fmt_mrm(buf, buflen, c, a);
+    case x86_ord_vec:
+        return fmt->fmt_vec(buf, buflen, c, a);
+    case x86_ord_opr:
+        return fmt->fmt_opb(buf, buflen, c, a);
     case x86_ord_imm:
         if (a.opr == x86_opr_rel8 || a.opr == x86_opr_relw) {
             return fmt->fmt_rel(buf, buflen, c, a, pc_offset, sym_cb);
@@ -2497,7 +2542,8 @@ enum {
     x86_enc_tpm_mask  = x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask
 };
 
-static x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c, x86_opc_data k, int w)
+static x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c,
+    x86_opc_data k, int w)
 {
     x86_opc_data *r = NULL;
     /* key is type+prefix+map with substituted rexw=w flag */
@@ -2542,7 +2588,7 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
     case x86_modes_32: c->flags |= x86_cf_ia32; break;
     case x86_modes_64: c->flags |= x86_cf_amd64; break;
     }
- 
+
     while (state != x86_state_done) {
         nbytes += x86_buffer_read(buf, &b, 1);
         switch (state) {
@@ -2634,12 +2680,24 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
                 t = x86_table_lex;
                 state = x86_state_rex_opcode;
                 break;
-            case x86_pb_26: c->seg = x86_seg_es; state = x86_state_legacy; break;
-            case x86_pb_2e: c->seg = x86_seg_cs; state = x86_state_legacy; break;
-            case x86_pb_36: c->seg = x86_seg_ss; state = x86_state_legacy; break;
-            case x86_pb_3e: c->seg = x86_seg_ds; state = x86_state_legacy; break;
-            case x86_pb_64: c->seg = x86_seg_fs; state = x86_state_legacy; break;
-            case x86_pb_65: c->seg = x86_seg_gs; state = x86_state_legacy; break;
+            case x86_pb_26:
+                c->seg = x86_seg_es; state = x86_state_legacy;
+                break;
+            case x86_pb_2e:
+                c->seg = x86_seg_cs; state = x86_state_legacy;
+                break;
+            case x86_pb_36:
+                c->seg = x86_seg_ss; state = x86_state_legacy;
+                break;
+            case x86_pb_3e:
+                c->seg = x86_seg_ds; state = x86_state_legacy;
+                break;
+            case x86_pb_64:
+                c->seg = x86_seg_fs; state = x86_state_legacy;
+                break;
+            case x86_pb_65:
+                c->seg = x86_seg_gs; state = x86_state_legacy;
+                break;
             case x86_pb_66:
             case x86_pb_67:
             case x86_pb_9b:
@@ -2687,12 +2745,30 @@ int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
             case x86_pb_c5:
             case x86_pb_d5:
                 goto err;
-            case x86_pb_66: lastp = b; c->flags |= x86_cp_osize; break;
-            case x86_pb_67: lastp = b; c->flags |= x86_cp_asize; break;
-            case x86_pb_9b: lastp = b; c->flags |= x86_cp_wait; break;
-            case x86_pb_f0: lastp = b; c->flags |= x86_cp_lock; break;
-            case x86_pb_f2: lastp = b; c->flags |= x86_cp_repne; break;
-            case x86_pb_f3: lastp = b; c->flags |= x86_cp_rep; break;
+            case x86_pb_66:
+                lastp = b;
+                c->flags |= x86_cp_osize;
+                break;
+            case x86_pb_67:
+                lastp = b;
+                c->flags |= x86_cp_asize;
+                break;
+            case x86_pb_9b:
+                lastp = b;
+                c->flags |= x86_cp_wait;
+                break;
+            case x86_pb_f0:
+                lastp = b;
+                c->flags |= x86_cp_lock;
+                break;
+            case x86_pb_f2:
+                lastp = b;
+                c->flags |= x86_cp_repne;
+                break;
+            case x86_pb_f3:
+                lastp = b;
+                c->flags |= x86_cp_rep;
+                break;
             case 0x0f:
                 t = x86_table_lex;
                 state = x86_state_map_0f;

@@ -54,8 +54,10 @@ typedef struct x86_ctx x86_ctx;
  */
 
 #define VA_ARGS(...) , ##__VA_ARGS__
-#define x86_debug(fmt,...) if (debug) printf(fmt "\n" VA_ARGS(__VA_ARGS__))
-#define x86_debugf(fmt,...) if (debug) printf("%s: " fmt "\n", __func__ VA_ARGS(__VA_ARGS__))
+#define x86_debug(fmt,...) if (debug) \
+    printf(fmt "\n" VA_ARGS(__VA_ARGS__))
+#define x86_debugf(fmt,...) if (debug) \
+    printf("%s: " fmt "\n", __func__ VA_ARGS(__VA_ARGS__))
 
 /*
  * register groups
@@ -592,26 +594,66 @@ enum x86_enc
     x86_enc_param_mask       = x86_enc_immediate_mask | x86_enc_suffix_mask
 };
 
-static inline uint x86_enc_width(uint enc) { return (enc & x86_enc_w_mask); }
-static inline uint x86_enc_prefix(uint enc) { return (enc & x86_enc_prexw_mask); }
-static inline uint x86_enc_length(uint enc) { return (enc & x86_enc_l_mask); }
-static inline uint x86_enc_opcode(uint enc) { return (enc & x86_enc_o_mask); }
-static inline uint x86_enc_func(uint enc) { return (enc & x86_enc_f_mask); }
-static inline uint x86_enc_map(uint enc) { return (enc & x86_enc_m_mask); }
-static inline uint x86_enc_imm(uint enc) { return (enc & x86_enc_i_mask); }
-static inline uint x86_enc_imm2(uint enc) { return (enc & x86_enc_j_mask); }
-static inline uint x86_enc_type(uint enc) { return (enc & x86_enc_t_mask); }
-static inline uint x86_enc_suffix(uint enc) { return (enc & x86_enc_suffix_mask); }
-static inline uint x86_enc_leading(uint enc) { return (enc & ~x86_enc_param_mask); }
-static inline uint x86_enc_has_rep(uint enc) { return (enc & x86_enc_r_rep); }
-static inline uint x86_enc_has_lock(uint enc) { return (enc & x86_enc_r_lock); }
-static inline uint x86_enc_has_norexb(uint enc) { return (enc & x86_enc_r_norexb); }
-static inline uint x86_enc_has_o16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o16; }
-static inline uint x86_enc_has_o32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o32; }
-static inline uint x86_enc_has_o64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_o64; }
-static inline uint x86_enc_has_a16(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a16; }
-static inline uint x86_enc_has_a32(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a32; }
-static inline uint x86_enc_has_a64(uint enc) { return (enc & x86_enc_s_mask) == x86_enc_s_a64; }
+static inline uint x86_enc_width(uint enc) {
+    return (enc & x86_enc_w_mask);
+}
+static inline uint x86_enc_prefix(uint enc) {
+    return (enc & x86_enc_prexw_mask);
+}
+static inline uint x86_enc_length(uint enc) {
+    return (enc & x86_enc_l_mask);
+}
+static inline uint x86_enc_opcode(uint enc) {
+    return (enc & x86_enc_o_mask);
+}
+static inline uint x86_enc_func(uint enc) {
+    return (enc & x86_enc_f_mask);
+}
+static inline uint x86_enc_map(uint enc) {
+    return (enc & x86_enc_m_mask);
+}
+static inline uint x86_enc_imm(uint enc) {
+    return (enc & x86_enc_i_mask);
+}
+static inline uint x86_enc_imm2(uint enc) {
+    return (enc & x86_enc_j_mask);
+}
+static inline uint x86_enc_type(uint enc) {
+    return (enc & x86_enc_t_mask);
+}
+static inline uint x86_enc_suffix(uint enc) {
+    return (enc & x86_enc_suffix_mask);
+}
+static inline uint x86_enc_leading(uint enc) {
+    return (enc & ~x86_enc_param_mask);
+}
+static inline uint x86_enc_has_rep(uint enc) {
+    return (enc & x86_enc_r_rep);
+}
+static inline uint x86_enc_has_lock(uint enc) {
+    return (enc & x86_enc_r_lock);
+}
+static inline uint x86_enc_has_norexb(uint enc) {
+    return (enc & x86_enc_r_norexb);
+}
+static inline uint x86_enc_has_o16(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_o16;
+}
+static inline uint x86_enc_has_o32(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_o32;
+}
+static inline uint x86_enc_has_o64(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_o64;
+}
+static inline uint x86_enc_has_a16(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_a16;
+}
+static inline uint x86_enc_has_a32(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_a32;
+}
+static inline uint x86_enc_has_a64(uint enc) {
+    return (enc & x86_enc_s_mask) == x86_enc_s_a64;
+}
 
 /*
  * operand encoding
@@ -1642,7 +1684,8 @@ size_t x86_format_hex(char *buf, size_t len, uchar *data, size_t datalen);
 x86_ctx* x86_ctx_create(uint mode);
 void x86_ctx_destroy(x86_ctx *ctx);
 int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len);
-int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len, size_t limit);
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
+    size_t *len, size_t limit);
 
 /*
  * registers sand opcodes
