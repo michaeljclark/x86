@@ -2,7 +2,7 @@
 
 #include "x86.h"
 
-void x86_out(x86_codec codec)
+void x86_out(x86_ctx *ctx, x86_codec codec)
 {
     x86_buffer buf;
     uchar data[32];
@@ -10,7 +10,7 @@ void x86_out(x86_codec codec)
 
     x86_buffer_init(&buf, data);
 
-    if (x86_codec_write(&buf, codec, &nbytes) == 0)
+    if (x86_codec_write(ctx, &buf, codec, &nbytes) == 0)
     {
         printf("./scripts/disasm-x86.sh");
 
@@ -21,7 +21,7 @@ void x86_out(x86_codec codec)
     }
 }
 
-void t1()
+void t1(x86_ctx *ctx)
 {
     // MOVD xmm/m32,xmm [mr: 66 0f 7e /r]
     // asm: movd DWORD PTR [r14+r13*8-0x8],xmm15
@@ -41,10 +41,10 @@ void t1()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t2()
+void t2(x86_ctx *ctx)
 {
     // MOVD xmm,xmm/m32 [rm: 66 0f 6e /r]
     // asm: movd xmm15,DWORD PTR [r14+r13*8-0x8]
@@ -64,10 +64,10 @@ void t2()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t3()
+void t3(x86_ctx *ctx)
 {
     // VMOVD xmm,xmm/m32 [mr: vex.128.66.0f.w0 7e /r]
     // asm: vmovd DWORD PTR [rcx+rax*8-8],xmm15
@@ -88,10 +88,10 @@ void t3()
     codec.sib = x86_enc_sib(x86_scale_8, x86_rax, x86_rcx);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t4()
+void t4(x86_ctx *ctx)
 {
     // VMOVD xmm,xmm/m32 [mr: vex.128.66.0f.w0 6e /r]
     // asm: vmovd xmm15,DWORD PTR [rcx+rax*8-8]
@@ -112,10 +112,10 @@ void t4()
     codec.sib = x86_enc_sib(x86_scale_8, x86_rax, x86_rcx);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t5()
+void t5(x86_ctx *ctx)
 {
     // VMOVD xmm/m32,xmm [mr: vex.128.66.0f.w0 7e /r]
     // asm: vmovd DWORD PTR [r9+r8*8-8],xmm15
@@ -136,10 +136,10 @@ void t5()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r14, x86_r13);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t6()
+void t6(x86_ctx *ctx)
 {
     // VMOVD xmm,xmm/m32 [mr: vex.128.66.0f.w0 6e /r]
     // asm: vmovd xmm15,DWORD PTR [r9+r8*8-8]
@@ -160,10 +160,10 @@ void t6()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r14, x86_r13);
     codec.disp32 = -8;
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t7()
+void t7(x86_ctx *ctx)
 {
     // VMOVD xmm/m32,xmm [mr: evex.128.66.0f.w0 7e /r]
     // asm: vmovd DWORD PTR [r14+r13*8-8],xmm31
@@ -185,10 +185,10 @@ void t7()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -2; /* EVEX scales displacement to word size */
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
-void t8()
+void t8(x86_ctx *ctx)
 {
     // VMOVD xmm,xmm/m32 [rm: evex.128.66.0f.w0 6e /r]
     // asm: vmovd xmm31,DWORD PTR [r14+r13*8-8]
@@ -210,18 +210,20 @@ void t8()
     codec.sib = x86_enc_sib(x86_scale_8, x86_r13, x86_r14);
     codec.disp32 = -2; /* EVEX scales displacement to word size */
 
-    x86_out(codec);
+    x86_out(ctx, codec);
 }
 
 int main(int argc, char const *argv[])
 {
-    t1();
-    t2();
-    t3();
-    t4();
-    t5();
-    t6();
-    t7();
-    t8();
+    x86_ctx *ctx = x86_ctx_create(x86_modes_64);
+    t1(ctx);
+    t2(ctx);
+    t3(ctx);
+    t4(ctx);
+    t5(ctx);
+    t6(ctx);
+    t7(ctx);
+    t8(ctx);
+    x86_ctx_destroy(ctx);
     return 0;
 }

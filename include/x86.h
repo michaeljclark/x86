@@ -1683,9 +1683,8 @@ size_t x86_format_hex(char *buf, size_t len, uchar *data, size_t datalen);
 
 x86_ctx* x86_ctx_create(uint mode);
 void x86_ctx_destroy(x86_ctx *ctx);
-int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len);
-int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
-    size_t *len, size_t limit);
+int x86_codec_write(x86_ctx *ctx, x86_buffer *buf, x86_codec c, size_t *len);
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len);
 
 /*
  * registers sand opcodes

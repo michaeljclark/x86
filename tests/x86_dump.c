@@ -85,7 +85,7 @@ static void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen,
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     do {
-        ret = x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen);
+        ret = x86_codec_read(ctx, &buf, &codec, &nbytes);
         if (ret == 0) {
             x86_format_op(str, sizeof(str), ctx, &codec);
         } else {

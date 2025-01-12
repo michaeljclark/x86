@@ -14,7 +14,6 @@ void print_decode_table(uint modes, uint compact, uint opcode)
 
 void print_opcode_table(uint modes, uint sort, uint compact, uint opcode)
 {
-
     x86_table_idx tab = x86_opc_table_filter(x86_opc_table_identity(), modes);
     if (sort) tab = x86_opc_table_sorted(tab, sort);
     for(size_t i = 0; i < tab.count; i++) {

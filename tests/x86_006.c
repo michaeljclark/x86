@@ -13,7 +13,7 @@ void x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen)
 
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
-    if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
+    if (x86_codec_read(ctx, &buf, &codec, &nbytes) == 0) {
         len += x86_format_hex(str+len, sizeof(str)-len, insn, nbytes);
         len += x86_format_op(str+len, sizeof(str)-len, ctx, &codec);
     } else {

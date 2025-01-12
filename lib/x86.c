@@ -1265,7 +1265,7 @@ void x86_print_op(const x86_opc_data *d, uint compact, uint opcode)
  * encoding / decoding
  */
 
-int x86_codec_write(x86_buffer *buf, x86_codec c, size_t *len)
+int x86_codec_write(x86_ctx *ctx, x86_buffer *buf, x86_codec c, size_t *len)
 {
     size_t nbytes = 0;
 
@@ -2574,11 +2574,10 @@ static x86_opc_data* x86_table_match(x86_ctx *ctx, x86_codec *c,
     return r;
 }
 
-int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c,
-    size_t *len, size_t limit)
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len)
 {
     uint state = x86_state_top;
-    size_t nbytes = 0;
+    size_t nbytes = 0, limit = buf->end - buf->start;
     uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
     x86_opc_data k = { 0 }, *r = NULL;
     uchar b = 0, lastp = 0;

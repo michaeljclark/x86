@@ -16,7 +16,7 @@ size_t x86_disasm_decode(x86_ctx *ctx, uchar *insn, size_t insnlen)
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     do {
-        if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
+        if (x86_codec_read(ctx, &buf, &codec, &nbytes) == 0) {
             offset += nbytes;
             count++;
         } else {
@@ -36,7 +36,7 @@ size_t x86_disasm_format(x86_ctx *ctx, uchar *insn, size_t insnlen)
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     do {
-        if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
+        if (x86_codec_read(ctx, &buf, &codec, &nbytes) == 0) {
             x86_format_op(str, sizeof(str), ctx, &codec);
             offset += nbytes;
             count++;
@@ -58,7 +58,7 @@ size_t x86_disasm_test(x86_ctx *ctx, uchar *insn, size_t insnlen)
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     do {
-        if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
+        if (x86_codec_read(ctx, &buf, &codec, &nbytes) == 0) {
             x86_format_op(str, sizeof(str), ctx, &codec);
             printf("%s\n", str);
             offset += nbytes;

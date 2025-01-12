@@ -72,7 +72,7 @@ static void x86_disasm_dump(x86_ctx *ctx, uchar *insn, size_t insnlen,
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
 
     do {
-        ret = x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen);
+        ret = x86_codec_read(ctx, &buf, &codec, &nbytes);
         if (ret == 0) {
             x86_format_op(text, sizeof(text), ctx, &codec);
         } else {
@@ -108,7 +108,7 @@ static size_t x86_disasm(x86_ctx *ctx, uchar *insn, size_t insnlen,
     size_t nbytes = 0;
 
     x86_buffer_init_ex(&buf, insn, 0, insnlen);
-    if (x86_codec_read(ctx, &buf, &codec, &nbytes, insnlen) == 0) {
+    if (x86_codec_read(ctx, &buf, &codec, &nbytes) == 0) {
         text[0] = '\t';
         x86_format_op(text + 1, text_len - 1, ctx, &codec);
         return nbytes;
@@ -831,7 +831,7 @@ void x86_evaluate_opcode(x86_ctx *ctx_x86, LLVMDisasmContextRef ctx_llvm,
             x86_gen_print(gen, count);
         }
         x86_gen_codec(d, &c, gen, count);
-        x86_codec_write(&b, c, &nbytes);
+        x86_codec_write(ctx_x86, &b, c, &nbytes);
         ours_len = x86_disasm(ctx_x86, buf, nbytes, ours, sizeof(ours));
         llvm_len = llvm_disasm(ctx_llvm, buf, nbytes, llvm, sizeof(llvm));
         pass = ours_len == llvm_len && strcmp(ours, llvm) == 0;
