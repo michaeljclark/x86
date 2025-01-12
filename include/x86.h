@@ -979,6 +979,64 @@ enum x86_opr
     x86_opr_f64x8            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x8,
 };
 
+static inline uint x86_opr_mem_size(uint opr)
+{
+    switch (opr & x86_opr_mem_mask) {
+    case x86_opr_m8: return x86_opr_size_8;
+    case x86_opr_m16: return x86_opr_size_16;
+    case x86_opr_m32: return x86_opr_size_32;
+    case x86_opr_m64: return x86_opr_size_64;
+    case x86_opr_m80: return x86_opr_size_80;
+    case x86_opr_m128: return x86_opr_size_128;
+    case x86_opr_m256: return x86_opr_size_256;
+    case x86_opr_m512: return x86_opr_size_512;
+    case x86_opr_mw:
+    default: return x86_opr_size_w;
+    }
+}
+
+static inline uint x86_opr_ew_bytes(uint opr)
+{
+    switch(opr & x86_opr_ew_mask) {
+    case x86_opr_ew_8: return 1;
+    case x86_opr_ew_16: return 2;
+    case x86_opr_ew_32: return 4;
+    case x86_opr_ew_64: return 8;
+    case x86_opr_ew_128: return 16;
+    case x86_opr_ew_256: return 32;
+    case x86_opr_ew_512: return 64;
+    }
+    return 0;
+}
+
+static inline uint x86_opr_ew_size(uint opr)
+{
+    switch(opr & x86_opr_ew_mask) {
+    case x86_opr_ew_8: return x86_opr_size_8;
+    case x86_opr_ew_16: return x86_opr_size_16;
+    case x86_opr_ew_32: return x86_opr_size_32;
+    case x86_opr_ew_64: return x86_opr_size_64;
+    case x86_opr_ew_128: return x86_opr_size_128;
+    case x86_opr_ew_256: return x86_opr_size_256;
+    case x86_opr_ew_512: return x86_opr_size_512;
+    }
+    return 0;
+}
+
+static inline uint x86_opr_ec_mult(uint opr)
+{
+    switch(opr & x86_opr_ec_mask) {
+    case x86_opr_ec_x1: return 1;
+    case x86_opr_ec_x2: return 2;
+    case x86_opr_ec_x4: return 4;
+    case x86_opr_ec_x8: return 8;
+    case x86_opr_ec_x16: return 16;
+    case x86_opr_ec_x32: return 32;
+    case x86_opr_ec_x64: return 64;
+    }
+    return 0;
+}
+
 /*
  * order encoding
  */
