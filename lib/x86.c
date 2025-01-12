@@ -97,10 +97,6 @@ struct x86_opr_formats
     const char *imm64;
     const char *imm32;
     const char *reg;
-    const char *tuple_ptr_reg_scaled_reg;
-    const char *tuple_ptr_reg_scaled_reg_disp;
-    const char *tuple_ptr_reg_reg;
-    const char *tuple_ptr_reg_reg_disp;
 };
 
 struct x86_operands
@@ -1852,10 +1848,6 @@ x86_opr_formats x86_opr_formats_intel_hex =
     .imm64                          = "%s0x%llx",
     .imm32                          = "%s0x%x",
     .reg                            = "%s",
-    .tuple_ptr_reg_scaled_reg       = "%s* %d [%s + %d*%s]",
-    .tuple_ptr_reg_scaled_reg_disp  = "%s* %d [%s + %d*%s %s 0x%x]",
-    .tuple_ptr_reg_reg              = "%s* %d [%s + %s]",
-    .tuple_ptr_reg_reg_disp         = "%s* %d [%s + %s %s 0x%x]"
 };
 
 x86_opr_formats x86_opr_formats_intel_dec =
@@ -1875,10 +1867,6 @@ x86_opr_formats x86_opr_formats_intel_dec =
     .imm64                          = "%s%llu",
     .imm32                          = "%s%u",
     .reg                            = "%s",
-    .tuple_ptr_reg_scaled_reg       = "%s* %d [%s + %d*%s]",
-    .tuple_ptr_reg_scaled_reg_disp  = "%s* %d [%s + %d*%s %s %u]",
-    .tuple_ptr_reg_reg              = "%s* %d [%s + %s]",
-    .tuple_ptr_reg_reg_disp         = "%s* %d [%s + %s %s %u]"
 };
 
 static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
@@ -1936,20 +1924,18 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     uint bcstsz = x86_opr_bcst_size(a.opr);
     uint bcstsc = 1;
     uint vmsz = 0;
-    uint vmsc = 0;
     int disp = c->disp32;
     size_t len = 0;
 
     if (bcstsz && a.q.brd) {
         bcstsc = x86_regsz_bytes(ptrsz) / x86_regsz_bytes(bcstsz);
-        regsz = ptrsz = bcstsz;
+        ptrsz = bcstsz;
     }
 
     switch (a.opr & x86_opr_mem_mask) {
     case x86_opr_vm32:
     case x86_opr_vm64:
-        vmsc = x86_opr_ec_mult(a.opr);
-        vmsz = x86_opr_ew_size(a.opr);
+        vmsz = ptrsz = x86_opr_ew_size(a.opr);
         break;
     }
 
@@ -1976,13 +1962,13 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                     disp < 0 ? -disp : disp);
             }
         } else if (a.q.rm == x86_rm_sp_sib && (a.q.b & 7) == x86_rm_bp_disp0) {
-            if (a.q.x == x86_sp && a.q.s != 0) {
+            if (a.q.x == x86_sp && vmsz == 0 && a.q.s != 0) {
                 len = snprintf(buf, buflen,
                     fmt->ptr_scaled_reg,
                     x86_ptr_size_str(ptrsz),
                     (1 << a.q.s), "riz");
             }
-            else if (a.q.x == x86_sp) {
+            else if (a.q.x == x86_sp && vmsz == 0) {
                 len = snprintf(buf, buflen,
                     fmt->ptr_disp,
                     x86_ptr_size_str(ptrsz),
@@ -1992,50 +1978,37 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
                 len = snprintf(buf, buflen,
                     fmt->ptr_scaled_reg,
                     x86_ptr_size_str(ptrsz), (1 << a.q.s),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
                     x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
         } else if (a.q.rm == x86_rm_sp_sib) {
             if (a.q.s != 0) {
-                if (vmsz) {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_scaled_reg,
-                        x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_scaled_reg,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
-                }
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_scaled_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    (1 << a.q.s),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
-            else if ((a.q.b & 7) == x86_sp && a.q.x == x86_sp) {
+            else if ((a.q.b & 7) == x86_sp && a.q.x == x86_sp && vmsz == 0) {
                 len = snprintf(buf, buflen,
                     fmt->ptr_reg,
                     x86_ptr_size_str(ptrsz),
                     x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)));
             }
             else {
-                if (vmsz) {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_reg,
-                        x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_reg,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
-                }
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
         } else {
             len = snprintf(buf, buflen,
@@ -2056,7 +2029,7 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     case x86_mod_dispw:
         if ((a.q.rm != x86_rm_sp_sib) ||
             (a.q.rm == x86_rm_sp_sib && a.q.s == 0 &&
-            (a.q.b & 7) == x86_sp && a.q.x == x86_sp))
+            (a.q.b & 7) == x86_sp && a.q.x == x86_sp && vmsz == 0))
         {
            if (disp) {
                 len = snprintf(buf, buflen,
@@ -2074,84 +2047,50 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
         }
         else if (a.q.rm == x86_rm_sp_sib && a.q.s != 0) {
             if (disp) {
-                if (vmsz) {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_scaled_reg_disp,
-                        x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)),
-                        disp < 0 ? "-" : "+",
-                        disp < 0 ? -disp : disp);
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_scaled_reg_disp,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
-                        disp < 0 ? "-" : "+",
-                        disp < 0 ? -disp : disp);
-                }
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_scaled_reg_disp,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    (1 << a.q.s),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
+                    disp < 0 ? "-" : "+",
+                    disp < 0 ? -disp : disp);
             } else {
-                if (vmsz) {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_scaled_reg,
-                        x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_scaled_reg,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (1 << a.q.s),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
-                }
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_scaled_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    (1 << a.q.s),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
         }
         else if (a.q.rm == x86_rm_sp_sib) {
-            if (vmsz) {
-                if (disp) {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_reg_disp,
-                        x86_ptr_size_str(vmsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)),
-                        disp < 0 ? "-" : "+",
-                        disp < 0 ? -disp : disp);
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->tuple_ptr_reg_reg,
-                        x86_ptr_size_str(ptrsz), vmsc,
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_vec(a.q.x, regsz)));
-                }
+            if (disp) {
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_reg_disp,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
+                    disp < 0 ? "-" : "+",
+                    disp < 0 ? -disp : disp);
             } else {
-                if (disp) {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_reg_disp,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)),
-                        disp < 0 ? "-" : "+",
-                        disp < 0 ? -disp : disp);
-                } else {
-                    len = snprintf(buf, buflen,
-                        fmt->ptr_reg_reg,
-                        x86_ptr_size_str(ptrsz),
-                        x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
-                        (a.q.x & 15) == x86_sp ? "riz" :
-                        x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
-                }
+                len = snprintf(buf, buflen,
+                    fmt->ptr_reg_reg,
+                    x86_ptr_size_str(ptrsz),
+                    x86_reg_name(x86_sized_gpr(c, a.q.b, addrsz)),
+                    vmsz ?
+                    x86_reg_name(x86_sized_vec(a.q.x, regsz)) :
+                    (a.q.x & 15) == x86_sp ? "riz" :
+                    x86_reg_name(x86_sized_gpr(c, a.q.x, addrsz)));
             }
         }
         break;
