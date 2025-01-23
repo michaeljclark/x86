@@ -979,9 +979,34 @@ enum x86_opr
     x86_opr_f64x8            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x8,
 };
 
+static inline uint x86_opr_has_mem(uint opr) {
+    return (opr & x86_opr_mem) != 0;
+}
+static inline uint x86_opr_type_val(uint opr) {
+    return opr & x86_opr_type_mask;
+}
+static inline uint x86_opr_size_val(uint opr) {
+    return opr & x86_opr_size_mask;
+}
+static inline uint x86_opr_mem_val(uint opr) {
+    return opr & x86_opr_mem_mask;
+}
+static inline uint x86_opr_bcst_val(uint opr) {
+    return opr & x86_opr_bcst_mask;
+}
+static inline uint x86_opr_et_val(uint opr) {
+    return opr & x86_opr_et_mask;
+}
+static inline uint x86_opr_ec_val(uint opr) {
+    return opr & x86_opr_ec_mask;
+}
+static inline uint x86_opr_ew_val(uint opr) {
+    return opr & x86_opr_ew_mask;
+}
+
 static inline uint x86_opr_mem_size(uint opr)
 {
-    switch (opr & x86_opr_mem_mask) {
+    switch (x86_opr_mem_val(opr)) {
     case x86_opr_m8: return x86_opr_size_8;
     case x86_opr_m16: return x86_opr_size_16;
     case x86_opr_m32: return x86_opr_size_32;
@@ -997,7 +1022,7 @@ static inline uint x86_opr_mem_size(uint opr)
 
 static inline uint x86_opr_ew_bytes(uint opr)
 {
-    switch(opr & x86_opr_ew_mask) {
+    switch (x86_opr_ew_val(opr)) {
     case x86_opr_ew_8: return 1;
     case x86_opr_ew_16: return 2;
     case x86_opr_ew_32: return 4;
@@ -1011,7 +1036,7 @@ static inline uint x86_opr_ew_bytes(uint opr)
 
 static inline uint x86_opr_ew_size(uint opr)
 {
-    switch(opr & x86_opr_ew_mask) {
+    switch (x86_opr_ew_val(opr)) {
     case x86_opr_ew_8: return x86_opr_size_8;
     case x86_opr_ew_16: return x86_opr_size_16;
     case x86_opr_ew_32: return x86_opr_size_32;
@@ -1025,7 +1050,7 @@ static inline uint x86_opr_ew_size(uint opr)
 
 static inline uint x86_opr_ec_mult(uint opr)
 {
-    switch(opr & x86_opr_ec_mask) {
+    switch (x86_opr_ec_val(opr)) {
     case x86_opr_ec_x1: return 1;
     case x86_opr_ec_x2: return 2;
     case x86_opr_ec_x4: return 4;
@@ -1088,6 +1113,10 @@ enum x86_ord
     x86_ord_is4              = x86_ord_imm | (1 << x86_ord_s3),
     x86_ord_ime              = x86_ord_imm | (2 << x86_ord_s3),
 };
+
+static inline uint x86_ord_type_val(uint ord) {
+    return ord & x86_ord_type_mask;
+}
 
 /*
  * codec flags

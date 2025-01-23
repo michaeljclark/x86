@@ -501,7 +501,7 @@ size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord)
     const char codes[8] = " -irmvo ";
     size_t count = 0;
     for (size_t i = 0; i < array_size(x86_ord_table[0].ord) && ord[i]; i++) {
-        uint type = ord[i] & x86_ord_type_mask;
+        uint type = x86_ord_type_val(ord[i]);
         if (buf && count < len) {
             buf[count++] = codes[type];
         }
@@ -897,9 +897,9 @@ static x86_opc_prefix x86_table_make_prefix(const x86_opc_data *d,
     tp.modfun = x86_enc_func(d->enc) == x86_enc_f_modrm_n;
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++)
     {
-        uint isreg = (o->opr[i] & x86_opr_type_mask) >= x86_opr_reg;
-        uint ismem = (o->opr[i] & x86_opr_mem) != 0;
-        uint ismrm = (p->ord[i] & x86_ord_type_mask) == x86_ord_mrm;
+        uint isreg = x86_opr_type_val(o->opr[i]) >= x86_opr_reg;
+        uint ismem = x86_opr_has_mem(o->opr[i]);
+        uint ismrm = x86_ord_type_val(p->ord[i]) == x86_ord_mrm;
         if (ismrm) {
             if (isreg && !ismem) {
                 tp.modreg = 1; /* mod == 0b11 */
@@ -1739,12 +1739,13 @@ static const char* x86_ptr_size_str(uint sz)
 
 static uint x86_opr_reg_size(x86_codec *c, x86_arg a)
 {
-    uint oprty = (a.opr & x86_opr_type_mask);
-    uint oprsz = (a.opr & x86_opr_size_mask);
+    uint oprty = x86_opr_type_val(a.opr);
+    uint oprsz = x86_opr_size_val(a.opr);
+    uint oprmem = x86_opr_mem_val(a.opr);
 
     /* 'rw' or 'mw' deduce size from mode, operand size prefix and REX.W */
     if ((oprty == x86_opr_reg && oprsz == x86_opr_size_w) ||
-         (a.opr & x86_opr_mem_mask) == x86_opr_mw ||
+        (oprmem == x86_opr_mw) ||
         (a.opr == x86_opr_moffs || a.opr == x86_opr_reg_psi ||
          a.opr == x86_opr_reg_pdi))
     {
@@ -1792,7 +1793,7 @@ static uint x86_opr_ptr_size(x86_codec *c, x86_arg a)
 
 static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
 {
-    switch (opr & x86_opr_size_mask) {
+    switch (x86_opr_size_val(opr)) {
     case x86_opr_size_8:
         /* legacy encoding selects ah/cd/dh/bh instead of spl/bpl/sil/dil */
         if ((x86_codec_field_ce(c)) == x86_ce_none &&
@@ -1807,7 +1808,7 @@ static uint x86_sized_gpr(x86_codec *c, uint reg, uint opr)
 
 static uint x86_sized_vec(uint reg, uint opr)
 {
-    switch (opr & x86_opr_size_mask) {
+    switch (x86_opr_size_val(opr)) {
     case x86_opr_size_64:  return x86_reg_mmx | (reg & 7);
     case x86_opr_size_128: return x86_reg_xmm | (reg & 31);
     case x86_opr_size_256: return x86_reg_ymm | (reg & 31);
@@ -1874,7 +1875,7 @@ static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
 {
     size_t len = 0;
 
-    switch (a.opr & x86_opr_type_mask) {
+    switch (x86_opr_type_val(a.opr)) {
     case x86_opr_reg: len = snprintf(buf, buflen, "%s",
         x86_reg_name(x86_sized_gpr(c, reg,
         x86_opr_reg_size(c, a)))); break;
@@ -1907,7 +1908,7 @@ static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
 
 static uint x86_opr_bcst_size(uint opr)
 {
-    switch (opr & x86_opr_bcst_mask) {
+    switch (x86_opr_bcst_val(opr)) {
     case x86_opr_m16bcst: return x86_opr_size_16;
     case x86_opr_m32bcst: return x86_opr_size_32;
     case x86_opr_m64bcst: return x86_opr_size_64;
@@ -2330,7 +2331,7 @@ x86_opr_formatter x86_format_intel_dec =
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
     x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb, x86_opr_formatter *fmt)
 {
-    switch(a.ord & x86_ord_type_mask) {
+    switch (x86_ord_type_val(a.ord)) {
     case x86_ord_const:
         return fmt->fmt_const(buf, buflen, c, a);
     case x86_ord_reg:
