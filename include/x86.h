@@ -1707,12 +1707,12 @@ extern const x86_ord_data x86_ord_table[];
  */
 
 void x86_set_debug(uint d);
-size_t x86_mode_name(char * buf, size_t len, uint mode, const char *sep);
-size_t x86_map_name(char * buf, size_t len, uint mode, const char *sep);
-size_t x86_ord_name(char * buf, size_t len, uint ord, const char *sep);
-size_t x86_ord_mnem(char * buf, size_t len, const ushort *ord);
-size_t x86_opr_name(char * buf, size_t len, uint opr);
-size_t x86_enc_name(char * buf, size_t len, uint enc);
+size_t x86_mode_name(char *buf, size_t len, uint mode, const char *sep);
+size_t x86_map_name(char *buf, size_t len, uint mode, const char *sep);
+size_t x86_ord_name(char *buf, size_t len, uint ord, const char *sep);
+size_t x86_ord_mnem(char *buf, size_t len, const ushort *ord);
+size_t x86_opr_name(char *buf, size_t len, uint opr);
+size_t x86_enc_name(char *buf, size_t len, uint enc);
 const char* x86_reg_name(uint reg);
 const char* x86_table_type_name(uint type);
 const char* x86_table_map_name(uint map);
