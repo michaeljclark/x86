@@ -54,9 +54,9 @@ typedef struct x86_ctx x86_ctx;
  */
 
 #define VA_ARGS(...) , ##__VA_ARGS__
-#define x86_debug(fmt,...) if (debug) \
+#define x86_debug(fmt, ...) if (debug) \
     printf(fmt "\n" VA_ARGS(__VA_ARGS__))
-#define x86_debugf(fmt,...) if (debug) \
+#define x86_debugf(fmt, ...) if (debug) \
     printf("%s: " fmt "\n", __func__ VA_ARGS(__VA_ARGS__))
 
 /*
@@ -90,7 +90,7 @@ enum
  * prefix byte
  */
 
-enum x86_pb
+enum
 {
     x86_pb_26    = 0x26,
     x86_pb_2e    = 0x2e,
@@ -136,10 +136,10 @@ enum x86_pb
 };
 
 /*
- * mod
+ * mod values
  */
 
-enum x86_mod
+enum
 {
     x86_mod_disp0,
     x86_mod_disp8,
@@ -151,7 +151,7 @@ enum x86_mod
  * SIB scale
  */
 
-enum x86_scale
+enum
 {
     x86_scale_1,
     x86_scale_2,
@@ -163,7 +163,7 @@ enum x86_scale
  * segment
  */
 
-enum x86_seg
+enum
 {
     x86_seg_none,
     x86_seg_es,
@@ -190,7 +190,7 @@ enum
  * VEX prefix
  */
 
-enum x86_pfx
+enum
 {
     x86_pfx_none,
     x86_pfx_66,
@@ -204,7 +204,7 @@ enum x86_pfx
  * VEX map
  */
 
-enum x86_map
+enum
 {
     x86_map_none,
     x86_map_0f,
@@ -219,7 +219,7 @@ enum x86_map
  * VEX length
  */
 
-enum x86_vex_l
+enum
 {
     x86_vex_l0 = 0,
     x86_vex_l1 = 1,
@@ -236,7 +236,7 @@ enum x86_vex_l
  * VEX width
  */
 
-enum x86_vex_w
+enum
 {
     x86_vex_w0,
     x86_vex_w1,
@@ -246,7 +246,8 @@ enum x86_vex_w
  * test conditions
  */
 
-enum x86_cond {
+enum
+{
     /* non-signed */
     x86_never  = (0 | 0 | 0 | 0),
     x86_always = (0 | 0 | 0 | 1),
@@ -270,7 +271,9 @@ enum x86_cond {
  * oq = ordered queit, os = ordered signalling
  * uq = unordered queit, us = unordered signalling
  */
-enum x86_cmpp {
+
+enum
+{
     x86_eq_oq    = 0x00,
     x86_lt_os    = 0x01,
     x86_le_os    = 0x02,
@@ -312,7 +315,7 @@ enum x86_cmpp {
  */
 
 /*
- * ModRM
+ * ModRM struct
  */
 
 struct x86_modrm
@@ -320,12 +323,16 @@ struct x86_modrm
     union {
         uchar data[1];
         struct {
-            /* [0:2] */ uchar rm  : 3;
-            /* [3:5] */ uchar reg : 3;
-            /* [6:7] */ uchar mod : 2;
+            /* [0:2] */ uchar rm:3;
+            /* [3:5] */ uchar reg:3;
+            /* [6:7] */ uchar mod:2;
         };
     };
 };
+
+/*
+ * ModRM values
+ */
 
 enum
 {
@@ -339,22 +346,22 @@ enum
     x86_modrm_mod_mask  = 3,
 };
 
-static inline uint x86_modrm_rm (uchar modrm) {
+/*
+ * ModRM accessors
+ */
+
+static inline uint x86_modrm_rm(uchar modrm) {
     return modrm & x86_modrm_rm_mask;
 }
-static inline uint x86_modrm_reg (uchar modrm) {
+static inline uint x86_modrm_reg(uchar modrm) {
     return (modrm >> x86_modrm_reg_shift) & x86_modrm_reg_mask;
 }
-static inline uint x86_modrm_mod (uchar modrm) {
+static inline uint x86_modrm_mod(uchar modrm) {
     return (modrm >> x86_modrm_mod_shift) & x86_modrm_mod_mask;
 }
 
 /*
- * SIB
- */
-
-/*
- * SIB
+ * SIB struct
  */
 
 struct x86_sib
@@ -369,8 +376,11 @@ struct x86_sib
     };
 };
 
-enum
-{
+/*
+ * SIB values
+ */
+
+enum {
     x86_sib_b_mask = 7,
     x86_sib_x_shift = 3,
     x86_sib_x_mask = 7,
@@ -378,13 +388,17 @@ enum
     x86_sib_s_mask = 3
 };
 
-static inline uint x86_sib_b (uchar sib) {
+/*
+ * SIB accessors
+ */
+
+static inline uint x86_sib_b(uchar sib) {
     return sib & x86_sib_b_mask;
 }
-static inline uint x86_sib_x (uchar sib) {
+static inline uint x86_sib_x(uchar sib) {
     return (sib >> x86_sib_x_shift) & x86_sib_x_mask;
 }
-static inline uint x86_sib_s (uchar sib) {
+static inline uint x86_sib_s(uchar sib) {
     return (sib >> x86_sib_s_shift) & x86_sib_s_mask;
 }
 
@@ -448,6 +462,7 @@ struct x86_vex2
 /*
  * VEX3 struct
  */
+
 struct x86_vex3
 {
     union {
@@ -469,6 +484,7 @@ struct x86_vex3
 /*
  * EVEX struct
  */
+
 struct x86_evex
 {
     union {
@@ -490,7 +506,7 @@ struct x86_evex
             /*   [3] */ uchar v4n : 1; /* ~vec[4] */
             /*   [4] */ uchar br  : 1; /* broadcast or map4.ND[4] new-dest */
             /* [5:6] */ uchar l   : 2; /* len 00=128 01=256, 10=512 */
-            /*   [7] */ uchar z  : 1;  /* merge/zero */
+            /*   [7] */ uchar z   : 1; /* merge/zero */
         };
     };
 };
@@ -499,7 +515,7 @@ struct x86_evex
  * opcode encoding
  */
 
-enum x86_enc
+enum
 {
     x86_enc_w_shift          = 0,
     x86_enc_m_shift          = x86_enc_w_shift + 3,
@@ -555,13 +571,13 @@ enum x86_enc
     x86_enc_t_evex           = (3 << x86_enc_t_shift),
     x86_enc_t_mask           = (3 << x86_enc_t_shift),
 
-    x86_enc_o_opcode_r       = (1 << x86_enc_o_shift), // XX+r
+    x86_enc_o_opcode_r       = (1 << x86_enc_o_shift), /* XX+r */
     x86_enc_o_mask           = (1 << x86_enc_o_shift),
 
-    x86_enc_f_modrm_r        = (1 << x86_enc_f_shift), // /r
-    x86_enc_f_modrm_n        = (2 << x86_enc_f_shift), // /N
-    x86_enc_f_opcode         = (3 << x86_enc_f_shift), // XX
-    x86_enc_f_opcode_r       = (4 << x86_enc_f_shift), // XX+r
+    x86_enc_f_modrm_r        = (1 << x86_enc_f_shift), /* /r */
+    x86_enc_f_modrm_n        = (2 << x86_enc_f_shift), /* /N */
+    x86_enc_f_opcode         = (3 << x86_enc_f_shift), /* XX */
+    x86_enc_f_opcode_r       = (4 << x86_enc_f_shift), /* XX+r */
     x86_enc_f_mask           = (7 << x86_enc_f_shift),
 
     x86_enc_i_ib             = (1 << x86_enc_i_shift),
@@ -594,47 +610,51 @@ enum x86_enc
     x86_enc_param_mask       = x86_enc_immediate_mask | x86_enc_suffix_mask
 };
 
+/*
+ * opcode encoding accessors
+ */
+
 static inline uint x86_enc_width(uint enc) {
-    return (enc & x86_enc_w_mask);
+    return enc & x86_enc_w_mask;
 }
 static inline uint x86_enc_prefix(uint enc) {
-    return (enc & x86_enc_prexw_mask);
+    return enc & x86_enc_prexw_mask;
 }
 static inline uint x86_enc_length(uint enc) {
-    return (enc & x86_enc_l_mask);
+    return enc & x86_enc_l_mask;
 }
 static inline uint x86_enc_opcode(uint enc) {
-    return (enc & x86_enc_o_mask);
+    return enc & x86_enc_o_mask;
 }
 static inline uint x86_enc_func(uint enc) {
-    return (enc & x86_enc_f_mask);
+    return enc & x86_enc_f_mask;
 }
 static inline uint x86_enc_map(uint enc) {
-    return (enc & x86_enc_m_mask);
+    return enc & x86_enc_m_mask;
 }
 static inline uint x86_enc_imm(uint enc) {
-    return (enc & x86_enc_i_mask);
+    return enc & x86_enc_i_mask;
 }
 static inline uint x86_enc_imm2(uint enc) {
-    return (enc & x86_enc_j_mask);
+    return enc & x86_enc_j_mask;
 }
 static inline uint x86_enc_type(uint enc) {
-    return (enc & x86_enc_t_mask);
+    return enc & x86_enc_t_mask;
 }
 static inline uint x86_enc_suffix(uint enc) {
-    return (enc & x86_enc_suffix_mask);
+    return enc & x86_enc_suffix_mask;
 }
 static inline uint x86_enc_leading(uint enc) {
-    return (enc & ~x86_enc_param_mask);
+    return enc & ~x86_enc_param_mask;
 }
 static inline uint x86_enc_has_rep(uint enc) {
-    return (enc & x86_enc_r_rep);
+    return enc & x86_enc_r_rep;
 }
 static inline uint x86_enc_has_lock(uint enc) {
-    return (enc & x86_enc_r_lock);
+    return enc & x86_enc_r_lock;
 }
 static inline uint x86_enc_has_norexb(uint enc) {
-    return (enc & x86_enc_r_norexb);
+    return enc & x86_enc_r_norexb;
 }
 static inline uint x86_enc_has_o16(uint enc) {
     return (enc & x86_enc_s_mask) == x86_enc_s_o16;
@@ -659,7 +679,7 @@ static inline uint x86_enc_has_a64(uint enc) {
  * operand encoding
  */
 
-enum x86_opr
+enum
 {
     x86_opr_none,
 
@@ -979,6 +999,10 @@ enum x86_opr
     x86_opr_f64x8            = x86_opr_et_f | x86_opr_ew_64 | x86_opr_ec_x8,
 };
 
+/*
+ * operand encoding accessors
+ */
+
 static inline uint x86_opr_has_mem(uint opr) {
     return (opr & x86_opr_mem) != 0;
 }
@@ -1066,7 +1090,7 @@ static inline uint x86_opr_ec_mult(uint opr)
  * order encoding
  */
 
-enum x86_ord
+enum
 {
     x86_ord_none,
 
@@ -1074,12 +1098,12 @@ enum x86_ord
     x86_ord_s2               = x86_ord_s1 + 3,
     x86_ord_s3               = x86_ord_s2 + 3,
 
-    x86_ord_const            = (1 << x86_ord_s1), // -
-    x86_ord_imm              = (2 << x86_ord_s1), // I
-    x86_ord_reg              = (3 << x86_ord_s1), // R
-    x86_ord_mrm              = (4 << x86_ord_s1), // M
-    x86_ord_vec              = (5 << x86_ord_s1), // V
-    x86_ord_opr              = (6 << x86_ord_s1), // O
+    x86_ord_const            = (1 << x86_ord_s1), /* - */
+    x86_ord_imm              = (2 << x86_ord_s1), /* I */
+    x86_ord_reg              = (3 << x86_ord_s1), /* R */
+    x86_ord_mrm              = (4 << x86_ord_s1), /* M */
+    x86_ord_vec              = (5 << x86_ord_s1), /* V */
+    x86_ord_opr              = (6 << x86_ord_s1), /* O */
     x86_ord_type_mask        = (7 << x86_ord_s1),
 
     x86_ord_r                = (1 << x86_ord_s2),
@@ -1114,6 +1138,10 @@ enum x86_ord
     x86_ord_ime              = x86_ord_imm | (2 << x86_ord_s3),
 };
 
+/*
+ * order encoding accessors
+ */
+
 static inline uint x86_ord_type_val(uint ord) {
     return ord & x86_ord_type_mask;
 }
@@ -1122,7 +1150,7 @@ static inline uint x86_ord_type_val(uint ord) {
  * codec flags
  */
 
-enum x86_cf
+enum
 {
     x86_ce_shift   = 0,
     x86_cm_shift   = 3,
@@ -1217,20 +1245,20 @@ struct x86_codec
 };
 
 /*
- * codec fields and flags
+ * codec accessors
  */
 
 static inline int x86_codec_field_ce(x86_codec *c) {
-    return (c->flags & x86_ce_mask);
+    return c->flags & x86_ce_mask;
 }
 static inline int x86_codec_field_cm(x86_codec *c) {
-    return (c->flags & x86_cm_mask);
+    return c->flags & x86_cm_mask;
 }
 static inline int x86_codec_field_ci(x86_codec *c) {
-    return (c->flags & x86_ci_mask);
+    return c->flags & x86_ci_mask;
 }
 static inline int x86_codec_field_cj(x86_codec *c) {
-    return (c->flags & x86_cj_mask);
+    return c->flags & x86_cj_mask;
 }
 static inline int x86_codec_has_wait(x86_codec *c) {
     return (c->flags & x86_cp_wait) != 0;
@@ -1254,7 +1282,7 @@ static inline int x86_codec_has_modrm(x86_codec *c) {
     return (c->flags & x86_cf_modrm) != 0;
 }
 static inline int x86_codec_is16(x86_codec *c) {
-    return (c->flags & (x86_cf_ia32|x86_cf_amd64)) == 0;
+    return (c->flags & (x86_cf_ia32 | x86_cf_amd64)) == 0;
 }
 static inline int x86_codec_is32(x86_codec *c) {
     return (c->flags & x86_cf_ia32) != 0;
@@ -1267,12 +1295,16 @@ static inline int x86_codec_is64(x86_codec *c) {
  * modes
  */
 
-enum x86_modes
+enum
 {
     x86_modes_16 = (1 << 0),
     x86_modes_32 = (1 << 1),
     x86_modes_64 = (1 << 2),
 };
+
+/*
+ * modes accessors
+ */
 
 static inline int x86_mode_has16(uint mode) {
     return (mode & x86_modes_16) != 0;
@@ -1349,8 +1381,7 @@ struct x86_ord_data
  * invert condition
  */
 
-static inline uint x86_invert_cond(uint c)
-{
+static inline uint x86_invert_cond(uint c) {
     return c ^ 1;
 }
 
@@ -1358,8 +1389,7 @@ static inline uint x86_invert_cond(uint c)
  * swap condition operands
  */
 
-static inline uint x86_swap_cond(uint c)
-{
+static inline uint x86_swap_cond(uint c) {
     return c & 6 ? c ^ 9 : c;
 }
 
@@ -1438,8 +1468,7 @@ static inline x86_rex2 x86_enc_rex2(uint m, uint w, uint r, uint x, uint b)
  * VEX2 encoder
  */
 
-static inline x86_vex2 x86_enc_vex2(uint p, uint l,
-    uint r, uint v)
+static inline x86_vex2 x86_enc_vex2(uint p, uint l, uint r, uint v)
 {
     x86_vex2 vex2 = {
         .data = {
@@ -1516,7 +1545,7 @@ enum
 };
 
 /*
- * table types that map to instruction encoding prefix types
+ * table encoding prefix types
  */
 
 enum
@@ -1528,7 +1557,7 @@ enum
 };
 
 /*
- * table sort indices array used to sort immutable opcode table
+ * table sort indices
  */
 
 struct x86_table_idx
@@ -1574,7 +1603,7 @@ static inline size_t x86_acc_offset(x86_acc_idx *idx, size_t acc_page)
     return (size_t)idx->page_offsets[acc_page] << 8;
 }
 
-static inline x86_acc_entry* x86_acc_lookup(x86_acc_idx *idx, size_t offset)
+static inline x86_acc_entry *x86_acc_lookup(x86_acc_idx *idx, size_t offset)
 {
     return idx->acc + offset;
 }
@@ -1606,8 +1635,12 @@ struct x86_ctx
     x86_acc_idx *idx;
 };
 
-/* simplified buffer with read (start) and write (end) cursors
- * capacity is user managed because it does no limit checking. */
+/*
+ * buffer
+ *
+ * simplified buffer with read (start) and write (end) cursors
+ * capacity is user managed because it does no limit checking.
+ */
 
 struct x86_buffer
 {
@@ -1663,25 +1696,25 @@ static inline size_t x86_buffer_unwrite(x86_buffer *b, size_t len)
 
 static inline size_t x86_out8(x86_buffer *buf, u8 v)
 {
-    return x86_buffer_write(buf, (void*)&v, sizeof(u8));
+    return x86_buffer_write(buf, (void *)&v, sizeof(u8));
 }
 
 static inline size_t x86_out16(x86_buffer *buf, u16 v)
 {
     u16 t = le16(v);
-    return x86_buffer_write(buf, (void*)&t, sizeof(u16));
+    return x86_buffer_write(buf, (void *)&t, sizeof(u16));
 }
 
 static inline size_t x86_out32(x86_buffer *buf, u32 v)
 {
     u32 t = le32(v);
-    return x86_buffer_write(buf, (void*)&t, sizeof(u32));
+    return x86_buffer_write(buf, (void *)&t, sizeof(u32));
 }
 
 static inline size_t x86_out64(x86_buffer *buf, u64 v)
 {
     u64 t = le64(v);
-    return x86_buffer_write(buf, (void*)&t, sizeof(u64));
+    return x86_buffer_write(buf, (void *)&t, sizeof(u64));
 }
 
 static inline size_t x86_unput(x86_buffer *buf, size_t n)
@@ -1692,28 +1725,28 @@ static inline size_t x86_unput(x86_buffer *buf, size_t n)
 static inline u8 x86_in8(x86_buffer *buf)
 {
     u8 t = 0;
-    x86_buffer_read(buf, (void*)&t, sizeof(u8));
+    x86_buffer_read(buf, (void *)&t, sizeof(u8));
     return t;
 }
 
 static inline u16 x86_in16(x86_buffer *buf)
 {
     u16 t = 0;
-    x86_buffer_read(buf, (void*)&t, sizeof(u16));
+    x86_buffer_read(buf, (void *)&t, sizeof(u16));
     return le16(t);
 }
 
 static inline u32 x86_in32(x86_buffer *buf)
 {
     u32 t = 0;
-    x86_buffer_read(buf, (void*)&t, sizeof(u32));
+    x86_buffer_read(buf, (void *)&t, sizeof(u32));
     return le32(t);
 }
 
 static inline u64 x86_in64(x86_buffer *buf)
 {
     u64 t = 0;
-    x86_buffer_read(buf, (void*)&t, sizeof(u64));
+    x86_buffer_read(buf, (void *)&t, sizeof(u64));
     return le64(t);
 }
 
@@ -1721,9 +1754,9 @@ static inline u64 x86_in64(x86_buffer *buf)
  * metadata tables
  */
 
-extern const char* x86_reg_names[];
+extern const char *x86_reg_names[];
 extern const size_t x86_op_names_size;
-extern const char* x86_op_names[];
+extern const char *x86_op_names[];
 extern const size_t x86_opc_table_size;
 extern const x86_opc_data x86_opc_table[];
 extern const size_t x86_opr_table_size;
@@ -1742,10 +1775,10 @@ size_t x86_ord_name(char *buf, size_t len, uint ord, const char *sep);
 size_t x86_ord_mnem(char *buf, size_t len, const ushort *ord);
 size_t x86_opr_name(char *buf, size_t len, uint opr);
 size_t x86_enc_name(char *buf, size_t len, uint enc);
-const char* x86_reg_name(uint reg);
-const char* x86_table_type_name(uint type);
-const char* x86_table_map_name(uint map);
-const char* x86_table_prefix_name(uint prefix);
+const char *x86_reg_name(uint reg);
+const char *x86_table_type_name(uint type);
+const char *x86_table_map_name(uint map);
+const char *x86_table_prefix_name(uint prefix);
 int x86_enc_filter_rex(x86_rex prefix, uint enc);
 int x86_enc_filter_rex2(x86_rex2 prefix, uint enc);
 int x86_enc_filter_vex2(x86_vex2 prefix, uint enc);
@@ -1754,7 +1787,7 @@ int x86_enc_filter_evex(x86_evex prefix, uint enc);
 x86_table_idx x86_opc_table_identity(void);
 x86_table_idx x86_opc_table_sorted(x86_table_idx tab, uint sort);
 x86_table_idx x86_opc_table_filter(x86_table_idx tab, uint modes);
-x86_opc_data* x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
+x86_opc_data *x86_table_lookup(x86_acc_idx *idx, const x86_opc_data *m);
 void x86_print_op(const x86_opc_data *d, uint compact, uint opcode);
 size_t x86_format_op(char *buf, size_t len, x86_ctx *ctx, x86_codec *c);
 typedef size_t (*x86_fmt_symbol)(char *buf, size_t buflen, x86_codec *c,
@@ -1762,7 +1795,7 @@ typedef size_t (*x86_fmt_symbol)(char *buf, size_t buflen, x86_codec *c,
 size_t x86_format_op_symbol(char *buf, size_t buflen, x86_ctx *ctx,
     x86_codec *c, size_t pc_offset, x86_fmt_symbol sym_cb);
 size_t x86_format_hex(char *buf, size_t len, uchar *data, size_t datalen);
-x86_ctx* x86_ctx_create(uint mode);
+x86_ctx *x86_ctx_create(uint mode);
 void x86_ctx_destroy(x86_ctx *ctx);
 int x86_codec_write(x86_ctx *ctx, x86_buffer *buf, x86_codec c, size_t *len);
 int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len);
