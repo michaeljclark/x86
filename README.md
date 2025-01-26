@@ -367,6 +367,7 @@ _(enum x86_opr)_.
 | `1`                | constant 1                                            |
 | `ib`               | 8-bit immediate                                       |
 | `iw`               | 16-bit or 32-bit immediate (mode + operand size)      |
+| `iwd`              | 16-bit or 32-bit immediate (mode)                     |
 | `id`               | 32-bit immediate                                      |
 | `iq`               | 64-bit immediate                                      |
 | `rel8`             | 8-bit displacement                                    |
@@ -450,7 +451,7 @@ _(enum x86_enc)_.
 | mnemonic | description                                                     |
 |:---------|:----------------------------------------------------------------|
 | `/r`     | ModRM byte                                                      |
-| `/0../9` | ModRM byte with 'r' field used for functions 0 to 7             |
+| `/0../7` | ModRM byte with 'r' field used for functions 0 to 7             |
 | `XX+r`   | opcode byte with 3-bit register added to the opcode             |
 | `XX`     | opcode byte                                                     |
 | `ib`     | 8-bit immediate                                                 |
@@ -465,6 +466,7 @@ _(enum x86_enc)_.
 | `a32`    | encoding uses prefix 67 in 16-bit mode                          |
 | `a64`    | encoding is used exclusively in 64-bit mode                     |
 | `lock`   | memory operand encodings can be used with the LOCK prefix       |
+| `rep`    | string instructions that can be used with the REP prefix        |
 
 ### Appendix E - Instruction Synthesis Notes
 
