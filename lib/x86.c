@@ -1083,17 +1083,18 @@ static x86_acc_idx *x86_table_build(uint modes)
     x86_acc_idx *idx = calloc(1, sizeof(x86_acc_idx));
     x86_table_idx tab = x86_opc_table_sorted(x86_opc_table_filter(
         x86_opc_table_identity(), modes), x86_sort_numeric);
-    ullong *modfun = (ullong *)calloc(2048, sizeof(ullong));
-    ullong *modmod = (ullong *)calloc(2048, sizeof(ullong));
+    size_t bmap_size = /*t,p,m*/ 512 * /*opcode*/ 256 >> /*bits*/ 3;
+    ullong *modfun = calloc(bmap_size, sizeof(uchar));
+    ullong *modmod = calloc(bmap_size, sizeof(uchar));
     x86_build_prefix_clashes(idx, tab, modfun, modmod);
     x86_build_prefix_table(idx, tab, NULL, &idx->map_count, modfun, modmod);
     idx->map = calloc(idx->map_count, sizeof(x86_opc_data));
     x86_build_prefix_table(idx, tab, idx->map, NULL, modfun, modmod);
     qsort(idx->map, idx->map_count, sizeof(x86_opc_data),
         x86_opc_data_compare_build);
-    idx->page_offsets = calloc(512, sizeof(uchar));
+    idx->page_offsets = calloc(/*t,p,m*/ 512, sizeof(uchar));
     idx->acc_count = x86_build_accel_offsets(idx);
-    idx->acc = calloc(sizeof(x86_acc_entry), idx->acc_count);
+    idx->acc = calloc(idx->acc_count, sizeof(x86_acc_entry));
     x86_build_accel_table(idx, idx->acc);
     free(tab.idx);
     free(modfun);
