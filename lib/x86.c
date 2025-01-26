@@ -453,6 +453,10 @@ x86_map_str x86_enc_names[] =
     { 0,                        NULL               },
 };
 
+/*
+ *  string tables
+ */
+
 static size_t x86_name_map(x86_map_str *p, char * buf, size_t len, uint ord,
     const char *sep)
 {
@@ -869,6 +873,10 @@ static int x86_opc_data_compare_build(const void *p1, const void *p2)
     return 0;
 }
 
+/*
+ *  table construction
+ */
+
 static x86_opc_prefix x86_table_make_prefix(const x86_opc_data *d,
     const x86_opr_data *o, const x86_ord_data *p)
 {
@@ -1101,6 +1109,10 @@ static x86_acc_idx *x86_table_build(uint modes)
     free(modmod);
     return idx;
 }
+
+/*
+ *  table lookup
+ */
 
 static x86_opc_data *x86_table_lookup_slow(x86_acc_idx *idx,
     const x86_opc_data *m)
@@ -1605,6 +1617,373 @@ static size_t x86_parse_encoding(x86_buffer *buf, x86_codec *c,
     return nbytes;
 }
 
+enum {
+    x86_enc_tpm_mask  = x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask
+};
+
+static x86_opc_data *x86_table_match(x86_ctx *ctx, x86_codec *c,
+    x86_opc_data k, int w)
+{
+    x86_opc_data *r = NULL;
+    /* key is type+prefix+map with substituted rexw=w flag */
+    k.enc = ((k.enc & ~x86_enc_p_rexw) |
+             (-w    &  x86_enc_p_rexw)) & x86_enc_tpm_mask;
+    x86_debugf("table_lookup { type:%x prefix:%x map:%x "
+        "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
+        (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
+        (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
+        (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
+        k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
+    r = x86_table_lookup(ctx->idx, &k);
+    while (r < ctx->idx->map + ctx->idx->map_count) {
+        /* substitute suffix of record for precise match */
+        k.enc = ((k.enc & x86_enc_tpm_mask) |
+                  (r->enc & ~x86_enc_tpm_mask));
+        size_t oprec = (r - ctx->idx->map);
+        x86_debugf("checking opdata %zu", oprec);
+        if (debug) x86_print_op(r, 1, 1);
+        if (x86_opc_data_compare_masked(&k, r) != 0) {
+            x86_debugf("** no matches");
+            r = NULL;
+            break;
+        }
+        if (x86_filter_op(c, r, w) == 0) break;
+        r++;
+    }
+    return r;
+}
+
+int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len)
+{
+    uint state = x86_state_top;
+    size_t nbytes = 0, limit = buf->end - buf->start;
+    uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
+    x86_opc_data k = { 0 }, *r = NULL;
+    uchar b = 0, lastp = 0;
+
+    memset(c, 0, sizeof(x86_codec));
+    switch (mode) {
+    case x86_modes_32: c->flags |= x86_cf_ia32; break;
+    case x86_modes_64: c->flags |= x86_cf_amd64; break;
+    }
+
+    while (state != x86_state_done) {
+        nbytes += x86_buffer_read(buf, &b, 1);
+        switch (state) {
+        case x86_state_top:
+            switch (b) {
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                c->rex.data[0] = b;
+                c->flags |= x86_ce_rex;
+                w = (c->rex.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_rex_opcode;
+                break;
+            case x86_pb_26:
+            case x86_pb_2e:
+            case x86_pb_36:
+            case x86_pb_3e:
+            case x86_pb_64:
+            case x86_pb_65:
+                state = x86_state_segment;
+                goto segment_reparse;
+            case x86_pb_66:
+            case x86_pb_67:
+            case x86_pb_9b:
+            case x86_pb_f0:
+            case x86_pb_f2:
+            case x86_pb_f3:
+                state = x86_state_legacy;
+                goto legacy_reparse;
+            case x86_pb_62:
+                nbytes += x86_buffer_read(buf, c->evex.data, 3);
+                c->flags |= x86_ce_evex;
+                m = (c->evex.data[0] >> 0) & 7;
+                w = (c->evex.data[1] >> 7) & 1;
+                p = (c->evex.data[1] >> 0) & 3;
+                l = (c->evex.data[2] >> 5) & 3;
+                t = x86_table_evex;
+                state = x86_state_vex_opcode;
+                break;
+            case x86_pb_c4:
+                nbytes += x86_buffer_read(buf, c->vex3.data, 2);
+                c->flags |= x86_ce_vex3;
+                m = (c->vex3.data[0] >> 0) & 31;
+                w = (c->vex3.data[1] >> 7) & 1;
+                p = (c->vex3.data[1] >> 0) & 3;
+                l = (c->vex3.data[1] >> 2) & 1;
+                t = x86_table_vex;
+                state = x86_state_vex_opcode;
+                break;
+            case x86_pb_c5:
+                nbytes += x86_buffer_read(buf, c->vex2.data, 1);
+                c->flags |= x86_ce_vex2;
+                m = x86_map_0f;
+                p = (c->vex2.data[0] >> 0) & 3;
+                l = (c->vex2.data[0] >> 2) & 1;
+                t = x86_table_vex;
+                state = x86_state_vex_opcode;
+                break;
+            case x86_pb_d5:
+                nbytes += x86_buffer_read(buf, c->rex2.data, 1);
+                c->flags |= x86_ce_rex2;
+                m = (c->rex2.data[0] >> 7) & 1;
+                w = (c->rex2.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                break;
+            case 0x0f:
+                t = x86_table_lex;
+                state = x86_state_map_0f;
+                break;
+            default:
+                m = x86_map_none;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_segment: segment_reparse:
+            switch (b) {
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                c->rex.data[0] = b;
+                c->flags |= x86_ce_rex;
+                w = (c->rex.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_rex_opcode;
+                break;
+            case x86_pb_26:
+                c->seg = x86_seg_es; state = x86_state_legacy;
+                break;
+            case x86_pb_2e:
+                c->seg = x86_seg_cs; state = x86_state_legacy;
+                break;
+            case x86_pb_36:
+                c->seg = x86_seg_ss; state = x86_state_legacy;
+                break;
+            case x86_pb_3e:
+                c->seg = x86_seg_ds; state = x86_state_legacy;
+                break;
+            case x86_pb_64:
+                c->seg = x86_seg_fs; state = x86_state_legacy;
+                break;
+            case x86_pb_65:
+                c->seg = x86_seg_gs; state = x86_state_legacy;
+                break;
+            case x86_pb_66:
+            case x86_pb_67:
+            case x86_pb_9b:
+            case x86_pb_f0:
+            case x86_pb_f2:
+            case x86_pb_f3:
+                state = x86_state_legacy;
+                goto legacy_reparse;
+            case x86_pb_62:
+            case x86_pb_c4:
+            case x86_pb_c5:
+            case x86_pb_d5:
+                goto err;
+            case 0x0f:
+                t = x86_table_lex;
+                state = x86_state_map_0f;
+                break;
+            default:
+                m = x86_map_none;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_legacy: legacy_reparse:
+            switch (b) {
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                c->rex.data[0] = b;
+                c->flags |= x86_ce_rex;
+                w = (c->rex.data[0] >> 3) & 1;
+                t = x86_table_lex;
+                state = x86_state_rex_opcode;
+                break;
+            case x86_pb_26:
+            case x86_pb_2e:
+            case x86_pb_36:
+            case x86_pb_3e:
+            case x86_pb_64:
+            case x86_pb_65:
+            case x86_pb_62:
+            case x86_pb_c4:
+            case x86_pb_c5:
+            case x86_pb_d5:
+                goto err;
+            case x86_pb_66:
+                lastp = b;
+                c->flags |= x86_cp_osize;
+                break;
+            case x86_pb_67:
+                lastp = b;
+                c->flags |= x86_cp_asize;
+                break;
+            case x86_pb_9b:
+                lastp = b;
+                c->flags |= x86_cp_wait;
+                break;
+            case x86_pb_f0:
+                lastp = b;
+                c->flags |= x86_cp_lock;
+                break;
+            case x86_pb_f2:
+                lastp = b;
+                c->flags |= x86_cp_repne;
+                break;
+            case x86_pb_f3:
+                lastp = b;
+                c->flags |= x86_cp_rep;
+                break;
+            case 0x0f:
+                t = x86_table_lex;
+                state = x86_state_map_0f;
+                break;
+            default:
+                m = x86_map_none;
+                t = x86_table_lex;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_rex_opcode:
+            switch (b) {
+            case 0x0f:
+                state = x86_state_map_0f;
+                break;
+            default:
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_map_0f:
+            switch (b) {
+            case 0x38:
+                c->flags |= x86_cm_0f38;
+                m = x86_map_0f38;
+                state = x86_state_lex_opcode;
+                break;
+            case 0x3a:
+                c->flags |= x86_cm_0f3a;
+                m = x86_map_0f3a;
+                state = x86_state_lex_opcode;
+                break;
+            default:
+                c->flags |= x86_cm_0f;
+                m = x86_map_0f;
+                state = x86_state_lex_opcode;
+                goto lex_reparse;
+            }
+            break;
+        case x86_state_lex_opcode: lex_reparse:
+            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
+                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
+            switch (lastp) {
+            case 0x66: k.enc |= x86_enc_p_66; break;
+            case 0x9b: k.enc |= x86_enc_p_9b; break;
+            case 0xf2: k.enc |= x86_enc_p_f2; break;
+            case 0xf3: k.enc |= x86_enc_p_f3; break;
+            }
+            state = x86_state_done;
+            break;
+        case x86_state_vex_opcode:
+            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
+                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
+            switch (p) {
+            case x86_pfx_66: k.enc |= x86_enc_p_66; break;
+            case x86_pfx_f2: k.enc |= x86_enc_p_f2; break;
+            case x86_pfx_f3: k.enc |= x86_enc_p_f3; break;
+            }
+            state = x86_state_done;
+            (void)l; /* l can be added to the index key */
+            break;
+        default:
+            abort();
+        }
+    };
+
+    /* populate opcode for table lookup */
+    k.mode = mode;
+    c->opc[0] = k.opc[0] = b;
+    nbytes += x86_buffer_read(buf, &b, 1);
+    c->opc[1] = k.opc[1] = b;
+    k.opm[0] = k.opm[1] = 0xff;
+
+    /* if REX.W=1 first attempt to lookup W=1 record */
+    if (w) {
+        r = x86_table_match(ctx, c, k, 1);
+    }
+
+    /* if REX.W=0 or search failed lookup W=0/WIG record */
+    if (!w || (w && !r)) {
+        r = x86_table_match(ctx, c, k, 0);
+    }
+
+    /* now attempt lookup without using the prefix */
+    if (!r) {
+        k.enc &= ~x86_enc_p_mask;
+
+        /* if REX.W=1 first attempt to lookup W=1 record */
+        if (w) {
+            r = x86_table_match(ctx, c, k, 1);
+        }
+
+        /* if REX.W=0 or search failed lookup W=0/WIG record */
+        if (!w || (w && !r)) {
+            r = x86_table_match(ctx, c, k, 0);
+        }
+    }
+
+    /* parse encoding */
+    if (r) {
+
+        /* set opcode length and modrm flags */
+        switch (x86_enc_func(r->enc)) {
+        case x86_enc_f_modrm_r:
+        case x86_enc_f_modrm_n:
+            /* second byte is modrm */
+            c->flags |= x86_cf_modrm;
+            c->opclen = 1;
+            break;
+        case x86_enc_f_opcode:
+        case x86_enc_f_opcode_r:
+            /* two byte opcode */
+            c->opclen = 2;
+            break;
+        default:
+            /* no second opcode byte */
+            nbytes -= x86_buffer_unread(buf, 1);
+            c->opclen = 1;
+            break;
+        }
+
+        /* parse SIB, disp, imm from format */
+        nbytes += x86_parse_encoding(buf, c, r);
+        if (nbytes <= limit) {
+            c->rec = (r - ctx->idx->map);
+            *len = nbytes;
+            return 0;
+        }
+    }
+
+err:
+    nbytes -= x86_buffer_unread(buf, nbytes);
+    *len = nbytes;
+    return -1;
+}
+
 static x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
 {
     x86_operands q;
@@ -1704,6 +2083,10 @@ static x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
 
     return q;
 }
+
+/*
+ * disassembly
+ */
 
 static inline x86_arg x86_codec_meta(uint enc, uint opr, uint ord,
     x86_operands q)
@@ -1830,44 +2213,6 @@ static uint x86_regsz_bytes(uint regsz)
     return 1;
 }
 
-x86_opr_formats x86_opr_formats_intel_hex =
-{
-    .ptr_rip            = "%s[rip]",
-    .ptr_rip_disp       = "%s[rip %s 0x%x]",
-    .ptr_reg            = "%s[%s]",
-    .ptr_reg_disp       = "%s[%s %s 0x%x]",
-    .ptr_reg_sreg       = "%s[%s + %d*%s]",
-    .ptr_reg_sreg_disp  = "%s[%s + %d*%s %s 0x%x]",
-    .ptr_reg_reg        = "%s[%s + %s]",
-    .ptr_reg_reg_disp   = "%s[%s + %s %s 0x%x]",
-    .ptr_sreg           = "%s[%d*%s]",
-    .ptr_disp           = "%s[%s0x%x]",
-    .ptr_imm64          = "%s[%s0x%llx]",
-    .ptr_imm32          = "%s[%s0x%x]",
-    .imm64              = "%s0x%llx",
-    .imm32              = "%s0x%x",
-    .reg                = "%s",
-};
-
-x86_opr_formats x86_opr_formats_intel_dec =
-{
-    .ptr_rip            = "%s[rip]",
-    .ptr_rip_disp       = "%s[rip %s %u]",
-    .ptr_reg            = "%s[%s]",
-    .ptr_reg_disp       = "%s[%s %s %u]",
-    .ptr_reg_sreg       = "%s[%s + %d*%s]",
-    .ptr_reg_sreg_disp  = "%s[%s + %d*%s %s %u]",
-    .ptr_reg_reg        = "%s[%s + %s]",
-    .ptr_reg_reg_disp   = "%s[%s + %s %s %u]",
-    .ptr_sreg           = "%s[%d*%s]",
-    .ptr_disp           = "%s[%s%u]",
-    .ptr_imm64          = "%s[%s%llu]",
-    .ptr_imm32          = "%s[%s%u]",
-    .imm64              = "%s%llu",
-    .imm32              = "%s%u",
-    .reg                = "%s",
-};
-
 static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
     x86_codec *c, x86_arg a, uint reg)
 {
@@ -1913,6 +2258,44 @@ static uint x86_opr_bcst_size(uint opr)
     }
     return 0;
 }
+
+x86_opr_formats x86_opr_formats_intel_hex =
+{
+    .ptr_rip            = "%s[rip]",
+    .ptr_rip_disp       = "%s[rip %s 0x%x]",
+    .ptr_reg            = "%s[%s]",
+    .ptr_reg_disp       = "%s[%s %s 0x%x]",
+    .ptr_reg_sreg       = "%s[%s + %d*%s]",
+    .ptr_reg_sreg_disp  = "%s[%s + %d*%s %s 0x%x]",
+    .ptr_reg_reg        = "%s[%s + %s]",
+    .ptr_reg_reg_disp   = "%s[%s + %s %s 0x%x]",
+    .ptr_sreg           = "%s[%d*%s]",
+    .ptr_disp           = "%s[%s0x%x]",
+    .ptr_imm64          = "%s[%s0x%llx]",
+    .ptr_imm32          = "%s[%s0x%x]",
+    .imm64              = "%s0x%llx",
+    .imm32              = "%s0x%x",
+    .reg                = "%s",
+};
+
+x86_opr_formats x86_opr_formats_intel_dec =
+{
+    .ptr_rip            = "%s[rip]",
+    .ptr_rip_disp       = "%s[rip %s %u]",
+    .ptr_reg            = "%s[%s]",
+    .ptr_reg_disp       = "%s[%s %s %u]",
+    .ptr_reg_sreg       = "%s[%s + %d*%s]",
+    .ptr_reg_sreg_disp  = "%s[%s + %d*%s %s %u]",
+    .ptr_reg_reg        = "%s[%s + %s]",
+    .ptr_reg_reg_disp   = "%s[%s + %s %s %u]",
+    .ptr_sreg           = "%s[%d*%s]",
+    .ptr_disp           = "%s[%s%u]",
+    .ptr_imm64          = "%s[%s%llu]",
+    .ptr_imm32          = "%s[%s%u]",
+    .imm64              = "%s%llu",
+    .imm32              = "%s%u",
+    .reg                = "%s",
+};
 
 static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     x86_codec *c, x86_arg a, x86_opr_formats *fmt)
@@ -2307,372 +2690,9 @@ size_t x86_format_hex(char *buf, size_t buflen, uchar *data, size_t datalen)
     return len;
 }
 
-enum {
-    x86_enc_tpm_mask  = x86_enc_t_mask | x86_enc_prexw_mask | x86_enc_m_mask
-};
-
-static x86_opc_data *x86_table_match(x86_ctx *ctx, x86_codec *c,
-    x86_opc_data k, int w)
-{
-    x86_opc_data *r = NULL;
-    /* key is type+prefix+map with substituted rexw=w flag */
-    k.enc = ((k.enc & ~x86_enc_p_rexw) |
-             (-w    &  x86_enc_p_rexw)) & x86_enc_tpm_mask;
-    x86_debugf("table_lookup { type:%x prefix:%x map:%x "
-        "opc:[%02hhx %02hhx] opm:[%02hhx %02hhx] }",
-        (k.enc & x86_enc_t_mask) >> x86_enc_t_shift,
-        (k.enc & x86_enc_p_mask) >> x86_enc_p_shift,
-        (k.enc & x86_enc_m_mask) >> x86_enc_m_shift,
-        k.opc[0], k.opc[1], k.opm[0], k.opm[1]);
-    r = x86_table_lookup(ctx->idx, &k);
-    while (r < ctx->idx->map + ctx->idx->map_count) {
-        /* substitute suffix of record for precise match */
-        k.enc = ((k.enc & x86_enc_tpm_mask) |
-                  (r->enc & ~x86_enc_tpm_mask));
-        size_t oprec = (r - ctx->idx->map);
-        x86_debugf("checking opdata %zu", oprec);
-        if (debug) x86_print_op(r, 1, 1);
-        if (x86_opc_data_compare_masked(&k, r) != 0) {
-            x86_debugf("** no matches");
-            r = NULL;
-            break;
-        }
-        if (x86_filter_op(c, r, w) == 0) break;
-        r++;
-    }
-    return r;
-}
-
-int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len)
-{
-    uint state = x86_state_top;
-    size_t nbytes = 0, limit = buf->end - buf->start;
-    uint t = 0, m = 0, w = 0, p = 0, l = 0, mode = ctx->mode;
-    x86_opc_data k = { 0 }, *r = NULL;
-    uchar b = 0, lastp = 0;
-
-    memset(c, 0, sizeof(x86_codec));
-    switch (mode) {
-    case x86_modes_32: c->flags |= x86_cf_ia32; break;
-    case x86_modes_64: c->flags |= x86_cf_amd64; break;
-    }
-
-    while (state != x86_state_done) {
-        nbytes += x86_buffer_read(buf, &b, 1);
-        switch (state) {
-        case x86_state_top:
-            switch (b) {
-            case 0x40: case 0x41: case 0x42: case 0x43:
-            case 0x44: case 0x45: case 0x46: case 0x47:
-            case 0x48: case 0x49: case 0x4a: case 0x4b:
-            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
-                c->rex.data[0] = b;
-                c->flags |= x86_ce_rex;
-                w = (c->rex.data[0] >> 3) & 1;
-                t = x86_table_lex;
-                state = x86_state_rex_opcode;
-                break;
-            case x86_pb_26:
-            case x86_pb_2e:
-            case x86_pb_36:
-            case x86_pb_3e:
-            case x86_pb_64:
-            case x86_pb_65:
-                state = x86_state_segment;
-                goto segment_reparse;
-            case x86_pb_66:
-            case x86_pb_67:
-            case x86_pb_9b:
-            case x86_pb_f0:
-            case x86_pb_f2:
-            case x86_pb_f3:
-                state = x86_state_legacy;
-                goto legacy_reparse;
-            case x86_pb_62:
-                nbytes += x86_buffer_read(buf, c->evex.data, 3);
-                c->flags |= x86_ce_evex;
-                m = (c->evex.data[0] >> 0) & 7;
-                w = (c->evex.data[1] >> 7) & 1;
-                p = (c->evex.data[1] >> 0) & 3;
-                l = (c->evex.data[2] >> 5) & 3;
-                t = x86_table_evex;
-                state = x86_state_vex_opcode;
-                break;
-            case x86_pb_c4:
-                nbytes += x86_buffer_read(buf, c->vex3.data, 2);
-                c->flags |= x86_ce_vex3;
-                m = (c->vex3.data[0] >> 0) & 31;
-                w = (c->vex3.data[1] >> 7) & 1;
-                p = (c->vex3.data[1] >> 0) & 3;
-                l = (c->vex3.data[1] >> 2) & 1;
-                t = x86_table_vex;
-                state = x86_state_vex_opcode;
-                break;
-            case x86_pb_c5:
-                nbytes += x86_buffer_read(buf, c->vex2.data, 1);
-                c->flags |= x86_ce_vex2;
-                m = x86_map_0f;
-                p = (c->vex2.data[0] >> 0) & 3;
-                l = (c->vex2.data[0] >> 2) & 1;
-                t = x86_table_vex;
-                state = x86_state_vex_opcode;
-                break;
-            case x86_pb_d5:
-                nbytes += x86_buffer_read(buf, c->rex2.data, 1);
-                c->flags |= x86_ce_rex2;
-                m = (c->rex2.data[0] >> 7) & 1;
-                w = (c->rex2.data[0] >> 3) & 1;
-                t = x86_table_lex;
-                state = x86_state_lex_opcode;
-                break;
-            case 0x0f:
-                t = x86_table_lex;
-                state = x86_state_map_0f;
-                break;
-            default:
-                m = x86_map_none;
-                t = x86_table_lex;
-                state = x86_state_lex_opcode;
-                goto lex_reparse;
-            }
-            break;
-        case x86_state_segment: segment_reparse:
-            switch (b) {
-            case 0x40: case 0x41: case 0x42: case 0x43:
-            case 0x44: case 0x45: case 0x46: case 0x47:
-            case 0x48: case 0x49: case 0x4a: case 0x4b:
-            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
-                c->rex.data[0] = b;
-                c->flags |= x86_ce_rex;
-                w = (c->rex.data[0] >> 3) & 1;
-                t = x86_table_lex;
-                state = x86_state_rex_opcode;
-                break;
-            case x86_pb_26:
-                c->seg = x86_seg_es; state = x86_state_legacy;
-                break;
-            case x86_pb_2e:
-                c->seg = x86_seg_cs; state = x86_state_legacy;
-                break;
-            case x86_pb_36:
-                c->seg = x86_seg_ss; state = x86_state_legacy;
-                break;
-            case x86_pb_3e:
-                c->seg = x86_seg_ds; state = x86_state_legacy;
-                break;
-            case x86_pb_64:
-                c->seg = x86_seg_fs; state = x86_state_legacy;
-                break;
-            case x86_pb_65:
-                c->seg = x86_seg_gs; state = x86_state_legacy;
-                break;
-            case x86_pb_66:
-            case x86_pb_67:
-            case x86_pb_9b:
-            case x86_pb_f0:
-            case x86_pb_f2:
-            case x86_pb_f3:
-                state = x86_state_legacy;
-                goto legacy_reparse;
-            case x86_pb_62:
-            case x86_pb_c4:
-            case x86_pb_c5:
-            case x86_pb_d5:
-                goto err;
-            case 0x0f:
-                t = x86_table_lex;
-                state = x86_state_map_0f;
-                break;
-            default:
-                m = x86_map_none;
-                t = x86_table_lex;
-                state = x86_state_lex_opcode;
-                goto lex_reparse;
-            }
-            break;
-        case x86_state_legacy: legacy_reparse:
-            switch (b) {
-            case 0x40: case 0x41: case 0x42: case 0x43:
-            case 0x44: case 0x45: case 0x46: case 0x47:
-            case 0x48: case 0x49: case 0x4a: case 0x4b:
-            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
-                c->rex.data[0] = b;
-                c->flags |= x86_ce_rex;
-                w = (c->rex.data[0] >> 3) & 1;
-                t = x86_table_lex;
-                state = x86_state_rex_opcode;
-                break;
-            case x86_pb_26:
-            case x86_pb_2e:
-            case x86_pb_36:
-            case x86_pb_3e:
-            case x86_pb_64:
-            case x86_pb_65:
-            case x86_pb_62:
-            case x86_pb_c4:
-            case x86_pb_c5:
-            case x86_pb_d5:
-                goto err;
-            case x86_pb_66:
-                lastp = b;
-                c->flags |= x86_cp_osize;
-                break;
-            case x86_pb_67:
-                lastp = b;
-                c->flags |= x86_cp_asize;
-                break;
-            case x86_pb_9b:
-                lastp = b;
-                c->flags |= x86_cp_wait;
-                break;
-            case x86_pb_f0:
-                lastp = b;
-                c->flags |= x86_cp_lock;
-                break;
-            case x86_pb_f2:
-                lastp = b;
-                c->flags |= x86_cp_repne;
-                break;
-            case x86_pb_f3:
-                lastp = b;
-                c->flags |= x86_cp_rep;
-                break;
-            case 0x0f:
-                t = x86_table_lex;
-                state = x86_state_map_0f;
-                break;
-            default:
-                m = x86_map_none;
-                t = x86_table_lex;
-                state = x86_state_lex_opcode;
-                goto lex_reparse;
-            }
-            break;
-        case x86_state_rex_opcode:
-            switch (b) {
-            case 0x0f:
-                state = x86_state_map_0f;
-                break;
-            default:
-                state = x86_state_lex_opcode;
-                goto lex_reparse;
-            }
-            break;
-        case x86_state_map_0f:
-            switch (b) {
-            case 0x38:
-                c->flags |= x86_cm_0f38;
-                m = x86_map_0f38;
-                state = x86_state_lex_opcode;
-                break;
-            case 0x3a:
-                c->flags |= x86_cm_0f3a;
-                m = x86_map_0f3a;
-                state = x86_state_lex_opcode;
-                break;
-            default:
-                c->flags |= x86_cm_0f;
-                m = x86_map_0f;
-                state = x86_state_lex_opcode;
-                goto lex_reparse;
-            }
-            break;
-        case x86_state_lex_opcode: lex_reparse:
-            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
-                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
-            switch (lastp) {
-            case 0x66: k.enc |= x86_enc_p_66; break;
-            case 0x9b: k.enc |= x86_enc_p_9b; break;
-            case 0xf2: k.enc |= x86_enc_p_f2; break;
-            case 0xf3: k.enc |= x86_enc_p_f3; break;
-            }
-            state = x86_state_done;
-            break;
-        case x86_state_vex_opcode:
-            k.enc |= ((t << x86_enc_t_shift) & x86_enc_t_mask)
-                  |  ((m << x86_enc_m_shift) & x86_enc_m_mask);
-            switch (p) {
-            case x86_pfx_66: k.enc |= x86_enc_p_66; break;
-            case x86_pfx_f2: k.enc |= x86_enc_p_f2; break;
-            case x86_pfx_f3: k.enc |= x86_enc_p_f3; break;
-            }
-            state = x86_state_done;
-            (void)l; /* l can be added to the index key */
-            break;
-        default:
-            abort();
-        }
-    };
-
-    /* populate opcode for table lookup */
-    k.mode = mode;
-    c->opc[0] = k.opc[0] = b;
-    nbytes += x86_buffer_read(buf, &b, 1);
-    c->opc[1] = k.opc[1] = b;
-    k.opm[0] = k.opm[1] = 0xff;
-
-    /* if REX.W=1 first attempt to lookup W=1 record */
-    if (w) {
-        r = x86_table_match(ctx, c, k, 1);
-    }
-
-    /* if REX.W=0 or search failed lookup W=0/WIG record */
-    if (!w || (w && !r)) {
-        r = x86_table_match(ctx, c, k, 0);
-    }
-
-    /* now attempt lookup without using the prefix */
-    if (!r) {
-        k.enc &= ~x86_enc_p_mask;
-
-        /* if REX.W=1 first attempt to lookup W=1 record */
-        if (w) {
-            r = x86_table_match(ctx, c, k, 1);
-        }
-
-        /* if REX.W=0 or search failed lookup W=0/WIG record */
-        if (!w || (w && !r)) {
-            r = x86_table_match(ctx, c, k, 0);
-        }
-    }
-
-    /* parse encoding */
-    if (r) {
-
-        /* set opcode length and modrm flags */
-        switch (x86_enc_func(r->enc)) {
-        case x86_enc_f_modrm_r:
-        case x86_enc_f_modrm_n:
-            /* second byte is modrm */
-            c->flags |= x86_cf_modrm;
-            c->opclen = 1;
-            break;
-        case x86_enc_f_opcode:
-        case x86_enc_f_opcode_r:
-            /* two byte opcode */
-            c->opclen = 2;
-            break;
-        default:
-            /* no second opcode byte */
-            nbytes -= x86_buffer_unread(buf, 1);
-            c->opclen = 1;
-            break;
-        }
-
-        /* parse SIB, disp, imm from format */
-        nbytes += x86_parse_encoding(buf, c, r);
-        if (nbytes <= limit) {
-            c->rec = (r - ctx->idx->map);
-            *len = nbytes;
-            return 0;
-        }
-    }
-
-err:
-    nbytes -= x86_buffer_unread(buf, nbytes);
-    *len = nbytes;
-    return -1;
-}
+/*
+ * context
+ */
 
 x86_ctx *x86_ctx_create(uint mode)
 {
