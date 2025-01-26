@@ -25,9 +25,30 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "types.h"
-#include "bits.h"
-#include "bytes.h"
+/*
+ * types
+ */
+
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+typedef unsigned long ulong;
+typedef unsigned long long ullong;
+typedef long long llong;
+
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef llong i64;
+
+typedef uchar u8;
+typedef ushort u16;
+typedef uint u32;
+typedef ullong u64;
+
+/*
+ * x86 forward declarations
+ */
 
 typedef struct x86_rex x86_rex;
 typedef struct x86_rex2 x86_rex2;
@@ -1634,6 +1655,60 @@ struct x86_ctx
     uint mode;
     x86_acc_idx *idx;
 };
+
+/*
+ * endian helpers
+ */
+
+static inline u16 be16(u16 v)
+{
+    union { u8 a[2]; u16 b; } u = {
+        .a = { (u8)(v >> 8), (u8)(v) }
+    };
+    return u.b;
+}
+
+static inline u16 le16(u16 v)
+{
+    union { u8 a[2]; u16 b; } u = {
+        .a = { (u8)(v), (u8)(v >> 8) }
+    };
+    return u.b;
+}
+
+static inline u32 be32(u32 v)
+{
+    union { u8 a[4]; u32 b; } u = {
+        .a = { (u8)(v >> 24), (u8)(v >> 16), (u8)(v >> 8), (u8)(v) }
+    };
+    return u.b;
+}
+
+static inline u32 le32(u32 v)
+{
+    union { u8 a[4]; u32 b; } u = {
+        .a = { (u8)(v), (u8)(v >> 8), (u8)(v >> 16), (u8)(v >> 24) }
+    };
+    return u.b;
+}
+
+static inline u64 be64(u64 v)
+{
+    union { u8 a[8]; u64 b; } u = {
+        .a = { (u8)(v >> 56), (u8)(v >> 48), (u8)(v >> 40), (u8)(v >> 32),
+               (u8)(v >> 24), (u8)(v >> 16), (u8)(v >> 8), (u8)(v) }
+    };
+    return u.b;
+}
+
+static inline u64 le64(u64 v)
+{
+    union { u8 a[8]; u64 b; } u = {
+        .a = { (u8)(v), (u8)(v >> 8), (u8)(v >> 16), (u8)(v >> 24),
+               (u8)(v >> 32), (u8)(v >> 40), (u8)(v >> 48), (u8)(v >> 56) }
+    };
+    return u.b;
+}
 
 /*
  * buffer
