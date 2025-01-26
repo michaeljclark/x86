@@ -20,7 +20,7 @@ LIST(APPEND x86_gen_src x86_opc_enums.inc x86_opc_tables.inc)
 foreach(gen_opt gen_src IN ZIP_LISTS x86_gen_opt x86_gen_src)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/gen/${gen_src}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND ${Python3_EXECUTABLE}
-        ARGS ${CMAKE_SOURCE_DIR}/scripts/x86_tablegen.py ${gen_opt}
+        ARGS ${CMAKE_SOURCE_DIR}/scripts/x86-tablegen.py ${gen_opt}
             > ${CMAKE_BINARY_DIR}/gen/${gen_src}
         DEPENDS ${x86_metadata} VERBATIM)
     list(APPEND x86_gen_dep ${CMAKE_BINARY_DIR}/gen/${gen_src})

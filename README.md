@@ -34,7 +34,7 @@ _figure 1: x86 instruction set metadata organized by CPU extension._
 
 ## Build Instructions
 
-The build depends on python3 to run `scripts/x86_tablegen.py`
+The build depends on python3 to run `scripts/x86-tablegen.py`
 
 ```
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -159,11 +159,11 @@ _figure 4: x86 metadata table search showing 64-bit overrides._
 
 ### Fancy Instruction Formatting Tool
 
-The table generation tool `x86_tablegen.py` supports a mode to output the
+The table generation tool `x86-tablegen.py` supports a mode to output the
 instruction set metadata as a Markdown document organised by  sections
 from the instruction descriptions in [doc/x86_desc.md](doc/x86_desc.md).
 
-`./scripts/x86_tablegen.py --print-fancy-insn`
+`./scripts/x86-tablegen.py --print-fancy-insn`
 
 | opcode          | encoding                | order           | modes      |
 |:----------------|:------------------------|:----------------|:-----------|
@@ -238,7 +238,7 @@ instruction encodings and various other instruction set extensions.
 The appendices outline the printable form of the mnemonics used in the
 generated tables to describe operands, instruction encodings and field order.
 The mnemonics are referenced in the instruction set metadata files which are
-translated to enums and arrays by `scripts/x86_tablegen.py` which then map to
+translated to enums and arrays by `scripts/x86-tablegen.py` which then map to
 the enum type and set definitions in `include/x86.h`:
 
 - ___enum x86_opr___ - operand encoding enum type and set attributes.
@@ -254,7 +254,7 @@ form the primary metadata tables used by the encoder and decoder library:
 
 ***Note***: There are some differences between the mnemonics used in the
 CSV metadata and the C enums. Exceptions are described in `operand_map` and
-`opcode_map` within `scripts/x86_tablegen.py`. The primary differences are
+`opcode_map` within `scripts/x86-tablegen.py`. The primary differences are
 in the names used in the operand columns to indicate operand field order,
 otherwise a type prefix is added, dots and brackets are omitted, and forward
 slashes are translated to underscores.
