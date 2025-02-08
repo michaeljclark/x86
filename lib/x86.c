@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <limits.h>
 
@@ -563,6 +564,245 @@ const char *x86_table_prefix_name(uint prefix)
     case x86_pfx_9b | x86_pfx_rexw: return "9b+w";
     default: return "";
     }
+}
+
+/*
+ * string formatting
+ */
+
+static const char dd[200] = {
+    0x30, 0x30, 0x30, 0x31, 0x30, 0x32, 0x30, 0x33, 0x30, 0x34,
+    0x30, 0x35, 0x30, 0x36, 0x30, 0x37, 0x30, 0x38, 0x30, 0x39,
+    0x31, 0x30, 0x31, 0x31, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34,
+    0x31, 0x35, 0x31, 0x36, 0x31, 0x37, 0x31, 0x38, 0x31, 0x39,
+    0x32, 0x30, 0x32, 0x31, 0x32, 0x32, 0x32, 0x33, 0x32, 0x34,
+    0x32, 0x35, 0x32, 0x36, 0x32, 0x37, 0x32, 0x38, 0x32, 0x39,
+    0x33, 0x30, 0x33, 0x31, 0x33, 0x32, 0x33, 0x33, 0x33, 0x34,
+    0x33, 0x35, 0x33, 0x36, 0x33, 0x37, 0x33, 0x38, 0x33, 0x39,
+    0x34, 0x30, 0x34, 0x31, 0x34, 0x32, 0x34, 0x33, 0x34, 0x34,
+    0x34, 0x35, 0x34, 0x36, 0x34, 0x37, 0x34, 0x38, 0x34, 0x39,
+    0x35, 0x30, 0x35, 0x31, 0x35, 0x32, 0x35, 0x33, 0x35, 0x34,
+    0x35, 0x35, 0x35, 0x36, 0x35, 0x37, 0x35, 0x38, 0x35, 0x39,
+    0x36, 0x30, 0x36, 0x31, 0x36, 0x32, 0x36, 0x33, 0x36, 0x34,
+    0x36, 0x35, 0x36, 0x36, 0x36, 0x37, 0x36, 0x38, 0x36, 0x39,
+    0x37, 0x30, 0x37, 0x31, 0x37, 0x32, 0x37, 0x33, 0x37, 0x34,
+    0x37, 0x35, 0x37, 0x36, 0x37, 0x37, 0x37, 0x38, 0x37, 0x39,
+    0x38, 0x30, 0x38, 0x31, 0x38, 0x32, 0x38, 0x33, 0x38, 0x34,
+    0x38, 0x35, 0x38, 0x36, 0x38, 0x37, 0x38, 0x38, 0x38, 0x39,
+    0x39, 0x30, 0x39, 0x31, 0x39, 0x32, 0x39, 0x33, 0x39, 0x34,
+    0x39, 0x35, 0x39, 0x36, 0x39, 0x37, 0x39, 0x38, 0x39, 0x39
+};
+
+static inline size_t utoa_u32(uint n, char *s)
+{
+    const uchar utodb_u32[32] = {
+         9,  9,  9,  8,  8,  8,  7,  7,
+         7,  6,  6,  6,  6,  5,  5,  5,
+         4,  4,  4,  3,  3,  3,  3,  2,
+         2,  2,  1,  1,  1,  1,  1,  1,
+    };
+    const uint utodd_u32[10] = {
+        999999999u,  99999999u,
+          9999999u,    999999u,
+            99999u,      9999u,
+              999u,        99u,
+                9u,         0u,
+    };
+    uint x1, x2, a1, a2, a3, b1, b2;
+    uint dig = n == 0 ? 1 : utodb_u32[__builtin_clz(n)];
+    dig += n > utodd_u32[9-dig];
+    x1 = n % 1000000; x2 = n / 1000000;
+    switch (dig) {
+    case 9:      b2 = x2 / 100 % 100; *s++ = dd[b2*2+1]; goto l8;
+    case 7:      b1 = x2 % 100;       *s++ = dd[b1*2+1]; goto l6;
+    case 5:      a3 = x1 / 10000;     *s++ = dd[a3*2+1]; goto l4;
+    case 3:      a2 = x1 / 100 % 100; *s++ = dd[a2*2+1]; goto l2;
+    case 1:      a1 = x1 % 100;       *s++ = dd[a1*2+1]; break;
+    case 10:     b2 = x2 / 100 % 100; *s++ = dd[b2*2]; *s++ = dd[b2*2+1];
+    case 8:  l8: b1 = x2 % 100;       *s++ = dd[b1*2]; *s++ = dd[b1*2+1];
+    case 6:  l6: a3 = x1 / 10000;     *s++ = dd[a3*2]; *s++ = dd[a3*2+1];
+    case 4:  l4: a2 = x1 / 100 % 100; *s++ = dd[a2*2]; *s++ = dd[a2*2+1];
+    case 2:  l2: a1 = x1 % 100;       *s++ = dd[a1*2]; *s++ = dd[a1*2+1];
+    }
+    *s++ = '\0';
+    return dig;
+}
+
+static inline size_t utoa_u64(ullong n, char *s)
+{
+    const uchar utodb_u64[64] = {
+        19, 18, 18, 18, 18, 17, 17, 17,
+        16, 16, 16, 15, 15, 15, 15, 14,
+        14, 14, 13, 13, 13, 12, 12, 12,
+        12, 11, 11, 11, 10, 10, 10,  9,
+         9,  9,  9,  8,  8,  8,  7,  7,
+         7,  6,  6,  6,  6,  5,  5,  5,
+         4,  4,  4,  3,  3,  3,  3,  2,
+         2,  2,  1,  1,  1,  1,  1,  1,
+    };
+    const ullong utodd_u64[20] = {
+        9999999999999999999llu,  999999999999999999llu,
+          99999999999999999llu,    9999999999999999llu,
+            999999999999999llu,      99999999999999llu,
+              9999999999999llu,        999999999999llu,
+                99999999999llu,          9999999999llu,
+                  999999999llu,            99999999llu,
+                    9999999llu,              999999llu,
+                      99999llu,                9999llu,
+                        999llu,                  99llu,
+                          9llu,                   0llu,
+    };
+    ullong x1, x2;
+    uint y1, y2, z1, z2, a1, a2, a3, b1, b2, b3, c1, c2, c3, d1;
+    uint dig = n == 0 ? 1 : utodb_u64[__builtin_clzll(n)];
+    dig += n > utodd_u64[19-dig];
+    x1 = n  % 1000000000000ll; x2 = n  / 1000000000000ll;
+    y1 = x1 % 1000000ll;       y2 = x1 / 1000000ll;
+    z1 = x2 % 1000000ll;       z2 = x2 / 1000000ll;
+    switch (dig) {
+    case 19:      d1 = z2 % 100;       *s++ = dd[d1*2+1]; goto l18;
+    case 17:      c3 = z1 / 10000;     *s++ = dd[c3*2+1]; goto l16;
+    case 15:      c2 = z1 / 100 % 100; *s++ = dd[c2*2+1]; goto l14;
+    case 13:      c1 = z1 % 100;       *s++ = dd[c1*2+1]; goto l12;
+    case 11:      b3 = y2 / 10000;     *s++ = dd[b3*2+1]; goto l10;
+    case 9:       b2 = y2 / 100 % 100; *s++ = dd[b2*2+1]; goto l8;
+    case 7:       b1 = y2 % 100;       *s++ = dd[b1*2+1]; goto l6;
+    case 5:       a3 = y1 / 10000;     *s++ = dd[a3*2+1]; goto l4;
+    case 3:       a2 = y1 / 100 % 100; *s++ = dd[a2*2+1]; goto l2;
+    case 1:       a1 = y1 % 100;       *s++ = dd[a1*2+1]; break;
+    case 20:      d1 = z2 % 100;       *s++ = dd[d1*2]; *s++ = dd[d1*2+1];
+    case 18: l18: c3 = z1 / 10000;     *s++ = dd[c3*2]; *s++ = dd[c3*2+1];
+    case 16: l16: c2 = z1 / 100 % 100; *s++ = dd[c2*2]; *s++ = dd[c2*2+1];
+    case 14: l14: c1 = z1 % 100;       *s++ = dd[c1*2]; *s++ = dd[c1*2+1];
+    case 12: l12: b3 = y2 / 10000;     *s++ = dd[b3*2]; *s++ = dd[b3*2+1];
+    case 10: l10: b2 = y2 / 100 % 100; *s++ = dd[b2*2]; *s++ = dd[b2*2+1];
+    case 8:  l8:  b1 = y2 % 100;       *s++ = dd[b1*2]; *s++ = dd[b1*2+1];
+    case 6:  l6:  a3 = y1 / 10000;     *s++ = dd[a3*2]; *s++ = dd[a3*2+1];
+    case 4:  l4:  a2 = y1 / 100 % 100; *s++ = dd[a2*2]; *s++ = dd[a2*2+1];
+    case 2:  l2:  a1 = y1 % 100;       *s++ = dd[a1*2]; *s++ = dd[a1*2+1];
+    }
+    *s++ = '\0';
+    return dig;
+}
+
+
+static const char *hexdigits = "0123456789abcdef";
+
+static size_t xvappend_char(char * restrict out, size_t o, size_t n, char c)
+{
+    if (out && o < n) {
+        out[o] = c;
+    }
+    return o + 1;
+}
+
+static size_t xvappend_hex_u32(char * restrict out, size_t o, size_t n,
+    uint val)
+{
+    size_t dig = (32 - __builtin_clz(val) + 3) / 4;
+    for (size_t i = dig-1; i < dig; i--) {
+       o = xvappend_char(out, o, n, hexdigits[(val >> (i * 4)) & 0xf]);
+    }
+    return o;
+}
+
+static size_t xvappend_hex_u64(char * restrict out, size_t o, size_t n,
+    ullong val)
+{
+    size_t dig = (64 - __builtin_clzll(val) + 3) / 4;
+    for (size_t i = dig-1; i < dig; i--) {
+       o = xvappend_char(out, o, n, hexdigits[(val >> (i * 4)) & 0xf]);
+    }
+    return o;
+}
+
+static int xvsnprintf(char * restrict out, size_t n, const char* fmt,
+    va_list vl)
+{
+    int w = -1, s = 0, c;
+    size_t o = 0, l;
+    const char *v;
+    char t[21];
+    for( ; *fmt; fmt++) {
+        if (w >= 0) {
+            switch(*fmt) {
+            case 'l':
+                w = w < 2 ? w + 1 : w;
+                break;
+            case 'd':
+                s = 1;
+            case 'u':
+                if (w == 0 || sizeof(long) == 4) {
+                    int val = va_arg(vl, int);
+                    if (s && val < 0) {
+                        val = -val;
+                        o = xvappend_char(out, o, n, '-');
+                    }
+                    l = utoa_u32(val, t);
+                }
+                else if (w == 2 || sizeof(long) == 8) {
+                    llong val = va_arg(vl, llong);
+                    if (s && val < 0) {
+                        val = -val;
+                        o = xvappend_char(out, o, n, '-');
+                    }
+                    l = utoa_u64(val, t);
+                }
+                l = n - o < l ? n - o : l;
+                memcpy(out + o, t, l);
+                o += l;
+                w = -1;
+                s = 0;
+                break;
+            case 'p':
+                o = xvappend_char(out, o, n, '0');
+                o = xvappend_char(out, o, n, 'x');
+                w = 2;
+            case 'x':
+                if (w == 0 || sizeof(long) == 4) {
+                    int val = va_arg(vl, int);
+                    o = xvappend_hex_u32(out, o, n, val);
+                }
+                else if (w == 2 || sizeof(long) == 8) {
+                    llong val = va_arg(vl, llong);
+                    o = xvappend_hex_u64(out, o, n, val);
+                }
+                w = -1;
+                break;
+            case 's':
+                v = va_arg(vl, const char *);
+                l = strlen(v);
+                memcpy(out + o, v, n - o < l ? n - o : l);
+                o += l;
+                w = -1;
+                break;
+            case 'c':
+                c = va_arg(vl, int);
+                o = xvappend_char(out, o, n, (char)c);
+                w = -1;
+                break;
+            }
+        }
+        else if(*fmt == '%') {
+            w = 0;
+        }
+        else {
+            o = xvappend_char(out, o, n, *fmt);
+        }
+    }
+    if (out) {
+        out[o < n ? o : n ? n - 1 : 0] = 0;
+    }
+    return o;
+}
+
+static inline int xsnprintf(char *out, size_t n, const char *fmt, ...)
+{
+    va_list vl;
+    va_start(vl, fmt);
+    int res = xvsnprintf(out, n, fmt, vl);
+    va_end(vl);
+    return res;
 }
 
 /*
@@ -2219,30 +2459,30 @@ static size_t x86_opr_intel_reg_str_internal(char *buf, size_t buflen,
     size_t len = 0;
 
     switch (x86_opr_type_val(a.opr)) {
-    case x86_opr_reg: len = snprintf(buf, buflen, "%s",
+    case x86_opr_reg: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_sized_gpr(c, reg,
         x86_opr_reg_size(c, a)))); break;
-    case x86_opr_vec: len = snprintf(buf, buflen, "%s",
+    case x86_opr_vec: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_sized_vec(reg, a.opr))); break;
-    case x86_opr_k: len = snprintf(buf, buflen, "%s",
+    case x86_opr_k: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_kmask | (reg & 7))); break;
-    case x86_opr_mmx: len = snprintf(buf, buflen, "%s",
+    case x86_opr_mmx: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_mmx | (reg & 7))); break;
-    case x86_opr_st: len = snprintf(buf, buflen, "%s",
+    case x86_opr_st: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_fpu | (reg & 7))); break;
-    case x86_opr_bnd: len = snprintf(buf, buflen, "%s",
+    case x86_opr_bnd: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_bnd | (reg & 7))); break;
-    case x86_opr_seg: len = snprintf(buf, buflen, "%s",
+    case x86_opr_seg: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_sreg | (reg & 7)));  break;
-    case x86_opr_creg: len = snprintf(buf, buflen, "%s",
+    case x86_opr_creg: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_creg | (reg & 15))); break;
-    case x86_opr_dreg: len = snprintf(buf, buflen, "%s",
+    case x86_opr_dreg: len = xsnprintf(buf, buflen, "%s",
         x86_reg_name(x86_reg_dreg | (reg & 15))); break;
-    default: len = snprintf(buf, buflen, "%s", "unknown"); break;
+    default: len = xsnprintf(buf, buflen, "%s", "unknown"); break;
     }
 
     if ((a.q.k & 7) > 0 && (a.opr & x86_opr_flag_k) != 0) {
-        len += snprintf(buf + len, buflen - len, " {%s}",
+        len += xsnprintf(buf + len, buflen - len, " {%s}",
                         x86_reg_name(x86_reg_kmask | (a.q.k & 7)));
     }
 
@@ -2349,35 +2589,35 @@ static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
     if (is_reg) {
         len = x86_opr_intel_reg_str_internal(buf, buflen, c, a, a.q.b);
     } else if (is_ptr_rip_disp) {
-        len = snprintf(buf, buflen, fmt->ptr_rip_disp, p, so, d);
+        len = xsnprintf(buf, buflen, fmt->ptr_rip_disp, p, so, d);
     } else if (is_ptr_rip) {
-        len = snprintf(buf, buflen, fmt->ptr_rip, p);
+        len = xsnprintf(buf, buflen, fmt->ptr_rip, p);
     } else if (is_ptr_disp) {
-        len = snprintf(buf, buflen, fmt->ptr_disp, p, sn, d);
+        len = xsnprintf(buf, buflen, fmt->ptr_disp, p, sn, d);
     } else if (is_ptr_sreg) {
-        len = snprintf(buf, buflen, fmt->ptr_sreg, p, s, x);
+        len = xsnprintf(buf, buflen, fmt->ptr_sreg, p, s, x);
     } else if (is_ptr_reg_sreg_disp) {
-        len = snprintf(buf, buflen, fmt->ptr_reg_sreg_disp, p, b, s, x, so, d);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg_sreg_disp, p, b, s, x, so, d);
     } else if (is_ptr_reg_sreg) {
-        len = snprintf(buf, buflen, fmt->ptr_reg_sreg, p, b, s, x);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg_sreg, p, b, s, x);
     } else if (is_ptr_reg_reg_disp) {
-        len = snprintf(buf, buflen, fmt->ptr_reg_reg_disp, p, b, x, so, d);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg_reg_disp, p, b, x, so, d);
     } else if (is_ptr_reg_reg) {
-        len = snprintf(buf, buflen, fmt->ptr_reg_reg, p, b, x);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg_reg, p, b, x);
     } else if (is_disp) {
-        len = snprintf(buf, buflen, fmt->ptr_reg_disp, p, b, so, d);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg_disp, p, b, so, d);
     } else {
-        len = snprintf(buf, buflen, fmt->ptr_reg, p, b);
+        len = xsnprintf(buf, buflen, fmt->ptr_reg, p, b);
     }
 
     if (!is_reg && (a.q.k & 7) > 0 && (a.opr & x86_opr_flag_k) != 0) {
         const char *k = x86_reg_name(x86_reg_kmask | (a.q.k & 7));
-        len += snprintf(buf + len, buflen - len, " {%s}", k);
+        len += xsnprintf(buf + len, buflen - len, " {%s}", k);
     }
 
     if (bcstsz && a.q.brd) {
         int bcstsc = x86_regsz_bytes(ptrsz) / x86_regsz_bytes(bcstsz);
-        len += snprintf(buf + len, buflen - len, "{1to%u}", bcstsc);
+        len += xsnprintf(buf + len, buflen - len, "{1to%u}", bcstsc);
     }
 
     return len;
@@ -2429,23 +2669,23 @@ static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen,
         uint regsz = x86_opr_reg_size(c, a);
         if ((x86_codec_field_ci(c)) == x86_ci_i64) {
             llong imm = c->imm64;
-            return snprintf(buf, buflen, fmt->ptr_imm64,
+            return xsnprintf(buf, buflen, fmt->ptr_imm64,
                 x86_ptr_size_str(regsz),
                 imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
         } else {
             int imm = c->imm32;
-            return snprintf(buf, buflen, fmt->ptr_imm32,
+            return xsnprintf(buf, buflen, fmt->ptr_imm32,
                 x86_ptr_size_str(regsz),
                 imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
         }
     } else {
         if ((x86_codec_field_ci(c)) == x86_ci_i64) {
             llong imm = c->imm64;
-            return snprintf(buf, buflen, fmt->imm64,
+            return xsnprintf(buf, buflen, fmt->imm64,
                 imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
         } else {
             int imm = c->imm32;
-            return snprintf(buf, buflen, fmt->imm32,
+            return xsnprintf(buf, buflen, fmt->imm32,
                 imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
         }
     }
@@ -2469,7 +2709,7 @@ static size_t x86_opr_intel_ime_hex_str(char *buf, size_t buflen,
     x86_codec *c, x86_arg a)
 {
     int imm = c->imm2;
-    return snprintf(buf, buflen, "%s0x%x",
+    return xsnprintf(buf, buflen, "%s0x%x",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
@@ -2477,7 +2717,7 @@ static size_t x86_opr_intel_ime_dec_str(char *buf, size_t buflen,
     x86_codec *c, x86_arg a)
 {
     int imm = c->imm2;
-    return snprintf(buf, buflen, "%s%u",
+    return xsnprintf(buf, buflen, "%s%u",
         imm < 0 ? "-" : "", imm < 0 ? -imm : imm);
 }
 
@@ -2545,31 +2785,31 @@ static size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     int regname = x86_opr_intel_const_reg(c, a);
 
     if (regname >= 0) {
-        return snprintf(buf, buflen, "%s", x86_reg_name(regname));
+        return xsnprintf(buf, buflen, "%s", x86_reg_name(regname));
     }
 
     switch (a.opr) {
     case x86_opr_1:
-        return snprintf(buf, buflen, "1");
+        return xsnprintf(buf, buflen, "1");
     case x86_opr_reg_xmm0:
-        return snprintf(buf, buflen, "%s", "xmm0");
+        return xsnprintf(buf, buflen, "%s", "xmm0");
     case x86_opr_reg_xmm0_7:
-        return snprintf(buf, buflen, "%s", "xmm0_7");
+        return xsnprintf(buf, buflen, "%s", "xmm0_7");
     case x86_opr_seg_fs:
-        return snprintf(buf, buflen, "fs");
+        return xsnprintf(buf, buflen, "fs");
     case x86_opr_seg_gs:
-        return snprintf(buf, buflen, "gs");
+        return xsnprintf(buf, buflen, "gs");
     case x86_opr_reg_st0:
-        return snprintf(buf, buflen, "st");
+        return xsnprintf(buf, buflen, "st");
     case x86_opr_reg_psi:
-        return snprintf(buf, buflen, "%s[%s]",
+        return xsnprintf(buf, buflen, "%s[%s]",
             x86_ptr_size_str(regsz),
             x86_reg_name(x86_sized_gpr(c, x86_sil, addrsz)));
     case x86_opr_reg_pdi:
-        return snprintf(buf, buflen, "%s[%s]",
+        return xsnprintf(buf, buflen, "%s[%s]",
             x86_ptr_size_str(regsz),
             x86_reg_name(x86_sized_gpr(c, x86_dil, addrsz)));
-    default: return snprintf(buf, buflen, "%s", "unknown");
+    default: return xsnprintf(buf, buflen, "%s", "unknown");
     }
 }
 
@@ -2640,23 +2880,23 @@ static size_t x86_format_op_internal(char *buf, size_t buflen, x86_ctx *ctx,
     uint prefix = d->enc & x86_enc_p_mask;
 
     if (x86_codec_has_lock(c)) {
-        len += snprintf(buf + len, buflen - len, "lock ");
+        len += xsnprintf(buf + len, buflen - len, "lock ");
     }
     if (x86_codec_has_rep(c) && prefix != x86_enc_p_f3) {
-        len += snprintf(buf + len, buflen - len, "rep ");
+        len += xsnprintf(buf + len, buflen - len, "rep ");
     }
     if (x86_codec_has_repne(c) && prefix != x86_enc_p_f2) {
-        len += snprintf(buf + len, buflen - len, "repne ");
+        len += xsnprintf(buf + len, buflen - len, "repne ");
     }
     if (x86_codec_has_wait(c) && prefix != x86_enc_p_9b) {
-        len += snprintf(buf + len, buflen - len, "wait ");
+        len += xsnprintf(buf + len, buflen - len, "wait ");
     }
 
-    len += snprintf(buf + len, buflen - len, "%s", x86_op_names[d->op]);
+    len += xsnprintf(buf + len, buflen - len, "%s", x86_op_names[d->op]);
 
     for (size_t i = 0; i < array_size(o->opr) && o->opr[i]; i++) {
         x86_arg a = x86_codec_meta(d->enc, o->opr[i], s->ord[i], q);
-        len += snprintf(buf + len, buflen - len, i == 0 ? "\t" : ", ");
+        len += xsnprintf(buf + len, buflen - len, i == 0 ? "\t" : ", ");
         len += x86_format_operand(buf + len, buflen - len, c, a,
             pc_offset, sym_cb, &x86_format_intel_dec);
     }
@@ -2680,12 +2920,12 @@ size_t x86_format_hex(char *buf, size_t buflen, uchar *data, size_t datalen)
 {
     size_t len = 0;
     for (size_t i = 0; i < datalen && i < 11; i++) {
-        len += snprintf(buf + len, buflen - len, i == 0 ? "\t" : " ");
-        len += snprintf(buf + len, buflen - len, "%02hhx", data[i]);
+        len += xsnprintf(buf + len, buflen - len, i == 0 ? "\t" : " ");
+        len += xsnprintf(buf + len, buflen - len, "%02hhx", data[i]);
     }
     size_t tabs = datalen < 10 ? (40 - datalen * 3) / 8 : 1;
     for (size_t i = 0; i < tabs ; i++) {
-        len += snprintf(buf + len, buflen - len, "\t");
+        len += xsnprintf(buf + len, buflen - len, "\t");
     }
     return len;
 }
