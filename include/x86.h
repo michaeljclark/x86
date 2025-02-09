@@ -370,8 +370,6 @@ enum
 
 /*
  * prefix encoding structures
- *
- * note: bitfields used for documentation purposes only
  */
 
 /*
@@ -382,6 +380,7 @@ struct x86_modrm
 {
     union {
         uchar data[1];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0:2] */ uchar rm:3;
             /* [3:5] */ uchar reg:3;
@@ -428,6 +427,7 @@ struct x86_sib
 {
     union {
         uchar data[1];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0:2] */ uchar b : 3; /* base[0:2] */
             /* [3:5] */ uchar x : 3; /* index[0:2] */
@@ -470,6 +470,7 @@ struct x86_rex
 {
     union {
         uchar data[1];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0] */ uchar b3 : 1; /* base[3] */
             /* [1] */ uchar x3 : 1; /* index[3] */
@@ -488,6 +489,7 @@ struct x86_rex2
 {
     union {
         uchar data[1];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0] */ uchar b3 : 1; /* base[3] */
             /* [1] */ uchar x3 : 1; /* index[3] */
@@ -510,6 +512,7 @@ struct x86_vex2
 {
     union {
         uchar data[1];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0:1] */ uchar p   : 2; /* see x86_pfx */
             /*   [2] */ uchar l   : 1; /* len 0=128 1=256 */
@@ -527,6 +530,7 @@ struct x86_vex3
 {
     union {
         uchar data[2];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0:4] */ uchar m   : 5; /* see x86_map */
             /*   [5] */ uchar b3n : 1; /* ~base[3] */
@@ -549,6 +553,7 @@ struct x86_evex
 {
     union {
         uchar data[3];
+        /* note: bitfield used for documentation purposes only */
         struct {
             /* [0:2] */ uchar m   : 3; /* see x86_map */
             /*   [3] */ uchar b4  : 1; /* base[4] */
