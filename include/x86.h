@@ -264,26 +264,65 @@ enum
 };
 
 /*
- * test conditions
+ * condition codes (x86)
  */
 
 enum
 {
-    /* non-signed */
-    x86_never  = (0 | 0 | 0 | 0),
-    x86_always = (0 | 0 | 0 | 1),
-    x86_eq     = (8 | 0 | 0 | 0),
-    x86_ne     = (8 | 0 | 0 | 1),
-    /* signed */
-    x86_lt     = (0 | 0 | 2 | 0),
-    x86_ge     = (0 | 0 | 2 | 1),
-    x86_le     = (8 | 0 | 2 | 0),
-    x86_gt     = (8 | 0 | 2 | 1),
-    /* unsigned */
-    x86_ltu    = (0 | 4 | 0 | 0),
-    x86_geu    = (0 | 4 | 0 | 1),
-    x86_leu    = (8 | 4 | 0 | 0),
-    x86_gtu    = (8 | 4 | 0 | 1),
+    x86_cc_o     = 0,  /* overflow */
+    x86_cc_no    = 1,  /* no overflow */
+    x86_cc_b     = 2,  /* below */
+    x86_cc_c     = 2,  /* carry */
+    x86_cc_nae   = 2,  /* neither-above-nor-equal */
+    x86_cc_nb    = 3,  /* not-below */
+    x86_cc_nc    = 3,  /* not-carry */
+    x86_cc_ae    = 3,  /* above-or-equal */
+    x86_cc_e     = 4,  /* equal */
+    x86_cc_z     = 4,  /* zero */
+    x86_cc_ne    = 5,  /* not-equal */
+    x86_cc_nz    = 5,  /* not-zero */
+    x86_cc_be    = 6,  /* below-or-equal */
+    x86_cc_na    = 6,  /* not-above */
+    x86_cc_nbe   = 7,  /* neither-below-nor-equal */
+    x86_cc_a     = 7,  /* above */
+    x86_cc_s     = 8,  /* sign */
+    x86_cc_ns    = 9,  /* no-sign */
+    x86_cc_p     = 10, /* parity */
+    x86_cc_pe    = 10, /* parity-even */
+    x86_cc_np    = 11, /* no-parity */
+    x86_cc_po    = 11, /* parity-odd */
+    x86_cc_l     = 12, /* less */
+    x86_cc_nge   = 12, /* neither-greater-nor-equal */
+    x86_cc_nl    = 13, /* not-less */
+    x86_cc_ge    = 13, /* greater-or-equal */
+    x86_cc_le    = 14, /* less-or-equal */
+    x86_cc_ng    = 14, /* not-greater */
+    x86_cc_nle   = 15, /* neither-less-nor-equal- */
+    x86_cc_g     = 15, /* greater */
+};
+
+/*
+ * condition codes (agnostic)
+ */
+
+enum
+{
+    x86_o        = 0,  /* overflow (signed) */
+    x86_no       = 1,  /* not-overflow (signed) */
+    x86_c        = 2,  /* carry */
+    x86_nc       = 3,  /* not-carry */
+    x86_ltu      = 2,  /* less-than (unsigned) */
+    x86_geu      = 3,  /* greater-than-or-equal (unsigned) */
+    x86_eq       = 4,  /* equal */
+    x86_ne       = 5,  /* not-equal */
+    x86_leu      = 6,  /* less-than-or-equal (unsigned) */
+    x86_gtu      = 7,  /* greater-than (unsigned) */
+    x86_s        = 8,  /* sign */
+    x86_ns       = 9,  /* not-sign */
+    x86_lt       = 12, /* less-than (signed) */
+    x86_ge       = 13, /* greater-than-or-equal (signed) */
+    x86_le       = 14, /* less-than-or-equal (signed) */
+    x86_gt       = 15, /* greater-than (signed) */
 };
 
 /*
@@ -1397,22 +1436,6 @@ struct x86_ord_data
 {
     ushort ord[4];
 };
-
-/*
- * invert condition
- */
-
-static inline uint x86_invert_cond(uint c) {
-    return c ^ 1;
-}
-
-/*
- * swap condition operands
- */
-
-static inline uint x86_swap_cond(uint c) {
-    return c & 6 ? c ^ 9 : c;
-}
 
 /*
  * ModRM encoder
