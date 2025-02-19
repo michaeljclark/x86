@@ -792,7 +792,7 @@ static inline size_t utoa_u64(ullong n, char *s)
 
 static const char *hexdigits = "0123456789abcdef";
 
-static size_t xvappend_char(char *restrict out, size_t o, size_t n, char c)
+static inline size_t xvappend_char(char *restrict out, size_t o, size_t n, char c)
 {
     if (out && o < n) {
         out[o] = c;
@@ -800,7 +800,7 @@ static size_t xvappend_char(char *restrict out, size_t o, size_t n, char c)
     return o + 1;
 }
 
-static size_t xvappend_hex_u32(char *restrict out, size_t o, size_t n,
+static inline size_t xvappend_hex_u32(char *restrict out, size_t o, size_t n,
     uint val)
 {
     size_t dig = (32 - __builtin_clz(val) + 3) / 4;
@@ -810,7 +810,7 @@ static size_t xvappend_hex_u32(char *restrict out, size_t o, size_t n,
     return o;
 }
 
-static size_t xvappend_hex_u64(char *restrict out, size_t o, size_t n,
+static inline size_t xvappend_hex_u64(char *restrict out, size_t o, size_t n,
     ullong val)
 {
     size_t dig = (64 - __builtin_clzll(val) + 3) / 4;
@@ -820,7 +820,7 @@ static size_t xvappend_hex_u64(char *restrict out, size_t o, size_t n,
     return o;
 }
 
-static int xvsnprintf(char *restrict out, size_t n, const char* fmt,
+static inline int xvsnprintf(char *restrict out, size_t n, const char* fmt,
     va_list vl)
 {
     int w = -1, s = 0, c;
@@ -902,7 +902,7 @@ static int xvsnprintf(char *restrict out, size_t n, const char* fmt,
     return o;
 }
 
-static inline int xsnprintf(char *out, size_t n, const char *fmt, ...)
+static int xsnprintf(char *out, size_t n, const char *fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
