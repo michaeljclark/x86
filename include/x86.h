@@ -264,6 +264,43 @@ enum
 };
 
 /*
+ * flags register bits (x86)
+ */
+
+enum
+{
+    /* arithmetic */
+    x86_flag_CF = 0,     /* carry flag - unsigned integer overflow */
+    x86_flag_PF = 2,     /* parity flag - least significant byte even ones */
+    x86_flag_AF = 4,     /* auxilliary BCD carry - bit 3 overflow */
+    x86_flag_ZF = 6,     /* zero flag - result is zero */
+    x86_flag_SF = 7,     /* sign flag - most significant sign bit */
+    x86_flag_OF = 11,    /* overflow flag - signed integer overflow */
+
+    /* string instructions */
+    x86_flag_DF = 10,    /* decrement flag - string instruction decrement */
+
+    /* privileged */
+    x86_flag_TF = 8,     /* trap flag - single-step mode enable */
+    x86_flag_IF = 9,     /* interrupt flag - interrupt request enable */
+    x86_flag_IOPL0 = 12, /* IO privilege level bit 0 - CPL0 IRET/POPF */
+    x86_flag_IOPL1 = 13, /* IO privilege level bit 1 - CPL0 IRET/POPF */
+    x86_flag_NT = 14,    /* nested task flag - task linked to last task */
+    x86_flag_RF = 16,    /* resume flag - single-step ignore breakpoint */
+    x86_flag_VM = 17,    /* virutal-8086 flag - virtual-8086 mode enable */
+    x86_flag_AC = 18,    /* alignment check flag - alignment check enable */
+    x86_flag_VIF = 19,   /* virtual interrupt flag - interrupt enable */
+    x86_flag_VIP = 20,   /* virtual interrupt pending - interrupt pending */
+    x86_flag_ID = 21,    /* identification flag - CPUID instruction enable */
+
+    /* reserved */
+    x86_flag_RSRV0 = 1,  /* bit 1 is hardwired to one */
+    x86_flag_RSRV1 = 3,  /* bit 3 is hardwired to zero */
+    x86_flag_RSRV2 = 5,  /* bit 5 is hardwired to zero */
+    x86_flag_RSRV3 = 15, /* bit 15 is hardwired to zero */
+};
+
+/*
  * condition codes (x86)
  */
 
