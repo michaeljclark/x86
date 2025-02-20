@@ -365,8 +365,8 @@ enum
 /*
  * compare packed operators
  *
- * oq = ordered queit, os = ordered signalling
- * uq = unordered queit, us = unordered signalling
+ * oq = ordered quiet, os = ordered signalling
+ * uq = unordered quiet, us = unordered signalling
  */
 
 enum
@@ -2272,7 +2272,7 @@ int x86_codec_write(x86_ctx *ctx, x86_buffer *buf, x86_codec c, size_t *len);
 int x86_codec_read(x86_ctx *ctx, x86_buffer *buf, x86_codec *c, size_t *len);
 
 /*
- * registers sand opcodes
+ * registers and opcodes
  */
 
 #include "x86_opc_enums.inc"
