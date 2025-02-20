@@ -406,6 +406,337 @@ enum
 };
 
 /*
+ * control registers (x86)
+ */
+
+enum
+{
+    x86_reg_cr0,             /* privileged flags */
+    x86_reg_cr1,             /* reserved */
+    x86_reg_cr2,             /* page fault linear address */
+    x86_reg_cr3,             /* page directpry base address */
+    x86_reg_cr4,             /* privileged flags */
+    x86_reg_cr5,             /* reserved */
+    x86_reg_cr7,             /* reserved */
+    x86_reg_cr8,             /* task priority level */
+};
+
+/*
+ * control register 0 - privileged flags (x86)
+ */
+
+enum
+{
+    x86_cr0_PE = 0,          /* Protection Enable - protected mode */
+    x86_cr0_MP = 1,          /* Monitor Co-processor - FWAIT exception */
+    x86_cr0_EM = 2,          /* x87 FPU Emulation - FPU not present */
+    x86_cr0_TS = 3,          /* Task Switched - FPU/MMX/SSE exceptions */
+    x86_cr0_ET = 4,          /* Extension Type - hardcoded to one */
+    x86_cr0_NE = 5,          /* Numeric Error - x86 FPU rrror enable */
+    x86_cr0_WP = 16,         /* Write Protect - write read-only disable */
+    x86_cr0_AM = 18,         /* Alignment Mask - alignment check enable */
+    x86_cr0_NW = 29,         /* Not Write-through - cache invalidation */
+    x86_cr0_CD = 30,         /* Cache Disable - read caching disable */
+    x86_cr0_PG = 31,         /* Paging - address translation enable */
+};
+
+/*
+ * control register 3 - page directpry (x86)
+ */
+
+enum
+{
+    x86_cr3_ID = 0,          /* bits 0-11 Page Table ID */
+    x86_cr3_PWT = 3,         /* Page-level Write-Through (if !PCIDE) */
+    x86_cr3_PCD =  4,        /* Page-level Cache Disable (if !PCIDE) */
+    x86_cr3_PDBR = 12,       /* bits 12-31/63 Page Directory Base Register */
+};
+
+/*
+ * control register 4 - privileged extensions (x86)
+ */
+
+enum
+{
+    x86_cr4_VME = 0,         /* Virtual 8086 Mode Extensions */
+    x86_cr4_PVI = 1,         /* Protected-mode Virtual Interrupts */
+    x86_cr4_TSD = 2,         /* Time Stamp Disable */
+    x86_cr4_DE = 3,          /* Debugging Extension */
+    x86_cr4_PSE = 4,         /* Page Size Extension */
+    x86_cr4_PAE = 5,         /* Physical Address Extension */
+    x86_cr4_MCE = 6,         /* Machine Check Exception */
+    x86_cr4_PGE = 7,         /* Page Global Enabled */
+    x86_cr4_PCE = 8,         /* Performance-Monitoring Counter enable */
+    x86_cr4_OSFXSR = 9,      /* support for FXSAVE and FXRSTOR */
+    x86_cr4_OSXMMEXCPT = 10, /* support for Unmasked SIMD FP Exceptions */
+    x86_cr4_UMIP = 11,       /* User-Mode Instruction Prevention */
+    x86_cr4_LA57 = 12,       /* 57-bit linear addresses */
+    x86_cr4_VMXE = 13,       /* Virtual Machine Extensions Enable */
+    x86_cr4_SMXE = 14,       /* Safer Mode Extensions Enable */
+    x86_cr4_FSGSBASE = 16,   /* Enables {RD,WR}{FS,GS}BASE */
+    x86_cr4_PCIDE = 17,      /* PCID Enable */
+    x86_cr4_OSXSAVE = 18,    /* XSAVE and Processor Extended States Enable */
+    x86_cr4_KL = 19,         /* Key-Locker-Enable */
+    x86_cr4_SMEP = 20,       /* Supervisor Mode Execution Protection Enable */
+    x86_cr4_SMAP = 21,       /* Supervisor Mode Access Prevention Enable */
+    x86_cr4_PKE = 22,        /* Protection Key Enable */
+    x86_cr4_CET = 23,        /* Control-flow Enforcement Technology */
+    x86_cr4_PKS = 24,        /* Enable Protection Keys for Supervisor-Mode */
+    x86_cr4_UINTR = 25,      /* User Mode Interrupts Enable */
+};
+
+/*
+ * control register 4 - privileged flags (x86)
+ */
+
+enum
+{
+    x86_cr8_TPL = 0,         /* Task Priority Level (bit 3:0) */
+};
+
+/*
+ * debug registers (x86)
+ */
+
+enum
+{
+    x86_reg_dr0,             /* breakpoint 0 linear address */
+    x86_reg_dr1,             /* breakpoint 1 linear address */
+    x86_reg_dr2,             /* breakpoint 2 linear address */
+    x86_reg_dr3,             /* breakpoint 3 linear address */
+    x86_reg_dr4,             /* unused */
+    x86_reg_dr5,             /* unused */
+    x86_reg_dr6,             /* debug status */
+    x86_reg_dr7,             /* debug flags */
+};
+
+/*
+ * debug register 6 - debug status (x86)
+ */
+
+enum
+{
+    x86_dr6_B0 = 0,          /* set if breakpoint 0 exception */
+    x86_dr6_B1 = 1,          /* set if breakpoint 1 exception */
+    x86_dr6_B2 = 2,          /* set if breakpoint 2 exception */
+    x86_dr6_B3 = 3,          /* set if breakpoint 3 exception */
+                             /* bit 4 to bit 10 are hardwired to one */
+    x86_dr6_BLD = 11,        /* clear if bus lock detected */
+                             /* bit 12 is hardwired to zero */
+    x86_dr6_BD = 13,         /* set if debug register modified exception */
+    x86_dr6_BS = 14,         /* set if single step exception */
+    x86_dr6_BT = 15,         /* set if task switch exception */
+    x86_dr6_RTM = 16,        /* clear if transsaction memory exception */
+                             /* bit 17 to bit 32 are hardwired to one */
+};
+
+/*
+ * debug register 7 - debug flags (x86)
+ */
+
+enum
+{
+    x86_dr7_L0 = 0,          /* local breakpoint - breakpoint 0 */
+    x86_dr7_G0 = 1,          /* global breakpoint - breakpoint 0 */
+    x86_dr7_L1 = 2,          /* local breakpoint - breakpoint 1 */
+    x86_dr7_G1 = 3,          /* global breakpoint - breakpoint 1 */
+    x86_dr7_L2 = 4,          /* local breakpoint - breakpoint 2 */
+    x86_dr7_G2 = 5,          /* global breakpoint - breakpoint 2 */
+    x86_dr7_L3 = 6,          /* local breakpoint - breakpoint 3 */
+    x86_dr7_G3 = 7,          /* global breakpoint - breakpoint 3 */
+    x86_dr7_LE = 8,          /* less equal - ignored i486 and above */
+    x86_dr7_GE = 9,          /* greater equal - ignored i486 and above */
+                             /* bit 10 is hardwired to one */
+    x86_dr7_RTM = 11,        /* restricted transaction memory flag */
+                             /* bit 12 is hardwired to one */
+    x86_dr7_GD = 13,         /* general detect flag */
+                             /* bit 14 to 15 are hardwired to one */
+    x87_dr7_RW0_0 = 16,      /* rw field bit 0 for breakpoint 0 */
+    x87_dr7_RW0_1 = 17,      /* rw field bit 1 for breakpoint 0 */
+    x87_dr7_LEN0_0 = 18,     /* len field bit 0 for breakpoint 0 */
+    x87_dr7_LEN0_1 = 19,     /* len field bit 1 for breakpoint 0 */
+    x87_dr7_RW1_0 = 20,      /* rw field bit 0 for breakpoint 1 */
+    x87_dr7_RW1_1 = 21,      /* rw field bit 1 for breakpoint 1 */
+    x87_dr7_LEN1_0 = 22,     /* len field bit 0 for breakpoint 1 */
+    x87_dr7_LEN1_1 = 23,     /* len field bit 1 for breakpoint 1 */
+    x87_dr7_RW2_0 = 24,      /* rw field bit 0 for breakpoint 2 */
+    x87_dr7_RW2_1 = 25,      /* rw field bit 1 for breakpoint 2 */
+    x87_dr7_LEN2_0 = 26,     /* len field bit 0 for breakpoint 2 */
+    x87_dr7_LEN2_1 = 27,     /* len field bit 1 for breakpoint 2 */
+    x87_dr7_RW3_0 = 28,      /* rw field bit 0 for breakpoint 3 */
+    x87_dr7_RW3_1 = 29,      /* rw field bit 1 for breakpoint 3 */
+    x87_dr7_LEN3_0 = 30,     /* len field bit 0 for breakpoint 3 */
+    x87_dr7_LEN3_1 = 31,     /* len field bit 1 for breakpoint 3 */
+};
+
+/*
+ * debug register 7 - rw values (x86)
+ */
+
+enum
+{
+    x86_dr7_rw0 = 0,         /* rw field breakpoint n - instruction */
+    x86_dr7_rw1 = 1,         /* rw field breakpoint n - data read */
+    x86_dr7_rw2 = 2,         /* rw field breakpoint n - IO read/write */
+    x86_dr7_rw3 = 3,         /* rw field breakpoint n - data read/write */
+};
+
+/*
+ * debug register 7 - len values (x86)
+ */
+
+enum
+{
+    x86_dr7_len0 = 0,        /* 1-byte */
+    x86_dr7_len1 = 1,        /* 2-byte */
+    x86_dr7_len2 = 2,        /* undefined or 8-byte */
+    x86_dr7_len3 = 3,        /* 4-byte */
+};
+
+/*
+ * protected mode registers (x86)
+ */
+
+enum
+{
+    x86_reg_GDTR ,           /* global descriptor table */
+    x86_reg_LDTR,            /* local descriptor table */
+    x86_reg_IDTR,            /* interrupt descriptor table */
+    x86_reg_TR,              /* task register */
+};
+
+/*
+ * FP control regiser - FLDCW/FSTCW/FNSTCW (x86)
+ */
+
+enum
+{
+    x86_fpctrl_IM = 0,        /* Invalid Operation Mask */
+    x86_fpctrl_DM = 1,        /* Denormalized Mask */
+    x86_fpctrl_ZM = 2,        /* Divide-by-Zero Mask */
+    x86_fpctrl_OM = 3,        /* Overflow Mask */
+    x86_fpctrl_UM = 4,        /* Underflow Mask */
+    x86_fpctrl_PM = 5,        /* Precision Mask */
+    x86_fpctrl_PC0 = 8,       /* Precision Control bit 0 */
+    x86_fpctrl_PC1 = 9,       /* Precision Control bit 1 */
+    x86_fpctrl_RC0 = 10,      /* Rounding Control bit 0 */
+    x86_fpctrl_RC1 = 11,      /* Rounding Control bit 1 */
+    x86_fpctrl_X = 12,        /* Infinity Control */
+};
+
+
+/*
+ * FP control regiser - precision (x86)
+ */
+
+enum
+{
+    x86_fpctrl_PC_SP = 0,     /* single-precision (24-bits) */
+    x86_fpctrl_PC_DP = 2,     /* double-precision (53-bits) */
+    x86_fpctrl_PC_EP = 3,     /* double-extended-precision (64-bits) */
+};
+
+/*
+ * FP control regiser - rounding (x86)
+ */
+
+enum
+{
+    x86_fpctrl_RC_RNE = 0,   /* round to nearest ties even */
+    x86_fpctrl_RC_RDN = 1,   /* round down towards negative infinity */
+    x86_fpctrl_RC_RUP = 2,   /* round up towards positive infinity */
+    x86_fpctrl_RC_RTZ = 3,   /* round towards zero (truncate) */
+};
+
+/*
+ * FP status regiser - FSTSW/FNSTSW (x86)
+ */
+
+enum
+{
+    x86_fpstat_IE = 0,       /* Invalid Operation Flag */
+    x86_fpstat_DE = 1,       /* Denormalized Flag */
+    x86_fpstat_ZE = 2,       /* Divide-by-Zero Flag */
+    x86_fpstat_OE = 3,       /* Overflow Flag */
+    x86_fpstat_UE = 4,       /* Underflow Flag */
+    x86_fpstat_PE = 5,       /* Precision Flag */
+    x86_fpstat_SF = 6,       /* Stack Fault */
+    x86_fpstat_ES = 7,       /* Exception Summary Status */
+    x86_fpstat_C0 = 8,       /* Condition Code bit 0 */
+    x86_fpstat_C1 = 9,       /* Condition Code bit 1 */
+    x86_fpstat_C2 = 10,      /* Condition Code bit 2 */
+    x86_fpstat_TOP = 11,     /* Top of Stack Pointer (bits 11-13) */
+    x86_fpstat_C3 = 14,      /* Condition Code bit 3 */
+    x86_fpstat_B = 15,       /* FPU Busy */
+};
+
+/*
+ * MXCSR regiser - LDMXCSR/STMXCSR (x86)
+ */
+
+enum
+{
+    x86_mxcsr_IE = 0,        /* Invalid Operation Flag */
+    x86_mxcsr_DE = 1,        /* Denormalized Flag */
+    x86_mxcsr_ZE = 2,        /* Divide-by-Zero Flag */
+    x86_mxcsr_OE = 3,        /* Overflow Flag */
+    x86_mxcsr_UE = 4,        /* Underflow Flag */
+    x86_mxcsr_PE = 5,        /* Precision Flag */
+    x86_mxcsr_DAZ = 6,       /* Denormals Are Zeros */
+    x86_mxcsr_IM = 7,        /* Invalid Operation Mask */
+    x86_mxcsr_DM = 8,        /* Denormal Operation Mask */
+    x86_mxcsr_ZM = 9,        /* Divide-by-Zero Mask */
+    x86_mxcsr_OM = 10,       /* Overflow Mask */
+    x86_mxcsr_UM = 11,       /* Underflow Mask */
+    x86_mxcsr_PM = 12,       /* Precision Mask */
+    x86_mxcsr_RC0 = 13,      /* Rounding Control bit 0 */
+    x86_mxcsr_RC1 = 14,      /* Rounding Control bit 1 */
+    x86_mxcsr_FTZ = 15,      /* Flush to Zero */
+};
+
+/*
+ * extended control register - XGETBV/XSETBV (x86)
+ */
+
+enum
+{
+    x86_xcr0_X87 = 0,        /* x87 FPU/MMX support (must be 1) */
+    x86_xcr0_SSE = 1,        /* XSAVE support for MXCSR and XMM  */
+    x86_xcr0_AVX = 2,        /* AVX and XSAVE support for upper halves YMM */
+    x86_xcr0_BNDREG = 3,     /* MPX and XSAVE support for BND0-BND3  */
+    x86_xcr0_BNDCSR = 4,     /* MPX and XSAVE support for BND{CFGU,STATUS} */
+    x86_xcr0_OPMASK = 5,     /* AVX-512 and XSAVE for k0-k7 */
+    x86_xcr0_ZMM_Hi256 = 6,  /* AVX-512 and XSAVE for upper halves lower ZMM */
+    x86_xcr0_HI16_ZMM = 7,   /* AVX-512 and XSAVE for upper ZMM */
+    x86_xcr0_PKRU = 9,       /* XSAVE for PKRU register */
+};
+
+/*
+ * model specific registers - RDMSR/WRMSR (x86)
+ */
+
+enum
+{
+    x86_IA32_TSC            = 0x10,       /* Time Stamp Counter */
+    x86_IA32_APIC_BASE      = 0x1b,       /* APIC base address */
+    x86_IA32_TSC_ADJUST     = 0x3b,       /* TSC Adjustment */
+    x86_IA32_SYSENTER_CS    = 0x174,      /* SYSENTER code segnemt */
+    x86_IA32_SYSENTER_ESP   = 0x175,      /* SYSENTER stack pointer */
+    x86_IA32_SYSENTER_EIP   = 0x176,      /* SYSENTER intrustion pointer */
+    x86_IA32_PAT            = 0x277,      /* Page Attribute Tables */
+    x86_IA32_TSC_DEADLINE   = 0x6e0,      /* TSC Deadline */
+    x86_IA32_EFER           = 0xC0000080, /* Extended Feature Enables */
+    x86_IA32_STAR           = 0xC0000081, /* System Call Target Addr */
+    x86_IA32_LSTAR          = 0xc0000082, /* System Call Target Addr (long) */
+    x86_IA32_CSTAR          = 0xc0000083, /* System Call Target Addr (compat) */
+    x86_IA32_FMASK          = 0xc0000084, /* System Call Flag Mask */
+    x86_IA32_FS_BASE        = 0xc0000100, /* Base Address of FS */
+    x86_IA32_GS_BASE        = 0xc0000101, /* Base Address of GS */
+    x86_IA32_KERNEL_GS_BASE = 0xc0000102, /* Swap Target Base Address of GS */
+    x86_IA32_TSC_AUX        = 0xc0000103, /* Auxiliary TSC */
+};
+
+/*
  * prefix encoding structures
  */
 
