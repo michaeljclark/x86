@@ -693,10 +693,10 @@ parser.add_argument('--print-fancy-insn',
                     help='print fancy instructions')
 parser.add_argument('--print-opcode-enums',
                     default=False, action='store_true',
-                    help='print register enum')
+                    help='print opcode enum')
 parser.add_argument('--print-opcode-tables',
                     default=False, action='store_true',
-                    help='print register strings')
+                    help='print opcode strings')
 parser.add_argument('--output-file', type=argparse.FileType('w'),
                     help="filename to write output to")
 args = parser.parse_args()
