@@ -27,6 +27,16 @@ import glob
 import string
 import argparse
 
+prefixes = [ 'hex', 'lex', 'vex', 'evex' ]
+r_suffixes = [ 'rep', 'lock', 'norexb' ]
+s_suffixes = [ 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
+pbytes = [ '66', '9b', 'f2', 'f3' ]
+maps = { '0f', '0f38', '0f3a', 'map4', 'map5', 'map6' }
+widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
+lengths = { 'lig', 'lz', 'l0', 'l1', '128', '256', '512' }
+imm = { 'ib', 'iw', 'iwd', 'i16', 'i32', 'i64' }
+mods = { '/r', '/0', '/1', '/2', '/3', '/4', '/5', '/6', '/7' }
+
 gpr_bh = ["ah", "ch", "dh", "bh"]
 gpr_b = ["al", "cl", "dl", "bl", "spl", "bpl", "sil", "dil"]
 gpr_w = ["ax", "cx", "dx", "bx", "sp", "bp", "si", "di"]
@@ -40,62 +50,6 @@ cc_all = [ 'EQ', 'NEQ', 'GT', 'NLE', 'GE', 'NLT', 'LT', 'NGE', 'LE', 'NGT',
                         'A',  'NBE', 'AE', 'NB',  'B',  'NAE', 'BE', 'NA' ]
 cc_signed = [ 'EQ', 'GE', 'GT', 'LE', 'LT', 'NEQ', 'NGT', 'NLE', 'NLT' ]
 cc_unsigned = [ 'EQ', 'AE', 'A',  'BE', 'B',  'NEQ', 'NA',  'NBE', 'NB' ]
-
-def gen_range(fmt,f,s,e):
-    t = []
-    for i in range(s,e):
-        t += [[i, fmt % i, f]]
-    return t
-
-def gen_list(l,f,start):
-    t = []
-    for i, s in enumerate(l):
-        t += [[i + start, s, f]]
-    return t
-
-def gen_sep():
-    return [[0, "", ""]]
-
-def reg_table():
-    t = []
-    t += gen_list(gpr_bh, "reg_bl", 4)
-    t += gen_sep()
-    t += gen_list(gpr_b, "reg_b", 0)
-    t += gen_range("r%db", "reg_b", 8, 32)
-    t += gen_sep()
-    t += gen_list(gpr_w, "reg_w", 0)
-    t += gen_range("r%dw", "reg_w", 8, 32)
-    t += gen_sep()
-    t += gen_list(gpr_d, "reg_d", 0)
-    t += gen_range("r%dd", "reg_d", 8, 32)
-    t += gen_sep()
-    t += gen_list(gpr_q, "reg_q", 0)
-    t += gen_range("r%d", "reg_q", 8, 32)
-    t += gen_sep()
-    t += gen_range("mm%d", "reg_mmx", 0, 8)
-    t += gen_sep()
-    t += gen_range("xmm%d", "reg_xmm", 0, 32)
-    t += gen_sep()
-    t += gen_range("ymm%d", "reg_ymm", 0, 32)
-    t += gen_sep()
-    t += gen_range("zmm%d", "reg_zmm", 0, 32)
-    t += gen_sep()
-    t += gen_range("k%d", "reg_kmask", 0, 8)
-    t += gen_sep()
-    t += gen_range("st(%d)", "reg_fpu", 0, 8)
-    t += gen_sep()
-    t += gen_range("bnd%d", "reg_bnd", 0, 8)
-    t += gen_sep()
-    t += gen_range("dr%d", "reg_dreg", 0, 16)
-    t += gen_sep()
-    t += gen_range("cr%d", "reg_creg", 0, 16)
-    t += gen_sep()
-    t += gen_list(seg_r, "reg_sreg", 0)
-    t += gen_sep()
-    t += gen_list(sys_r, "reg_sys", 0)
-    t += gen_sep()
-    t += gen_list(sys_n, "reg_sys", 31)
-    return t
 
 operand_map = {
     '1'                                                     : 'one/r',
@@ -236,6 +190,62 @@ opcode_map = {
     'st(i)'   : 'st'
 }
 
+def gen_range(fmt,f,s,e):
+    t = []
+    for i in range(s,e):
+        t += [[i, fmt % i, f]]
+    return t
+
+def gen_list(l,f,start):
+    t = []
+    for i, s in enumerate(l):
+        t += [[i + start, s, f]]
+    return t
+
+def gen_sep():
+    return [[0, "", ""]]
+
+def reg_table():
+    t = []
+    t += gen_list(gpr_bh, "reg_bl", 4)
+    t += gen_sep()
+    t += gen_list(gpr_b, "reg_b", 0)
+    t += gen_range("r%db", "reg_b", 8, 32)
+    t += gen_sep()
+    t += gen_list(gpr_w, "reg_w", 0)
+    t += gen_range("r%dw", "reg_w", 8, 32)
+    t += gen_sep()
+    t += gen_list(gpr_d, "reg_d", 0)
+    t += gen_range("r%dd", "reg_d", 8, 32)
+    t += gen_sep()
+    t += gen_list(gpr_q, "reg_q", 0)
+    t += gen_range("r%d", "reg_q", 8, 32)
+    t += gen_sep()
+    t += gen_range("mm%d", "reg_mmx", 0, 8)
+    t += gen_sep()
+    t += gen_range("xmm%d", "reg_xmm", 0, 32)
+    t += gen_sep()
+    t += gen_range("ymm%d", "reg_ymm", 0, 32)
+    t += gen_sep()
+    t += gen_range("zmm%d", "reg_zmm", 0, 32)
+    t += gen_sep()
+    t += gen_range("k%d", "reg_kmask", 0, 8)
+    t += gen_sep()
+    t += gen_range("st(%d)", "reg_fpu", 0, 8)
+    t += gen_sep()
+    t += gen_range("bnd%d", "reg_bnd", 0, 8)
+    t += gen_sep()
+    t += gen_range("dr%d", "reg_dreg", 0, 16)
+    t += gen_sep()
+    t += gen_range("cr%d", "reg_creg", 0, 16)
+    t += gen_sep()
+    t += gen_list(seg_r, "reg_sreg", 0)
+    t += gen_sep()
+    t += gen_list(sys_r, "reg_sys", 0)
+    t += gen_sep()
+    t += gen_list(sys_n, "reg_sys", 31)
+    return t
+
 def x86_mode(row):
     l = list()
     if row['Valid 64-bit'] == 'Valid':
@@ -311,17 +321,7 @@ def translate_modes(modes):
         modelist += ['x86_modes_%s' % m]
     return "|".join(modelist)
 
-# add 9b, del rex rex.w
 def translate_encoding(enc):
-    prefixes = [ 'hex', 'lex', 'vex', 'evex' ]
-    r_suffixes = [ 'rep', 'lock', 'norexb' ]
-    s_suffixes = [ 'o16', 'o32', 'o64', 'a16', 'a32', 'a64' ]
-    pbytes = [ '66', '9b', 'f2', 'f3' ]
-    maps = { '0f', '0f38', '0f3a', 'map4', 'map5', 'map6' }
-    widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
-    lengths = { 'lig', 'lz', 'l0', 'l1', '128', '256', '512' }
-    imm = { 'ib', 'iw', 'iwd', 'i16', 'i32', 'i64' }
-    mods = { '/r', '/0', '/1', '/2', '/3', '/4', '/5', '/6', '/7' }
     pl = []
     opc = ['0x00','0x00']
     opm = ['0x00','0x00']
