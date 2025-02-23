@@ -320,7 +320,6 @@ def translate_encoding(enc):
     maps = { '0f', '0f38', '0f3a', 'map4', 'map5', 'map6' }
     widths = { 'w0', 'w1', 'wig', 'wb', 'wn', 'ws', 'wx', 'ww' }
     lengths = { 'lig', 'lz', 'l0', 'l1', '128', '256', '512' }
-    flags = { 'nds', 'ndd', 'dds' }
     imm = { 'ib', 'iw', 'iwd', 'i16', 'i32', 'i64' }
     mods = { '/r', '/0', '/1', '/2', '/3', '/4', '/5', '/6', '/7' }
     pl = []
@@ -338,7 +337,7 @@ def translate_encoding(enc):
         if p:
             pl += ['x86_enc_t_%s' % p.replace('.', '_')]
             el = el[len(p):]
-            vp, vm, vw, vl, vf = None, None, None, None, None
+            vp, vm, vw, vl = None, None, None, None
             for sel in el.split('.'):
                 if sel == '':
                     pass
@@ -350,8 +349,6 @@ def translate_encoding(enc):
                     vw = 'x86_enc_w_%s' % sel
                 elif sel in lengths:
                     vl = 'x86_enc_l_%s' % sel
-                elif sel in flags:
-                    vf = 'x86_enc_f_%s' % sel
                 else:
                     raise Exception("unknown element '%s' for encoding"
                         " '%s" % (sel, enc))
@@ -363,8 +360,6 @@ def translate_encoding(enc):
                 pl += [vw]
             if vl:
                 pl += [vl]
-            if vf:
-                pl += [vf]
             if p == 'vex' or p == 'evex' or p == 'lex':
                 has_pfx = True
         elif el in maps and len(comps) > 1 and not (has_map or has_pfx):
