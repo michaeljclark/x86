@@ -321,6 +321,30 @@ def translate_modes(modes):
         modelist += ['x86_modes_%s' % m]
     return "|".join(modelist)
 
+def translate_prefix(el):
+    p, vt, vp, vm, vw, vl = None, None, None, None, None, None
+    for sel in prefixes:
+        if el.find(sel) == 0 and ( p == None or len(sel) > len(p) ):
+            p = sel
+    if p:
+        el = el[len(p):]
+        vt = p.replace('.', '_')
+        for sel in el.split('.'):
+            if sel == '':
+                pass
+            elif sel in pbytes:
+                vp = sel
+            elif sel in maps:
+                vm = sel
+            elif sel in widths:
+                vw = sel
+            elif sel in lengths:
+                vl = sel
+            else:
+                raise Exception("unknown element '%s' for encoding"
+                    " '%s" % (sel, enc))
+    return p, vt, vp, vm, vw, vl
+
 def translate_encoding(enc):
     pl = []
     opc = ['0x00','0x00']
@@ -330,38 +354,19 @@ def translate_encoding(enc):
     comps = enc.split(" ")
     for el in comps:
         is_hex = all(c in string.hexdigits for c in el[0:2])
-        p = None
-        for sel in prefixes:
-            if el.find(sel) == 0 and ( p == None or len(sel) > len(p) ):
-                p = sel
-        if p:
-            pl += ['x86_enc_t_%s' % p.replace('.', '_')]
-            el = el[len(p):]
-            vp, vm, vw, vl = None, None, None, None
-            for sel in el.split('.'):
-                if sel == '':
-                    pass
-                elif sel in pbytes:
-                    vp = 'x86_enc_p_%s' % sel
-                elif sel in maps:
-                    vm = 'x86_enc_m_%s' % sel
-                elif sel in widths:
-                    vw = 'x86_enc_w_%s' % sel
-                elif sel in lengths:
-                    vl = 'x86_enc_l_%s' % sel
-                else:
-                    raise Exception("unknown element '%s' for encoding"
-                        " '%s" % (sel, enc))
-            if vp:
-                pl += [vp]
-            if vm:
-                pl += [vm]
-            if vw:
-                pl += [vw]
-            if vl:
-                pl += [vl]
-            if p == 'vex' or p == 'evex' or p == 'lex':
-                has_pfx = True
+        p, vt, vp, vm, vw, vl = translate_prefix(el)
+        if vt:
+            pl += ['x86_enc_t_%s' % vt]
+        if vp:
+            pl += ['x86_enc_p_%s' % vp]
+        if vm:
+            pl += ['x86_enc_m_%s' % vm]
+        if vw:
+            pl += ['x86_enc_w_%s' % vw]
+        if vl:
+            pl += ['x86_enc_l_%s' % vl]
+        if p == 'vex' or p == 'evex' or p == 'lex':
+            has_pfx = True
         elif el in maps and len(comps) > 1 and not (has_map or has_pfx):
             pl += ['x86_enc_m_%s' % el]
             has_map = True
