@@ -113,6 +113,7 @@ struct x86_operands
     ullong k   : 5;
     ullong l   : 2;
     ullong w   : 1;
+    ullong z   : 1;
     ullong brd : 1;
     ullong osz : 1;
 };
@@ -2419,9 +2420,11 @@ static x86_operands x86_codec_operands(x86_ctx *ctx, x86_codec *c)
         q.x |= (~c->evex.data[1] &   4) << 2; /* [2] -> x[4]*/
         q.r |= (~c->evex.data[0] &  16) >> 0; /* [4] -> r[4]*/
         q.v  = (~c->evex.data[1] >>  3) & 15;
+        q.w   = (c->evex.data[1] >>  7) & 1;
         q.v |= (~c->evex.data[2] &   8) << 1; /* [3] -> v[4]*/
         q.k  =  (c->evex.data[2] >>  0) & 7;
         q.l  =  (c->evex.data[2] >>  5) & 3;
+        q.z   = (c->evex.data[2] >>  7) & 1;
         q.brd = (c->evex.data[2] >>  4) & 1;
         q.osz = (c->evex.data[1] & 3) == x86_pfx_66;
         break;
