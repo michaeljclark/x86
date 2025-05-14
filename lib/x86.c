@@ -136,23 +136,23 @@ struct x86_opc_prefix
     uint modmem;
 };
 
-x86_opr_formatter x86_format_intel_hex;
-x86_opr_formatter x86_format_intel_dec;
-x86_opr_formats x86_opr_formats_intel_hex;
-x86_opr_formats x86_opr_formats_intel_dec;
+const x86_opr_formatter x86_format_intel_hex;
+const x86_opr_formatter x86_format_intel_dec;
+const x86_opr_formats x86_opr_formats_intel_hex;
+const x86_opr_formats x86_opr_formats_intel_dec;
 
 static uint debug;
 
 void x86_set_debug(uint d) { debug = d; }
 
-x86_map_str x86_mode_names[] =
+const x86_map_str x86_mode_names[] =
 {
     { x86_modes_64,             "64"               },
     { x86_modes_32,             "32"               },
     { x86_modes_16,             "16"               },
 };
 
-x86_map_str x86_map_names[] =
+const x86_map_str x86_map_names[] =
 {
     { x86_map_map6,            "map6"              },
     { x86_map_map5,            "map5"              },
@@ -162,7 +162,7 @@ x86_map_str x86_map_names[] =
     { x86_map_0f,              "0f"                },
 };
 
-x86_map_str x86_ord_names[] =
+const x86_map_str x86_ord_names[] =
 {
     { x86_ord_rflags,           "rflags"           },
     { x86_ord_mxcsr,            "mxcsr"            },
@@ -198,7 +198,7 @@ x86_map_str x86_ord_names[] =
     { 0,                        NULL               },
 };
 
-x86_map_str x86_opr_names[] =
+const x86_map_str x86_opr_names[] =
 {
     { x86_opr_bnd_mem,          "bnd/mem"          },
     { x86_opr_k_m64,            "k/m64"            },
@@ -400,7 +400,7 @@ x86_map_str x86_opr_names[] =
     { 0,                        NULL               },
 };
 
-x86_map_str x86_enc_names[] =
+const x86_map_str x86_enc_names[] =
 {
     { x86_enc_r_norexb,         " .norexb"         },
     { x86_enc_r_lock,           " .lock"           },
@@ -459,8 +459,8 @@ x86_map_str x86_enc_names[] =
  *  string tables
  */
 
-static size_t x86_name_map(x86_map_str *p, char * buf, size_t len, uint ord,
-    const char *sep)
+static size_t x86_name_map(const x86_map_str *p, char * buf, size_t len,
+    uint ord, const char *sep)
 {
     size_t count = 0;
     int ret = 0;
@@ -2608,7 +2608,7 @@ static uint x86_opr_bcst_size(uint opr)
     return 0;
 }
 
-x86_opr_formats x86_opr_formats_intel_hex =
+const x86_opr_formats x86_opr_formats_intel_hex =
 {
     .ptr_rip            = "%s[rip]",
     .ptr_rip_disp       = "%s[rip %s 0x%x]",
@@ -2627,7 +2627,7 @@ x86_opr_formats x86_opr_formats_intel_hex =
     .reg                = "%s",
 };
 
-x86_opr_formats x86_opr_formats_intel_dec =
+const x86_opr_formats x86_opr_formats_intel_dec =
 {
     .ptr_rip            = "%s[rip]",
     .ptr_rip_disp       = "%s[rip %s %u]",
@@ -2647,7 +2647,7 @@ x86_opr_formats x86_opr_formats_intel_dec =
 };
 
 static size_t x86_opr_intel_mrm_str_internal(char *buf, size_t buflen,
-    x86_codec *c, x86_arg a, x86_opr_formats *fmt)
+    x86_codec *c, x86_arg a, const x86_opr_formats *fmt)
 {
     uint regsz = x86_opr_reg_size(c, a);
     uint ptrsz = x86_opr_ptr_size(c, a);
@@ -2772,7 +2772,7 @@ static size_t x86_opr_intel_is4_str(char *buf, size_t buflen,
 }
 
 static size_t x86_opr_intel_imm_str_internal(char *buf, size_t buflen,
-    x86_codec *c, x86_arg a, x86_opr_formats *fmt)
+    x86_codec *c, x86_arg a, const x86_opr_formats *fmt)
 {
     if (a.opr == x86_opr_moffs) {
         uint regsz = x86_opr_reg_size(c, a);
@@ -2852,8 +2852,7 @@ static size_t x86_opr_intel_rel_dec_str(char *buf, size_t buflen,
     return len;
 }
 
-static uint x86_opr_intel_const_reg(x86_codec *c,
-    x86_arg a)
+static uint x86_opr_intel_const_reg(x86_codec *c, x86_arg a)
 {
     uint regsz = x86_opr_reg_size(c, a);
     uint addrsz = x86_codec_addr_size(c);
@@ -2922,7 +2921,7 @@ static size_t x86_opr_intel_const_str(char *buf, size_t buflen, x86_codec *c,
     }
 }
 
-x86_opr_formatter x86_format_intel_hex =
+const x86_opr_formatter x86_format_intel_hex =
 {
     .fmt_const = &x86_opr_intel_const_str,
     .fmt_imm = &x86_opr_intel_imm_hex_str,
@@ -2935,7 +2934,7 @@ x86_opr_formatter x86_format_intel_hex =
     .fmt_rel = &x86_opr_intel_rel_hex_str
 };
 
-x86_opr_formatter x86_format_intel_dec =
+const x86_opr_formatter x86_format_intel_dec =
 {
     .fmt_const = &x86_opr_intel_const_str,
     .fmt_imm = &x86_opr_intel_imm_dec_str,
@@ -2949,7 +2948,8 @@ x86_opr_formatter x86_format_intel_dec =
 };
 
 static size_t x86_format_operand(char *buf, size_t buflen, x86_codec *c,
-    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb, x86_opr_formatter *fmt)
+    x86_arg a, size_t pc_offset, x86_fmt_symbol sym_cb,
+    const x86_opr_formatter *fmt)
 {
     switch (x86_ord_type_val(a.ord)) {
     case x86_ord_const:
