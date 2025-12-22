@@ -371,7 +371,7 @@ _(enum x86_opr)_.
 | `id`               | 32-bit immediate                                      |
 | `iq`               | 64-bit immediate                                      |
 | `rel8`             | 8-bit displacement                                    |
-| `relw`             | 6-bit or 32-bit displacement (mode + operand size)    |
+| `relw`             | 64-bit or 32-bit displacement (mode + operand size)   |
 | `moffs`            | indirect memory offset                                |
 | `far16/16`         | 16-bit seg 16-bit far displacement                    |
 | `far16/32`         | 16-bit seg 32-bit far displacement                    |
