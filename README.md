@@ -132,7 +132,7 @@ to inspect the x86 metadata. Here are some example invocations:
 This shows sample output from the `x86_opcodes` tool being used to search
 for 64-bit operand size encoding exceptions in metadata. These are special
 cases where the operand size is not automatically derived from word size
-synthesis rules described in [*Instruction Synthesis Notes*](#user-content-instruction-synthesis-notes):
+synthesis rules described in [*Instruction Synthesis Notes*](#user-content-appendix-e---instruction-synthesis-notes):
 
 `$ ./build/x86_opcodes -n | grep o64`
 
